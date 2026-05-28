@@ -959,7 +959,6 @@ app.get("/api/sales", requireAuth, (req, res) => {
   if (from) where.createdAt = { gte: new Date(from) };
   if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
   if (method) where.paymentMethod = method;
-  if (channel) where.channel = channel;
 
   prisma.sale
     .findMany({
@@ -1318,6 +1317,7 @@ app.get("/api/stats", requireAuth, async (req, res) => {
         totalSales > 0
           ? ((totalSales / (totalSales * 15)) * 100).toFixed(1) + "%"
           : "0%",
+      conversion_trend: "↑ +0.2% vs semana",
     });
   } catch (err) {
     console.error("❌ Error en Dashboard Stats:", err.message);
