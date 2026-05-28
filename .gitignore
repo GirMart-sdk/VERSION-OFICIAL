@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.db
+*.log
+dist/
+.DS_Store
+package-lock.json
+backend/winner_store.db
+
+# Prisma
+/prisma/migrations/

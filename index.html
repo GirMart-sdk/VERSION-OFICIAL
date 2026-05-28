@@ -1,0 +1,2255 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTC-5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="google-site-verification"
+      content="O1MwdJv9gIZ2Y70C5XlF22To1v0zNuQcX7mhtSnv47o"
+    />
+    <meta
+      name="description"
+      content="Winner — Ropa urbana de alto impacto. Diseños exclusivos streetwear para hombre y mujer. Envíos a toda Colombia."
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta property="og:title" content="WINNER — Estilo Ganador para Todos" />
+    <meta
+      property="og:description"
+      content="Ropa urbana de alto impacto. Diseños exclusivos streetwear. Nueva colección 2026."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content="https://i.pinimg.com/736x/1e/43/a1/1e43a1e73d33e25f6e2dc9c0e7ecde3e.jpg"
+    />
+    <title>WINNER — Estilo Ganador para Todos</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <!-- ══ TOAST ══ -->
+    <div class="toast" id="toast">
+      <span class="toast-icon">✓</span>
+      <span id="toastMsg">Agregado al carrito</span>
+    </div>
+
+    <!-- ══ CART DRAWER ══ -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <aside class="cart-drawer" id="cartDrawer" aria-label="Carrito de compras">
+      <div class="cart-header">
+        <h3>Tu Carrito</h3>
+        <button class="cart-close" id="cartClose" aria-label="Cerrar carrito">
+          ✕
+        </button>
+      </div>
+      <div class="cart-items" id="cartItems">
+        <div class="cart-empty">
+          <div class="empty-icon">🛒</div>
+          <p>Tu carrito está vacío</p>
+        </div>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total">
+          <span>Total</span>
+          <span id="cartTotal">$0</span>
+        </div>
+        <button class="checkout-btn" onclick="checkoutWhatsApp()">
+          PROCEDER AL PAGO →
+        </button>
+      </div>
+    </aside>
+
+    <!-- ══ NAVBAR ══ -->
+    <nav id="navbar">
+      <a href="#" class="nav-logo">W<span class="logo-dot"></span>NNER</a>
+      <ul class="nav-links">
+        <li><a href="#productos">Colección</a></li>
+        <li><a href="#categorias">Categorías</a></li>
+        <li><a href="#destacados">Destacados</a></li>
+        <li><a href="#misventas">Mis Ventas</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="cart-btn" id="cartToggle" aria-label="Abrir carrito">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 01-8 0" />
+          </svg>
+          Carrito
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+        <button
+          class="menu-btn"
+          id="menuBtn"
+          aria-label="Menú"
+          onclick="toggleMobileMenu()"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ══ HERO ══ -->
+    <section class="hero" id="inicio">
+      <div class="hero-bg"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-left">
+        <div class="hero-tag fade-up">
+          <span class="tag-dot"></span>
+          Nueva Colección 2026
+        </div>
+        <h1 class="hero-title fade-up delay-1">
+          <span class="line-accent">VISTE</span><br />
+          <span class="line-outline">COMO UN</span><br />
+          GANADOR
+        </h1>
+        <p class="hero-sub fade-up delay-2">
+          Ropa urbana de alto impacto. Diseños exclusivos para quienes no siguen
+          tendencias — las crean.
+        </p>
+        <div class="hero-actions fade-up delay-3">
+          <button
+            class="btn-primary"
+            onclick="
+              document
+                .getElementById('productos')
+                .scrollIntoView({ behavior: 'smooth' })
+            "
+          >
+            VER COLECCIÓN
+          </button>
+          <a href="#destacados" class="btn-secondary">
+            Destacados <span class="btn-arrow">→</span>
+          </a>
+        </div>
+        <div class="hero-stats fade-up delay-4">
+          <div class="stat-item">
+            <div class="stat-num">2K+</div>
+            <div class="stat-label">Clientes</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">150+</div>
+            <div class="stat-label">Prendas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">4.9★</div>
+            <div class="stat-label">Rating</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <img
+          src="https://modagroup.com/_nuxt/image/304965.jpg"
+          alt="Winner Streetwear Hero"
+          class="hero-img"
+        />
+        <div class="hero-badge">
+          <div class="hero-badge-inner">NEW<br />DROP<br />2026</div>
+        </div>
+        <div class="hero-price-tag">
+          <div class="price-tag-label">Desde</div>
+          <div class="price-tag-val">$49.990</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ MARQUEE ══ -->
+    <div class="marquee-section">
+      <div class="marquee-track">
+        <div class="marquee-inner" id="marqueeInner">
+          <span>WINNER</span><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span> <span>WINNER</span
+          ><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span>
+        </div>
+        <div class="marquee-inner" aria-hidden="true">
+          <span>WINNER</span><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span> <span>WINNER</span
+          ><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CATEGORIES ══ -->
+    <section class="categories" id="categorias">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Explorar</div>
+          <h2 class="section-title">CATEGORÍAS</h2>
+        </div>
+        <a href="#productos" class="section-link">Ver todo <span>→</span></a>
+      </div>
+      <div class="cat-grid">
+        <div class="cat-card reveal" onclick="filterByCategory('mujer')">
+          <img
+            src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=700&q=80"
+            alt="Mujer"
+            class="cat-img"
+          />
+          <div class="cat-overlay"></div>
+          <div class="cat-info">
+            <div class="cat-name">MUJER</div>
+            <div class="cat-count">48 productos</div>
+          </div>
+          <div class="cat-arrow">→</div>
+        </div>
+        <div class="cat-card reveal" onclick="filterByCategory('hombre')">
+          <img
+            src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500&q=80"
+            alt="Hombre"
+            class="cat-img"
+          />
+          <div class="cat-overlay"></div>
+          <div class="cat-info">
+            <div class="cat-name">HOMBRE</div>
+            <div class="cat-count">36 productos</div>
+          </div>
+          <div class="cat-arrow">→</div>
+        </div>
+        <div class="cat-card reveal" onclick="filterByCategory('hombre')">
+          <img
+            src="https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500&q=80"
+            alt="Outerwear"
+            class="cat-img"
+          />
+          <div class="cat-overlay"></div>
+          <div class="cat-info">
+            <div class="cat-name">OUTERWEAR</div>
+            <div class="cat-count">22 productos</div>
+          </div>
+          <div class="cat-arrow">→</div>
+        </div>
+        <div class="cat-card reveal" onclick="filterByCategory('accesorios')">
+          <img
+            src="https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?w=500&q=80"
+            alt="Accesorios"
+            class="cat-img"
+          />
+          <div class="cat-overlay"></div>
+          <div class="cat-info">
+            <div class="cat-name">ACCESORIOS</div>
+            <div class="cat-count">31 productos</div>
+          </div>
+          <div class="cat-arrow">→</div>
+        </div>
+        <div class="cat-card reveal" onclick="filterByCategory('all')">
+          <img
+            src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80"
+            alt="Calzado"
+            class="cat-img"
+          />
+          <div class="cat-overlay"></div>
+          <div class="cat-info">
+            <div class="cat-name">CALZADO</div>
+            <div class="cat-count">18 productos</div>
+          </div>
+          <div class="cat-arrow">→</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ PRODUCTS ══ -->
+    <section class="products" id="productos">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Colección 2026</div>
+          <h2 class="section-title">LO MÁS NUEVO</h2>
+        </div>
+      </div>
+      <div class="filter-bar" id="filterBar">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="mujer">Mujer</button>
+        <button class="filter-btn" data-filter="hombre">Hombre</button>
+        <button class="filter-btn" data-filter="accesorios">Accesorios</button>
+        <button class="filter-btn" data-filter="sale">Ofertas</button>
+      </div>
+      <div class="products-grid" id="productsGrid"></div>
+    </section>
+
+    <!-- ══ PROMO BANNER ══ -->
+    <div class="promo-banner">
+      <div class="promo-bg-text">WINNER</div>
+      <div class="promo-left">
+        <div class="promo-label">Oferta especial</div>
+        <div class="promo-title">20% OFF EN<br /><em>TODA LA TIENDA</em></div>
+        <div class="promo-desc promo-desc-left">
+          Streetwear exclusivo con drops limitados y estilo urbano premium.
+        </div>
+      </div>
+      <div class="promo-center">
+        <img
+          src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=900&q=80"
+          alt="Banner promocional Winner"
+          class="promo-image"
+          onerror="
+            this.src =
+              'https://i.pinimg.com/736x/1e/43/a1/1e43a1e73d33e25f6e2dc9c0e7ecde3e.jpg'
+          "
+        />
+      </div>
+      <div class="promo-right">
+        <div class="promo-code" id="promoCode" onclick="copyCode()">
+          WINNER20
+        </div>
+        <div class="promo-desc">
+          Clic para copiar. Válido hasta el 31 de marzo.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FEATURED ══ -->
+    <section class="featured" id="destacados">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Edición Limitada</div>
+          <h2 class="section-title">DESTACADOS</h2>
+        </div>
+      </div>
+      <div class="featured-grid">
+        <div class="featured-item reveal">
+          <img
+            src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&q=80"
+            alt="Bomber Urbano"
+            class="featured-img"
+          />
+          <div class="featured-overlay"></div>
+          <div class="featured-content">
+            <div class="featured-tag">✦ Edición Limitada</div>
+            <div class="featured-name">BOMBER URBANO</div>
+            <div class="featured-desc">
+              Diseño exclusivo con detalles reflectivos. Stock limitado para los
+              que van primero.
+            </div>
+            <div
+              class="size-selector"
+              data-product="P003"
+              style="display: flex; gap: 5px; margin-bottom: 15px"
+            >
+              <button
+                class="size-btn"
+                data-size="S"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--dark);
+                  color: var(--text);
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                S
+              </button>
+              <button
+                class="size-btn active"
+                data-size="M"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--accent);
+                  color: #000;
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                M
+              </button>
+              <button
+                class="size-btn"
+                data-size="L"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--dark);
+                  color: var(--text);
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                L
+              </button>
+            </div>
+            <button class="featured-cta" data-id="P003">
+              Agregar al carrito →
+            </button>
+          </div>
+        </div>
+        <div class="featured-item reveal">
+          <img
+            src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80"
+            alt="Set Deportivo W"
+            class="featured-img"
+          />
+          <div class="featured-overlay"></div>
+          <div class="featured-content">
+            <div class="featured-tag">✦ Más Vendido</div>
+            <div class="featured-name">SET DEPORTIVO W</div>
+            <div class="featured-desc">
+              Top + legging. El conjunto ganador para entrenar con el estilo que
+              te define.
+            </div>
+            <div
+              class="size-selector"
+              data-product="P007"
+              style="display: flex; gap: 5px; margin-bottom: 15px"
+            >
+              <button
+                class="size-btn"
+                data-size="S"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--dark);
+                  color: var(--text);
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                S
+              </button>
+              <button
+                class="size-btn active"
+                data-size="M"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--accent);
+                  color: #000;
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                M
+              </button>
+              <button
+                class="size-btn"
+                data-size="L"
+                style="
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  font-size: 12px;
+                  background: var(--dark);
+                  color: var(--text);
+                  border: 1px solid var(--border);
+                  cursor: pointer;
+                "
+              >
+                L
+              </button>
+            </div>
+            <button class="featured-cta" data-id="P007">
+              Agregar al carrito →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TESTIMONIALS ══ -->
+    <section class="testimonials">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Reviews</div>
+          <h2 class="section-title">LO QUE DICEN</h2>
+        </div>
+      </div>
+      <div class="test-grid">
+        <div class="test-card reveal">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-text">
+            "La calidad superó todas mis expectativas. Las telas son increíbles
+            y el envío llegó en 2 días. Definitivamente mi tienda favorita."
+          </p>
+          <div class="test-author">
+            <img
+              src="https://i.pravatar.cc/80?img=47"
+              alt="Valentina M."
+              class="test-avatar"
+            />
+            <div>
+              <div class="test-name">Valentina M.</div>
+              <div class="test-location">Bogotá, Colombia</div>
+            </div>
+          </div>
+        </div>
+        <div class="test-card reveal">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-text">
+            "Compré el bomber y todos me preguntan dónde lo conseguí. Winner
+            tiene los diseños más únicos del mercado colombiano."
+          </p>
+          <div class="test-author">
+            <img
+              src="https://i.pravatar.cc/80?img=12"
+              alt="Sebastián R."
+              class="test-avatar"
+            />
+            <div>
+              <div class="test-name">Sebastián R.</div>
+              <div class="test-location">Medellín, Colombia</div>
+            </div>
+          </div>
+        </div>
+        <div class="test-card reveal">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-text">
+            "Atención al cliente de 10. Tuve un problema con la talla y lo
+            resolvieron al instante. Calidad premium a precios justos."
+          </p>
+          <div class="test-author">
+            <img
+              src="https://i.pravatar.cc/80?img=32"
+              alt="Daniela C."
+              class="test-avatar"
+            />
+            <div>
+              <div class="test-name">Daniela C.</div>
+              <div class="test-location">Cali, Colombia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ NEWSLETTER ══ -->
+    <section class="newsletter" id="contacto">
+      <div class="section-label">Comunidad Winner</div>
+      <h2 class="newsletter-title">ÚNETE A LOS<br /><span>WINNERS</span></h2>
+      <p class="newsletter-sub">
+        Suscríbete y recibe lanzamientos exclusivos + 15% de descuento en tu
+        primera compra.
+      </p>
+      <form class="newsletter-form" id="newsletterForm">
+        <input
+          class="newsletter-input"
+          type="email"
+          placeholder="tu@email.com"
+          required
+        />
+        <button class="newsletter-submit" type="submit">SUSCRIBIR →</button>
+      </form>
+    </section>
+
+    <!-- ══ FOOTER ══ -->
+    <footer>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo footer-logo"
+            >W<span class="logo-dot"></span>NNER</a
+          >
+          <p class="footer-desc">
+            Ropa urbana para quienes se atreven a destacar. Diseños exclusivos,
+            calidad premium, envíos a toda Colombia.
+          </p>
+          <div class="footer-socials">
+            <a href="#" class="social-link" aria-label="Instagram">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                width="16"
+                height="16"
+              >
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <circle cx="12" cy="12" r="5" />
+                <circle
+                  cx="17.5"
+                  cy="6.5"
+                  r="1"
+                  fill="currentColor"
+                  stroke="none"
+                />
+              </svg>
+            </a>
+            <a href="#" class="social-link" aria-label="TikTok">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="16"
+                height="16"
+              >
+                <path
+                  d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V9.15a8.16 8.16 0 004.77 1.52V7.22a4.85 4.85 0 01-1-.53z"
+                />
+              </svg>
+            </a>
+            <a href="#" class="social-link" aria-label="X / Twitter">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="16"
+                height="16"
+              >
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                />
+              </svg>
+            </a>
+            <a href="#" class="social-link" aria-label="YouTube">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="16"
+                height="16"
+              >
+                <path
+                  d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58zM9.75 15.02V8.98L15.5 12z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Tienda</h4>
+          <ul class="footer-links">
+            <li><a href="#productos">Nueva Colección</a></li>
+            <li><a href="#categorias">Mujer</a></li>
+            <li><a href="#categorias">Hombre</a></li>
+            <li><a href="#categorias">Accesorios</a></li>
+            <li><a href="#productos">Ofertas</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Ayuda</h4>
+          <ul class="footer-links">
+            <li><a href="#">Mi Pedido</a></li>
+            <li><a href="#">Devoluciones</a></li>
+            <li><a href="#">Guía de Tallas</a></li>
+            <li><a href="#">Envíos</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Info</h4>
+          <ul class="footer-links">
+            <li><a href="#">Sobre Winner</a></li>
+            <li><a href="#">Sostenibilidad</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Trabaja con nosotros</a></li>
+            <li><a href="#">Privacidad</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-copy"
+          >© 2026 Winner. Todos los derechos reservados.</span
+        >
+        <div class="payment-icons">
+          <span class="pay-icon pi-pse">PSE</span>
+          <span class="pay-icon pi-nequi">NEQUI</span>
+          <span class="pay-icon pi-visa">VISA</span>
+          <span class="pay-icon pi-mc">MC</span>
+          <span class="pay-icon pi-daviplata">DAVIPLATA</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ════════════════════════════════════════════════════════
+       ADMIN PANEL — Embedded Slide-out Drawer
+  ════════════════════════════════════════════════════════ -->
+
+    <!-- FAB TRIGGER -->
+    <button
+      class="admin-fab"
+      id="adminFab"
+      onclick="window.open('admin-panel.html', '_blank')"
+      aria-label="Panel administrativo"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        <circle cx="19" cy="8" r="2.5" fill="currentColor" stroke="none" />
+        <path d="M19 6v4M17 8h4" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+      Admin
+    </button>
+
+    <!-- OVERLAY -->
+    <div
+      class="admin-overlay"
+      id="adminOverlay"
+      onclick="toggleAdminPanel()"
+    ></div>
+
+    <!-- ADMIN PANEL DRAWER -->
+    <div
+      class="admin-panel"
+      id="adminPanel"
+      role="dialog"
+      aria-label="Panel administrativo"
+    >
+      <div class="adm-header">
+        <div class="adm-logo">
+          <span class="adm-logo-w">W</span>INNER
+          <span class="adm-badge">ADMIN</span>
+        </div>
+        <div class="adm-header-right">
+          <span class="adm-date" id="admDate"></span>
+          <button
+            class="adm-close"
+            id="adminClose"
+            onclick="toggleAdminPanel()"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <nav class="adm-tabs">
+        <button
+          class="adm-tab active"
+          data-tab="payments"
+          onclick="switchAdminTab('payments')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="1" y="4" width="22" height="16" rx="2" />
+            <line x1="1" y1="10" x2="23" y2="10" />
+          </svg>
+          Pagos
+        </button>
+        <button
+          class="adm-tab"
+          data-tab="inventory"
+          onclick="switchAdminTab('inventory')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+            />
+          </svg>
+          Inventario
+        </button>
+        <button
+          class="adm-tab"
+          data-tab="sales"
+          onclick="switchAdminTab('sales')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          Ventas Física
+        </button>
+        <button
+          class="adm-tab"
+          data-tab="analytics"
+          onclick="switchAdminTab('analytics')"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 20V10M18 20V4M6 20v-4" />
+          </svg>
+          Gráficas
+        </button>
+      </nav>
+
+      <!-- TAB PAGOS -->
+      <div class="adm-content active" id="tab-payments">
+        <div class="adm-section-title">
+          <h2>Métodos de Pago</h2>
+          <p>Configura los canales de cobro activos para tu tienda</p>
+        </div>
+        <div class="pay-stats">
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="statTotalCollected">$0</div>
+            <div class="pay-stat-label">Recaudado total</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="statTxCount">0</div>
+            <div class="pay-stat-label">Transacciones</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="statTopMethod">—</div>
+            <div class="pay-stat-label">Método más usado</div>
+          </div>
+        </div>
+        <h3 class="adm-sub-title">Métodos activos</h3>
+        <div class="pay-methods-grid" id="payMethodsGrid"></div>
+        <h3 class="adm-sub-title" style="margin-top: 28px">
+          Registrar pago recibido
+        </h3>
+        <div class="pay-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Método</label>
+              <select id="payMethod">
+                <option value="">Seleccionar...</option>
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Nequi">📱 Nequi</option>
+                <option value="Daviplata">📱 Daviplata</option>
+                <option value="PSE">🏦 PSE</option>
+                <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+                <option value="Tarjeta Crédito">💳 Tarjeta Crédito</option>
+                <option value="Transferencia">🔁 Transferencia</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Monto (COP)</label>
+              <input
+                type="number"
+                id="payAmount"
+                placeholder="Ej: 89990"
+                min="0"
+              />
+            </div>
+            <div class="form-group">
+              <label>Referencia</label>
+              <input
+                type="text"
+                id="payRef"
+                placeholder="# factura o descripción"
+              />
+            </div>
+            <button class="adm-btn-primary" onclick="registerPaymentAdmin()">
+              REGISTRAR
+            </button>
+          </div>
+        </div>
+        <h3 class="adm-sub-title" style="margin-top: 28px">
+          Historial de pagos
+        </h3>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Método</th>
+                <th>Referencia</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="admPaymentsBody">
+              <tr class="empty-row">
+                <td colspan="6">Sin pagos registrados</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB INVENTARIO -->
+      <div class="adm-content" id="tab-inventory">
+        <div class="adm-section-title">
+          <h2>Inventario</h2>
+          <p>Controla el stock de todos tus productos en tiempo real</p>
+        </div>
+        <div class="pay-stats">
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="invTotalItems">0</div>
+            <div class="pay-stat-label">Total productos</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="invLowStock" style="color: #ff6b6b">
+              0
+            </div>
+            <div class="pay-stat-label">Stock bajo (≤5)</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="invOutStock" style="color: #ff3c3c">
+              0
+            </div>
+            <div class="pay-stat-label">Sin stock</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="invTotalValue">$0</div>
+            <div class="pay-stat-label">Valor inventario</div>
+          </div>
+        </div>
+        <div class="inv-actions">
+          <input
+            class="adm-search"
+            type="text"
+            id="admInvSearch"
+            placeholder="🔍 Buscar producto..."
+            oninput="renderAdminInventory()"
+          />
+          <select id="admInvCatFilter" onchange="renderAdminInventory()">
+            <option value="">Todas las categorías</option>
+            <option value="mujer">Mujer</option>
+            <option value="hombre">Hombre</option>
+            <option value="accesorios">Accesorios</option>
+          </select>
+          <button class="adm-btn-primary" onclick="openAddProduct()">
+            + Nuevo producto
+          </button>
+        </div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Tallas</th>
+                <th>Stock total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="admInventoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB VENTAS -->
+      <div class="adm-content" id="tab-sales">
+        <div class="adm-section-title">
+          <h2>Ventas Tienda Física</h2>
+          <p>Registra y controla todas las ventas en punto de venta</p>
+        </div>
+        <div class="pay-stats">
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="saleToday">$0</div>
+            <div class="pay-stat-label">Ventas hoy</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="saleTodayCount">0</div>
+            <div class="pay-stat-label">Transacciones hoy</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="saleAvgTicket">$0</div>
+            <div class="pay-stat-label">Ticket promedio</div>
+          </div>
+          <div class="pay-stat">
+            <div class="pay-stat-val" id="saleMonthTotal">$0</div>
+            <div class="pay-stat-label">Total acumulado</div>
+          </div>
+        </div>
+        <div class="sale-form-card">
+          <h3 class="adm-sub-title">Registrar venta</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vendedor</label
+              ><input
+                type="text"
+                id="saleVendor"
+                placeholder="Nombre del vendedor"
+              />
+            </div>
+            <div class="form-group">
+              <label>Cliente (opcional)</label
+              ><input
+                type="text"
+                id="saleClient"
+                placeholder="Nombre del cliente"
+              />
+            </div>
+            <div class="form-group">
+              <label>Método de pago</label>
+              <select id="salePayMethod">
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Nequi">📱 Nequi</option>
+                <option value="Daviplata">📱 Daviplata</option>
+                <option value="Tarjeta">💳 Tarjeta</option>
+                <option value="Transferencia">🔁 Transferencia</option>
+              </select>
+            </div>
+          </div>
+          <h4
+            style="
+              font-size: 11px;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+              color: var(--accent);
+              margin: 20px 0 12px;
+            "
+          >
+            Productos vendidos
+          </h4>
+          <div id="saleItemsList"></div>
+          <button
+            class="adm-btn-ghost"
+            onclick="addSaleItem()"
+            style="margin-top: 10px"
+          >
+            + Agregar producto
+          </button>
+          <div class="sale-total-row">
+            <div>
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--gray-text);
+                  letter-spacing: 2px;
+                  text-transform: uppercase;
+                  margin-bottom: 4px;
+                "
+              >
+                Total venta
+              </div>
+              <div class="sale-total-val" id="saleTotalPreview">$0</div>
+            </div>
+            <div style="display: flex; gap: 10px">
+              <button class="adm-btn-ghost" onclick="clearSaleForm()">
+                Limpiar
+              </button>
+              <button class="adm-btn-primary" onclick="registerSaleAdmin()">
+                REGISTRAR VENTA
+              </button>
+            </div>
+          </div>
+        </div>
+        <h3 class="adm-sub-title" style="margin-top: 28px">
+          Historial de ventas
+        </h3>
+        <div class="sale-filters">
+          <input
+            type="date"
+            id="saleFilterDate"
+            onchange="renderAdminSalesTable()"
+          />
+          <select id="saleFilterMethod" onchange="renderAdminSalesTable()">
+            <option value="">Todos los métodos</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Transferencia">Transferencia</option>
+          </select>
+          <button class="adm-btn-ghost" onclick="exportAdminSalesCSV()">
+            ⬇ Exportar CSV
+          </button>
+        </div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Vendedor</th>
+                <th>Cliente</th>
+                <th>Productos</th>
+                <th>Método</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="admSalesBody">
+              <tr class="empty-row">
+                <td colspan="7">Sin ventas registradas</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB ANALYTICS -->
+      <div class="adm-content" id="tab-analytics">
+        <div class="adm-section-title">
+          <h2>Análisis de Ventas</h2>
+          <p>Visualiza el rendimiento de tu negocio en gráficas interactivas</p>
+        </div>
+        <div
+          class="chart-container"
+          style="
+            background: var(--gray);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+          "
+        >
+          <h3 class="adm-sub-title" style="margin-top: 0">
+            Ventas Diarias (Últimos 7 días)
+          </h3>
+          <canvas
+            id="salesChart"
+            style="max-height: 400px; width: 100%"
+          ></canvas>
+        </div>
+        <div
+          class="chart-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px"
+        >
+          <div
+            class="chart-card"
+            style="
+              background: var(--gray);
+              border: 1px solid var(--border);
+              padding: 20px;
+              border-radius: 4px;
+            "
+          >
+            <h3 class="adm-sub-title" style="margin-top: 0">
+              Canales de Venta
+            </h3>
+            <canvas id="channelChart" style="max-height: 250px"></canvas>
+          </div>
+          <div
+            class="chart-card"
+            style="
+              background: var(--gray);
+              border: 1px solid var(--border);
+              padding: 20px;
+              border-radius: 4px;
+            "
+          >
+            <h3 class="adm-sub-title" style="margin-top: 0">
+              Top Métodos de Pago
+            </h3>
+            <canvas id="methodChart" style="max-height: 250px"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div
+      class="modal-overlay"
+      id="modalOverlay"
+      onclick="closeProductModal()"
+    ></div>
+    <div class="adm-modal" id="productModal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nuevo Producto</h3>
+        <button class="adm-close" onclick="closeProductModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalProductId" />
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Nombre del producto</label
+            ><input
+              type="text"
+              id="modalName"
+              placeholder="Ej: Hoodie Crop Urbana"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoría</label
+            ><select id="modalCat">
+              <option value="mujer">Mujer</option>
+              <option value="hombre">Hombre</option>
+              <option value="accesorios">Accesorios</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Precio (COP)</label
+            ><input type="number" id="modalPrice" placeholder="89990" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Precio Oferta</label
+            ><input
+              type="number"
+              id="modalOldPrice"
+              placeholder="Opcional"
+              min="0"
+            />
+          </div>
+        </div>
+        <div class="form-row" style="display: flex; gap: 10px">
+          <div class="form-group full">
+            <label>URL imagen (opcional)</label
+            ><input type="text" id="modalImg" placeholder="https://..." />
+          </div>
+          <div class="form-group full">
+            <label>Subir imagen</label
+            ><input type="file" id="modalImgFile" accept="image/*" /><input
+              type="hidden"
+              id="modalImgBase64"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Lectura por código QR</label>
+            <div class="qr-tools">
+              <input
+                type="text"
+                id="modalQrValue"
+                placeholder="Contenido detectado del QR"
+                readonly
+              />
+              <div
+                class="qr-actions"
+                style="flex-wrap: wrap; gap: 8px; display: flex"
+              >
+                <button
+                  type="button"
+                  class="adm-btn-ghost"
+                  id="startCameraScan"
+                  onclick="toggleCameraScan()"
+                >
+                  Escanear Cámara
+                </button>
+                <label class="adm-btn-ghost qr-upload-btn">
+                  Subir imagen QR
+                  <input type="file" id="modalQrFile" accept="image/*" hidden />
+                </label>
+                <button
+                  type="button"
+                  class="adm-btn-ghost"
+                  onclick="clearQrResult()"
+                >
+                  Limpiar QR
+                </button>
+              </div>
+              <small class="qr-help"
+                >Sube una imagen con QR o usa la cámara para autocompletar el
+                artículo por ID o nombre.</small
+              >
+              <div
+                id="qr-reader"
+                style="
+                  width: 100%;
+                  max-width: 400px;
+                  margin-top: 10px;
+                  display: none;
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+        <h4
+          style="
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 18px 0 12px;
+          "
+        >
+          Stock por talla
+        </h4>
+        <div class="size-stock-grid">
+          <div class="size-stock-item">
+            <label>XS</label
+            ><input type="number" id="stock-XS" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>S</label
+            ><input type="number" id="stock-S" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>M</label
+            ><input type="number" id="stock-M" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>L</label
+            ><input type="number" id="stock-L" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>XL</label
+            ><input type="number" id="stock-XL" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>XXL</label
+            ><input type="number" id="stock-XXL" min="0" value="0" />
+          </div>
+          <div class="size-stock-item">
+            <label>U</label
+            ><input
+              type="number"
+              id="stock-U"
+              min="0"
+              value="0"
+              title="Talla Única (Accesorios)"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="adm-btn-ghost" onclick="closeProductModal()">
+          Cancelar
+        </button>
+        <button class="adm-btn-primary" onclick="saveProduct()">GUARDAR</button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL OPCIONES DE PAGO ══ -->
+    <div
+      class="modal-overlay"
+      id="paymentModalOverlay"
+      onclick="closePaymentModal()"
+    ></div>
+    <div
+      class="adm-modal payment-modal"
+      id="paymentModal"
+      style="max-width: 560px"
+    >
+      <div class="modal-header">
+        <h3 id="paymentTitle">Selecciona tu método de pago</h3>
+        <button class="adm-close" onclick="closePaymentModal()">✕</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; max-height: 600px">
+        <!-- PASO 1: Datos del Cliente -->
+        <div id="paymentStep1" class="payment-step active">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            📋 Completa tus datos para procesar el pago
+          </p>
+          <form
+            id="customerForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Nombre Completo *</label
+              >
+              <input
+                type="text"
+                id="customerName"
+                placeholder="Juan Pérez"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Correo Electrónico *</label
+              >
+              <input
+                type="email"
+                id="customerEmail"
+                placeholder="juan@example.com"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Teléfono / WhatsApp *</label
+              >
+              <input
+                type="tel"
+                id="customerPhone"
+                placeholder="+57 3XX XXX XXXX"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Dirección de Entrega *</label
+              >
+              <input
+                type="text"
+                id="customerAddress"
+                placeholder="Calle 123 #45-67, Apto 8, Bogotá"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Ciudad / Departamento *</label
+              >
+              <input
+                type="text"
+                id="customerCity"
+                placeholder="Bogotá, D.C."
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <button
+              type="button"
+              class="adm-btn"
+              onclick="continueToPaymentMethod()"
+              style="margin-top: 10px"
+            >
+              CONTINUAR AL ENVÍO →
+            </button>
+          </form>
+        </div>
+
+        <!-- PASO 2: Selección de Envío -->
+        <div id="paymentStep2" class="payment-step" style="display: none">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 16px;
+            "
+          >
+            📦 Selecciona tu método de envío
+          </p>
+          <div
+            id="shippingOptionsContainer"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <!-- Se renderizan dinámicamente desde JS -->
+          </div>
+        </div>
+
+        <!-- PASO 2B: Método de Pago -->
+        <div
+          id="paymentStep2Payment"
+          class="payment-step"
+          style="display: none"
+        >
+          <div id="paymentSummary"></div>
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            💳 Elige cómo deseas pagar
+          </p>
+          <div class="pay-methods-grid" id="checkoutPayMethods">
+            <!-- Se renderizan dinámicamente desde JS -->
+          </div>
+          <div
+            id="finalizeActionContainer"
+            style="
+              margin-top: 25px;
+              display: none;
+              padding-top: 15px;
+              border-top: 1px solid var(--border);
+            "
+          >
+            <button
+              class="adm-btn"
+              onclick="finalizePurchase()"
+              style="
+                width: 100%;
+                height: 54px;
+                background: var(--accent);
+                color: var(--black);
+                font-weight: 800;
+                font-family: &quot;Bebas Neue&quot;;
+                letter-spacing: 2px;
+                font-size: 19px;
+                cursor: pointer;
+              "
+            >
+              CONFIRMAR COMPRA Y FINALIZAR →
+            </button>
+          </div>
+        </div>
+
+        <!-- PASO 3: TARJETA DE CRÉDITO/DÉBITO -->
+        <div id="paymentStep3" class="payment-step" style="display: none">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            💳 Datos de tu tarjeta de crédito/débito
+          </p>
+          <form
+            id="cardForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Número de Tarjeta *</label
+              >
+              <input
+                type="text"
+                id="cardNumber"
+                placeholder="4532 1234 5678 9010"
+                maxlength="23"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                  letter-spacing: 2px;
+                  font-family: monospace;
+                "
+                oninput="formatCardNumber(this)"
+              />
+              <small
+                id="cardBrandInfo"
+                style="
+                  display: block;
+                  margin-top: 6px;
+                  color: #3498db;
+                  font-size: 11px;
+                "
+              ></small>
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+            >
+              <div>
+                <label style="font-size: 12px; color: var(--gray-text)"
+                  >Vencimiento (MM/YY) *</label
+                >
+                <input
+                  type="text"
+                  id="cardExpiry"
+                  placeholder="12/26"
+                  maxlength="5"
+                  required
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background: var(--dark);
+                    color: white;
+                    font-size: 14px;
+                    font-family: monospace;
+                  "
+                  oninput="formatExpiry(this)"
+                />
+              </div>
+              <div>
+                <label style="font-size: 12px; color: var(--gray-text)"
+                  >CVV *</label
+                >
+                <input
+                  type="text"
+                  id="cardCVV"
+                  placeholder="***"
+                  maxlength="4"
+                  required
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background: var(--dark);
+                    color: white;
+                    font-size: 14px;
+                    font-family: monospace;
+                  "
+                  oninput="formatCVV(this)"
+                />
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Nombre en la Tarjeta *</label
+              >
+              <input
+                type="text"
+                id="cardName"
+                placeholder="JUAN PEREZ"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                  text-transform: uppercase;
+                "
+              />
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Documento de Identidad *</label
+              >
+              <input
+                type="text"
+                id="cardDocNumber"
+                placeholder="1234567890"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div
+              style="
+                background: rgba(52, 152, 219, 0.1);
+                border-left: 3px solid #3498db;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              🔐 Tus datos están encriptados. No guardamos información de
+              tarjeta en nuestros servidores.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPayment()"
+                style="background: #27ae60"
+              >
+                ✓ PAGAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASO 3: PSE / TRANSFERENCIA BANCARIA -->
+        <div id="paymentStep3PSE" class="payment-step" style="display: none">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            🏦 Datos para Transferencia Bancaria / PSE
+          </p>
+          <form
+            id="pseForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Banco *</label
+              >
+              <select
+                id="pseBank"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              >
+                <option value="">Selecciona tu banco...</option>
+                <option value="bancolombia">Bancolombia</option>
+                <option value="davivienda">Davivienda</option>
+                <option value="bbva">BBVA</option>
+                <option value="santander">Santander</option>
+                <option value="scotiabank">ScotiaBank</option>
+                <option value="occidente">Banco de Occidente</option>
+                <option value="itau">Itaú</option>
+                <option value="pichincha">Pichincha</option>
+                <option value="otros">Otro banco</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Tipo de Documento *</label
+              >
+              <select
+                id="pseDocType"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              >
+                <option value="">Selecciona tipo...</option>
+                <option value="cc">Cédula de Ciudadanía (CC)</option>
+                <option value="ce">Cédula de Extranjería (CE)</option>
+                <option value="pasaporte">Pasaporte</option>
+                <option value="nit">NIT</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Número de Documento *</label
+              >
+              <input
+                type="text"
+                id="pseDocNumber"
+                placeholder="1234567890"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div
+              style="
+                background: rgba(30, 144, 255, 0.1);
+                border-left: 3px solid #1e90ff;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              ℹ️ Te enviaremos por WhatsApp un enlace de PSE seguro o datos para
+              transferencia bancaria directa.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPaymentPSE()"
+                style="background: #1e90ff"
+              >
+                → CONTINUAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASO 3: NEQUI -->
+        <div id="paymentStep3Nequi" class="payment-step" style="display: none">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            📱 Datos para Pago por Nequi
+          </p>
+          <form
+            id="nequiForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Número de Celular Nequi *</label
+              >
+              <input
+                type="tel"
+                id="nequiPhone"
+                placeholder="+57 3XX XXX XXXX"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+                oninput="formatPhone(this)"
+              />
+              <small
+                style="
+                  display: block;
+                  margin-top: 6px;
+                  color: var(--gray-text);
+                  font-size: 11px;
+                "
+                >Debe ser el número asociado a tu cuenta Nequi</small
+              >
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Nombre Completo *</label
+              >
+              <input
+                type="text"
+                id="nequiName"
+                placeholder="Juan Pérez"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div
+              style="
+                background: rgba(233, 30, 139, 0.1);
+                border-left: 3px solid #e91e8b;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              💬 Te enviaremos por WhatsApp la solicitud de pago Nequi. Solo
+              debes aprobarla desde tu app.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPaymentNequi()"
+                style="background: #e91e8b"
+              >
+                → CONTINUAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASO 3: DAVIPLATA -->
+        <div
+          id="paymentStep3Daviplata"
+          class="payment-step"
+          style="display: none"
+        >
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            📱 Datos para Pago por Daviplata
+          </p>
+          <form
+            id="daviplataForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Número de Celular Daviplata *</label
+              >
+              <input
+                type="tel"
+                id="daviplataPhone"
+                placeholder="+57 3XX XXX XXXX"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+                oninput="formatPhone(this)"
+              />
+              <small
+                style="
+                  display: block;
+                  margin-top: 6px;
+                  color: var(--gray-text);
+                  font-size: 11px;
+                "
+                >Celular registrado en Davivienda / Daviplata</small
+              >
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Nombre Completo *</label
+              >
+              <input
+                type="text"
+                id="daviplataName"
+                placeholder="Juan Pérez"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div
+              style="
+                background: rgba(255, 107, 0, 0.1);
+                border-left: 3px solid #ff6b00;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              💬 Te enviaremos por WhatsApp el código QR y datos para pagar
+              desde tu Daviplata.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPaymentDaviplata()"
+                style="background: #ff6b00"
+              >
+                → CONTINUAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASO 3: EFECTIVO -->
+        <div id="paymentStep3Cash" class="payment-step" style="display: none">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--gray-text);
+              margin-bottom: 20px;
+            "
+          >
+            💵 Información para Pago en Efectivo
+          </p>
+          <form
+            id="cashForm"
+            style="display: flex; flex-direction: column; gap: 12px"
+          >
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >¿Prefieres pagar en efectivo? *</label
+              >
+              <select
+                id="cashDeliveryOption"
+                required
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+                onchange="updateCashFields()"
+              >
+                <option value="">Selecciona opción...</option>
+                <option value="delivery">Pago contra entrega</option>
+                <option value="pickup">Recogida en tienda</option>
+              </select>
+            </div>
+            <div
+              id="cashDeliveryInfo"
+              style="
+                background: rgba(46, 204, 113, 0.1);
+                border-left: 3px solid #2ecc71;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              ℹ️ Selecciona una opción para continuar
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Referencia Adicional (Apto, Piso, etc.)</label
+              >
+              <input
+                type="text"
+                id="cashDeliveryRef"
+                placeholder="Apto 305, Portería 2, Casa blanca con puerta verde..."
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--dark);
+                  color: white;
+                  font-size: 14px;
+                "
+              />
+            </div>
+            <div
+              style="
+                background: rgba(52, 152, 219, 0.1);
+                border-left: 3px solid #3498db;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--gray-text);
+              "
+            >
+              👤 Te contactaremos al número de WhatsApp registrado para
+              coordinar la entrega o recogida.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPaymentCash()"
+                style="background: #2ecc71"
+              >
+                ✓ CONFIRMAR
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer" id="paymentFooter">
+        <button class="adm-btn-ghost" onclick="closePaymentModal()">
+          CANCELAR
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL OPCIONES DE LOGÍSTICA ══ -->
+    <div
+      class="modal-overlay"
+      id="shippingModalOverlay"
+      onclick="closeShippingModal()"
+    ></div>
+    <div class="adm-modal" id="shippingModal" style="max-width: 520px">
+      <div class="modal-header">
+        <h3>Selecciona tu método de envío</h3>
+        <button class="adm-close" onclick="closeShippingModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div
+          id="shippingOptions"
+          style="display: flex; flex-direction: column; gap: 12px"
+        >
+          <!-- Se renderizan dinámicamente desde JS -->
+        </div>
+        <div
+          style="
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+          "
+        >
+          <h4 style="margin-bottom: 10px; font-size: 14px">
+            Dirección de envío
+          </h4>
+          <input
+            type="text"
+            id="shippingAddress"
+            placeholder="Calle, número, apartamento"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              margin-bottom: 10px;
+              font-size: 13px;
+            "
+          />
+          <input
+            type="text"
+            id="shippingCity"
+            placeholder="Ciudad, Estado"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              margin-bottom: 10px;
+              font-size: 13px;
+            "
+          />
+          <input
+            type="text"
+            id="shippingPhone"
+            placeholder="Teléfono de contacto"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              font-size: 13px;
+            "
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="adm-btn-ghost" onclick="closeShippingModal()">
+          CANCELAR
+        </button>
+        <button
+          class="adm-btn"
+          onclick="confirmShipping()"
+          id="confirmShippingBtn"
+          disabled
+        >
+          CONTINUAR AL PAGO
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ SCRIPTS ══ -->
+    <!-- QR Scanner Library -->
+    <script
+      src="https://unpkg.com/html5-qrcode"
+      type="text/javascript"
+    ></script>
+    <!-- Chart.js for Sales Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

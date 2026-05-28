@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test - Sistema de Pagos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'DM Sans', sans-serif;
+      background: #0a0a0a;
+      color: white;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      padding: 30px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    h1 { margin-bottom: 20px; color: #fff; }
+    .test-section {
+      background: #222;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      border-left: 3px solid #3498db;
+    }
+    .test-btn {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      font-size: 12px;
+    }
+    .test-btn:hover { background: #2980b9; }
+    .result {
+      background: #0a0a0a;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #444;
+    }
+    .success { color: #2ecc71; }
+    .error { color: #e74c3c; }
+    .info { color: #3498db; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test - Sistema de Pagos</h1>
+    
+    <div class="test-section">
+      <h3>1. Test Pago con Tarjeta</h3>
+      <button class="test-btn" onclick="testCardPayment()">Procesar Pago Tarjeta</button>
+      <div id="result1" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>2. Test Pago Nequi</h3>
+      <button class="test-btn" onclick="testNequiPayment()">Procesar Pago Nequi</button>
+      <div id="result2" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>3. Test Consulta de Pago</h3>
+      <button class="test-btn" onclick="testPaymentQuery()">Consultar Pago</button>
+      <div id="result3" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>4. Test Historial por Email</h3>
+      <button class="test-btn" onclick="testPaymentHistory()">Ver Historial</button>
+      <div id="result4" class="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+    const API_KEY = 'dev-api-key';
+
+    async function testCardPayment() {
+      const result = document.getElementById('result1');
+      result.innerHTML = '<span class="info">⏳ Procesando...</span>';
+      
+      try {
+        const paymentData = {
+          id: 'PAY-TEST-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          customer: {
+            name: 'Test Usuario Tarjeta',
+            email: 'test.tarjeta@example.com',
+            phone: '+573001234567',
+            address: 'Calle 123 #45-67'
+          },
+          method: 'card',
+          methodDetails: {
+            cardNumber: '**** **** **** 4532',
+            cardName: 'TEST USER',
+            cardBrand: 'VISA'
+          },
+          subtotal: 150000,
+          shipping: 15000,
+          total: 165000,
+          items: [
+            { name: 'Test Producto 1', qty: 2, price: 75000 }
+          ],
+          status: 'pending_verification',
+          shipping_address: 'Calle 123 #45-67, Bogotá',
+          reference: 'WIN-TEST-CARD-' + Date.now()
+        };
+
+        const res = await fetch(API_URL + '/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY
+          },
+          body: JSON.stringify(paymentData)
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          result.innerHTML = `
+            <span class="success">✓ Pago registrado exitosamente</span>
+            <br><br>
+            <strong>ID Pago:</strong> ${data.payment.id}
+            <br><strong>Referencia:</strong> ${data.payment.reference}
+            <br><strong>Monto:</strong> $${data.payment.amount.toLocaleString('es-CO')}
+            <br><strong>Estado:</strong> ${data.payment.status}
+            <br><strong>Cliente:</strong> ${data.payment.customer.name}
+            <br><strong>Email:</strong> ${data.payment.customer.email}
+          `;
+        } else {
+          result.innerHTML = `<span class="error">✗ Error: ${data.error}</span>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+      }
+    }
+
+    async function testNequiPayment() {
+      const result = document.getElementById('result2');
+      result.innerHTML = '<span class="info">⏳ Procesando...</span>';
+      
+      try {
+        const paymentData = {
+          id: 'PAY-TEST-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          customer: {
+            name: 'Test Usuario Nequi',
+            email: 'test.nequi@example.com',
+            phone: '+573009876543',
+            address: 'Carrera 50 #20-30'
+          },
+          method: 'nequi',
+          methodName: 'Nequi',
+          subtotal: 89990,
+          shipping: 12000,
+          total: 101990,
+          items: [
+            { name: 'Test Producto 2', qty: 1, price: 89990 }
+          ],
+          status: 'waiting_confirmation',
+          shipping_address: 'Carrera 50 #20-30, Medellín',
+          reference: 'WIN-TEST-NEQUI-' + Date.now()
+        };
+
+        const res = await fetch(API_URL + '/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY
+          },
+          body: JSON.stringify(paymentData)
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          result.innerHTML = `
+            <span class="success">✓ Pedido registrado exitosamente</span>
+            <br><br>
+            <strong>ID Pago:</strong> ${data.payment.id}
+            <br><strong>Referencia:</strong> ${data.payment.reference}
+            <br><strong>Monto:</strong> $${data.payment.amount.toLocaleString('es-CO')}
+            <br><strong>Estado:</strong> ${data.payment.status}
+            <br><strong>Método:</strong> ${data.payment.methodName}
+            <br><strong>WhatsApp:</strong> ${data.payment.customer.phone}
+          `;
+        } else {
+          result.innerHTML = `<span class="error">✗ Error: ${data.error}</span>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+      }
+    }
+
+    async function testPaymentQuery() {
+      const result = document.getElementById('result3');
+      result.innerHTML = '<span class="info">⏳ Consultando...</span>';
+      
+      try {
+        // Usar la referencia del primer test
+        const reference = 'WIN-TEST-CARD-' + (Date.now() - 10000);
+        
+        const res = await fetch(API_URL + '/payments/' + reference, {
+          headers: { 'x-api-key': API_KEY }
+        });
+
+        if (res.status === 404) {
+          result.innerHTML = `<span class="info">ℹ️  No hay pagos con esa referencia aún (espera a procesar uno)</span>`;
+          return;
+        }
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          result.innerHTML = `
+            <span class="success">✓ Pago encontrado</span>
+            <br><br>
+            <strong>ID:</strong> ${data.id}
+            <br><strong>Cliente:</strong> ${data.client}
+            <br><strong>Email:</strong> ${data.customer_email}
+            <br><strong>Monto:</strong> $${data.total.toLocaleString('es-CO')}
+            <br><strong>Estado:</strong> ${data.payment_status}
+            <br><strong>Fecha:</strong> ${new Date(data.timestamp).toLocaleString('es-CO')}
+          `;
+        } else {
+          result.innerHTML = `<span class="error">✗ Error: ${data.error}</span>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+      }
+    }
+
+    async function testPaymentHistory() {
+      const result = document.getElementById('result4');
+      result.innerHTML = '<span class="info">⏳ Cargando historial...</span>';
+      
+      try {
+        const email = 'test.tarjeta@example.com';
+        
+        const res = await fetch(API_URL + '/payments/customer/' + email, {
+          headers: { 'x-api-key': API_KEY }
+        });
+
+        const data = await res.json();
+        
+        if (res.ok && data.length > 0) {
+          result.innerHTML = `
+            <span class="success">✓ Se encontraron ${data.length} pago(s)</span>
+            <br><br>
+            ${data.map(p => `
+              <strong>${p.client}</strong>: $${p.total.toLocaleString('es-CO')} 
+              (${new Date(p.timestamp).toLocaleDateString('es-CO')})
+              <br>
+            `).join('')}
+          `;
+        } else {
+          result.innerHTML = `<span class="info">ℹ️  No hay pagos registrados para este email aún</span>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<span class="error">✗ Error: ${err.message}</span>`;
+      }
+    }
+  </script>
+</body>
+</html>
