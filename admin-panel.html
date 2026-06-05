@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WINNER — Panel Administrativo</title>
     <link rel="stylesheet" href="admin-panel.css" />
+    <link rel="stylesheet" href="goper/expenses-logic.css" />
     <link rel="stylesheet" href="payments-logic.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700&display=swap"
@@ -251,8 +252,9 @@
               height="18"
             >
               <path
-                d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
               />
+              <circle cx="12" cy="12" r="3" />
             </svg>
             Gastos Operativos
           </button>
@@ -482,30 +484,100 @@
             <h1>Gastos Operativos</h1>
             <p>Egresos de la tienda física (Arriendo, servicios, insumos)</p>
           </div>
-          <div class="toolbar">
-            <button class="btn-accent" onclick="openExpenseModal()">
-              + Registrar Gasto
-            </button>
-            <div
-              class="phc-summary-box"
-              style="
-                margin-left: auto;
-                background: rgba(255, 107, 107, 0.1);
-                border-color: var(--red);
-              "
-            >
-              <label class="phcs-label" style="color: var(--red)"
-                >TOTAL GASTOS</label
-              >
-              <span
-                id="totalExpensesSum"
-                class="phcs-value"
-                style="color: white"
-                >$0</span
-              >
+
+          <!-- KPIs -->
+          <div class="expenses-kpi-grid">
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">TOTAL GASTOS DEL MES</div>
+              <div class="dash-val-large" id="expTotalMonth">$0</div>
+              <div class="dash-sub-impact" id="expMonthLabel">Mes actual</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">GASTOS ESTA SEMANA</div>
+              <div class="dash-val-large" id="expTotalWeek">$0</div>
+              <div class="dash-sub-impact" id="expWeekLabel">Semana actual</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">MAYOR GASTO</div>
+              <div class="dash-val-large" id="expTopCategory">-</div>
+              <div class="dash-sub-impact" id="expTopPercent">0%</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">PROMEDIO SEMANAL</div>
+              <div class="dash-val-large" id="expAvgWeekly">$0</div>
+              <div class="dash-sub-impact">Gasto promedio</div>
             </div>
           </div>
-          <div id="expensesList" class="messaging-grid"></div>
+
+          <!-- Gráficos: barras (semanas) y torta (categorías) -->
+          <div class="expenses-charts-row">
+            <div
+              class="dash-card"
+              style="
+                background: var(--gray);
+                padding: 16px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  text-align: center;
+                  margin-bottom: 12px;
+                  color: var(--white);
+                  letter-spacing: 2px;
+                "
+              >
+                GASTOS POR SEMANA
+              </h3>
+              <canvas id="expensesWeeklyChart" height="200"></canvas>
+            </div>
+            <div
+              class="dash-card"
+              style="
+                background: var(--gray);
+                padding: 16px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  text-align: center;
+                  margin-bottom: 12px;
+                  color: var(--white);
+                  letter-spacing: 2px;
+                "
+              >
+                GASTOS POR CATEGORÍA
+              </h3>
+              <canvas id="expensesCategoryChart" height="200"></canvas>
+            </div>
+          </div>
+
+          <!-- Controles: selector de mes, botón nuevo gasto -->
+          <div class="expenses-controls">
+            <div class="form-group" style="margin-bottom: 0">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Mes</label
+              >
+              <input type="month" id="expenseMonth" class="tb-select" />
+            </div>
+            <button class="btn-accent" id="refreshExpenses">Actualizar</button>
+            <button class="btn-accent" id="addExpenseBtn">+ Nuevo Gasto</button>
+          </div>
+
+          <!-- Tablas desglosadas por semana -->
+          <div id="expensesWeeklyTables" class="expenses-weekly-tables">
+            <div class="ls-empty">Cargando gastos...</div>
+          </div>
         </div>
 
         <!-- ══ PAGE: INVENTARIO & QR ══ -->
@@ -515,6 +587,79 @@
             <p>
               Productos, stock por talla y códigos de barras EAN-13 / Code 128
             </p>
+          </div>
+
+          <!-- MODAL GASTO -->
+          <div
+            class="modal-overlay"
+            id="expenseModalOverlay"
+            onclick="closeExpenseModal()"
+          ></div>
+          <div class="modal" id="expenseModal" style="max-width: 500px">
+            <div class="modal-header">
+              <h3 id="expenseModalTitle">Nuevo Gasto</h3>
+              <button class="modal-close" onclick="closeExpenseModal()">
+                ✕
+              </button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="expenseId" />
+              <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" id="expenseDate" required />
+              </div>
+              <div class="form-group">
+                <label>Categoría *</label>
+                <select id="expenseCategory" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Pagos sueldos">Pagos sueldos</option>
+                  <option value="Arriendo / Servicios">
+                    Arriendo / Servicios
+                  </option>
+                  <option value="Comida / Insumos">Comida / Insumos</option>
+                  <option value="Transporte">Transporte</option>
+                  <option value="Impuestos">Impuestos</option>
+                  <option value="Mantenimiento">Mantenimiento</option>
+                  <option value="Otros">Otros</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Concepto *</label>
+                <input
+                  type="text"
+                  id="expenseConcept"
+                  placeholder="Ej: Publicidad Facebook"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Detalle (opcional)</label>
+                <textarea
+                  id="expenseDetail"
+                  rows="2"
+                  placeholder="Descripción adicional"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label>Valor *</label>
+                <input
+                  type="number"
+                  id="expenseAmount"
+                  step="1000"
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-ghost" onclick="closeExpenseModal()">
+                Cancelar
+              </button>
+              <button class="btn-accent" id="saveExpenseBtn">
+                Guardar Gasto
+              </button>
+            </div>
           </div>
           <div class="inv-stats-row">
             <div class="inv-stat">
@@ -2447,9 +2592,9 @@
     <script src="themead/dashboard-themes.js"></script>
     <script src="messaging.js"></script>
     <script src="dashboard.js"></script>
-    <script src="expenses.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="sales-logic.js"></script>
     <script src="payments-logic.js"></script>
+    <script src="goper/expenses-logic.js"></script>
   </body>
 </html>

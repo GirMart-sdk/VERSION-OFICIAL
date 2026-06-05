@@ -2971,7 +2971,6 @@ app.post("/api/webhooks/payment", async (req, res) => {
   }
 });
 
-/* ── RUTAS DE GASTOS ── */
 // Joi Schema para validación de gastos
 const expenseSchema = Joi.object({
   id: Joi.string().optional(),
@@ -2992,30 +2991,17 @@ app.get("/api/expenses", requireAuth, async (req, res) => {
   if (category) where.category = category;
 
   try {
-    if (!prisma.expense) {
-      console.warn(
-        "⚠️ Advertencia: El modelo 'Expense' no está definido en el esquema Prisma.",
-      );
-      return res.json([]);
-    }
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: { createdAt: "desc" },
     });
     res.json(expenses);
   } catch (err) {
-    res.status(500).json({ error: err.message });
     console.error("❌ Error fetching expenses:", err.message);
     res.status(500).json({ error: "Error al obtener gastos" });
   }
 });
 
-app.post("/api/expenses", requireAuth, async (req, res) => {
-  const { description, amount, category } = req.body;
-  if (!prisma.expense) {
-    return res.status(500).json({
-      error:
-        "El sistema de gastos no ha sido sincronizado en la base de datos.",
 // GET /api/expenses/summary?month=YYYY-MM
 app.get("/api/expenses/summary", requireAuth, async (req, res) => {
   const { month } = req.query; // formato YYYY-MM
@@ -3138,68 +3124,70 @@ app.get("/api/expenses/by-category", requireAuth, async (req, res) => {
 });
 
 // POST /api/expenses
-app.post("/api/expenses", requireAuth, validate(expenseSchema), async (req, res) => {
-  const { id, date, category, concept, detail, amount } = req.body;
-  const expenseId = id || "EXP-" + Date.now().toString(36).toUpperCase();
+app.post(
+  "/api/expenses",
+  requireAuth,
+  validate(expenseSchema),
+  async (req, res) => {
+    const { id, date, category, concept, detail, amount } = req.body;
+    const expenseId = id || "EXP-" + Date.now().toString(36).toUpperCase();
 
-  try {
-    const expense = await prisma.expense.create({
-      data: {
-        id: "EXP-" + Date.now().toString(36).toUpperCase(),
-        description,
-        amount: Number(amount),
-        category: category || "General",
-        id: expenseId,
-        date: new Date(date),
-        category,
-        concept,
-        detail,
-        amount: new Prisma.Decimal(amount),
-      },
-    });
-    res.status(201).json({ success: true, expense });
-  } catch (err) {
-    console.error("❌ Error creating expense:", err.message);
-    res.status(500).json({ error: "Error al registrar gasto" });
-  }
-});
+    try {
+      const expense = await prisma.expense.create({
+        data: {
+          id: expenseId,
+          date: new Date(date),
+          category,
+          concept,
+          detail,
+          amount: new Prisma.Decimal(amount),
+        },
+      });
+      res.status(201).json({ success: true, expense });
+    } catch (err) {
+      console.error("❌ Error creating expense:", err.message);
+      res.status(500).json({ error: "Error al registrar gasto" });
+    }
+  },
+);
 
 // PUT /api/expenses/:id
-app.put("/api/expenses/:id", requireAuth, validate(expenseSchema), async (req, res) => {
-  const { date, category, concept, detail, amount } = req.body;
-  try {
-    const expense = await prisma.expense.update({
-      where: { id: req.params.id },
-      data: {
-        date: new Date(date),
-        category,
-        concept,
-        detail,
-        amount: new Prisma.Decimal(amount),
-        updatedAt: new Date(),
-      },
-    });
-    res.json({ success: true, expense });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    console.error("❌ Error updating expense:", err.message);
-    res.status(500).json({ error: "Error al actualizar gasto" });
-  }
-});
+app.put(
+  "/api/expenses/:id",
+  requireAuth,
+  validate(expenseSchema),
+  async (req, res) => {
+    const { date, category, concept, detail, amount } = req.body;
+    try {
+      const expense = await prisma.expense.update({
+        where: { id: req.params.id },
+        data: {
+          date: new Date(date),
+          category,
+          concept,
+          detail,
+          amount: new Prisma.Decimal(amount),
+          updatedAt: new Date(),
+        },
+      });
+      res.json({ success: true, expense });
+    } catch (err) {
+      console.error("❌ Error updating expense:", err.message);
+      res.status(500).json({ error: "Error al actualizar gasto" });
+    }
+  },
+);
 
 // DELETE /api/expenses/:id
 app.delete("/api/expenses/:id", requireAuth, async (req, res) => {
   try {
     await prisma.expense.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
     res.json({ success: true, message: "Gasto eliminado" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
     console.error("❌ Error deleting expense:", err.message);
     res.status(500).json({ error: "Error al eliminar gasto" });
   }
 });
-
 /* ═══════════════════════════════════════════════════════════
    FALLBACK — servir index.html para rutas de SPA
    ═══════════════════════════════════════════════════════════ */

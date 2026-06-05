@@ -351,6 +351,10 @@ window.navigateTo = function (page) {
     if (typeof initPaymentsTab === "function") initPaymentsTab();
     else console.warn("Módulo de pagos no cargado");
   }
+  if (page === "expenses") {
+    if (typeof initExpensesTab === "function") initExpensesTab();
+    else console.warn("Módulo de gastos no cargado");
+  }
   if (page === "vip" && typeof loadVIPCustomersData === "function")
     loadVIPCustomersData();
   if (page === "layaway" && typeof renderLayawaySales === "function")

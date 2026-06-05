@@ -172,8 +172,10 @@ model Expense {
   id          String   @id
   description String
   amount      Float
+  date        DateTime @db.Date // Campo para la fecha del gasto
   category    String   @default("General")
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("expenses")
 }
