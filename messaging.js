@@ -89,10 +89,17 @@ window.sendWSMessage = function (saleId, type) {
       break;
   }
 
-  window.open(
-    `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`,
-    "_blank",
-  );
+  // ACTUALIZACIÓN: Flujo sin redirección (Requiere WhatsApp Business API)
+  /*
+  apiFetch(`${API_URL}/whatsapp/send`, {
+    method: 'POST',
+    body: JSON.stringify({ to: cleanPhone, message: message })
+  }).then(() => toast("✓ Mensaje enviado automáticamente"));
+  */
+
+  // MODO ACTUAL (Legacy con redirección manual)
+  const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  window.open(waUrl, "_blank");
 };
 
 window.setMsgFilter = function (val) {

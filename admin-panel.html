@@ -5,20 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WINNER — Panel Administrativo</title>
     <link rel="stylesheet" href="admin-panel.css" />
+    <link rel="stylesheet" href="payments-logic.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <!-- QR Generator -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="qrcode.min.js"></script>
+    <!-- Barcode Generator (EAN-13 / Code 128) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <!-- QR Scanner -->
     <script
       src="https://unpkg.com/html5-qrcode"
       type="text/javascript"
     ></script>
-    <script src="messaging.js"></script>
-    <!-- Chart.js - usar alternativa funcional -->
+    <!-- Modern Charts: ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Legacy Chart.js for small components -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Cropper.js (Para edición de fotos de productos) -->
+    <link rel="stylesheet" href="cropper.min.css" />
+    <script src="cropper.min.js"></script>
   </head>
 
   <body>
@@ -38,7 +45,7 @@
           Ingresa tus credenciales para administrar la tienda
         </p>
         <div id="loginError" class="login-error" style="display: none"></div>
-        <form class="login-form" onsubmit="doLogin(event)" action="#">
+        <form class="login-form" id="loginForm">
           <div class="login-field">
             <label>Usuario</label>
             <div class="field-wrap">
@@ -83,7 +90,7 @@
                 placeholder="••••••••"
                 autocomplete="current-password"
               />
-              <button class="pass-toggle" onclick="togglePass()" type="button">
+              <button class="pass-toggle" id="btnTogglePass" type="button">
                 👁
               </button>
             </div>
@@ -102,9 +109,6 @@
             </svg>
           </button>
         </form>
-        <p class="login-hint">
-          Demo: <strong>admin</strong> / <strong>winner2026</strong>
-        </p>
       </div>
     </div>
 
@@ -162,7 +166,7 @@
                 d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
               />
             </svg>
-            Inventario &amp; QR
+            Inventario &amp; Barcode
           </button>
           <button class="snav-item" data-page="pos" onclick="navigateTo('pos')">
             <svg
@@ -235,6 +239,25 @@
           </button>
           <button
             class="snav-item"
+            data-page="expenses"
+            onclick="navigateTo('expenses')"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              width="18"
+              height="18"
+            >
+              <path
+                d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+              />
+            </svg>
+            Gastos Operativos
+          </button>
+          <button
+            class="snav-item"
             data-page="layaway"
             onclick="navigateTo('layaway')"
           >
@@ -274,7 +297,7 @@
               <rect x="7" y="13" width="4" height="4" />
               <path d="M13 13h1v1M15 15h2v2M13 17h2" />
             </svg>
-            Escáner QR
+            Escáner de Barras
           </button>
         </nav>
         <button class="sidebar-logout" onclick="doLogout()">
@@ -339,6 +362,29 @@
               <label class="dash-label-impact">Conversión</label>
               <span class="dash-val-large" id="kpiConversion">3.2%</span>
               <div class="dash-sub-impact" id="kpiConversionTrend">--</div>
+            </div>
+          </div>
+
+          <div class="kpi-grid redesign" style="margin-top: 15px">
+            <div class="dash-neon-box">
+              <label class="dash-label-impact">Deuda Clientes</label>
+              <span
+                class="dash-val-large"
+                id="kpiTotalDebt"
+                style="color: var(--orange)"
+                >$0</span
+              >
+              <div class="dash-sub-impact">PENDIENTE POR COBRAR</div>
+            </div>
+            <div class="dash-neon-box">
+              <label class="dash-label-impact">Efectivo Neto (Caja)</label>
+              <span
+                class="dash-val-large"
+                id="kpiNetCash"
+                style="color: var(--accent)"
+                >$0</span
+              >
+              <div class="dash-sub-impact">DINERO REAL DISPONIBLE</div>
             </div>
           </div>
 
@@ -430,11 +476,45 @@
           </div>
         </div>
 
+        <!-- ══ PAGE: GASTOS OPERATIVOS ══ -->
+        <div class="page" id="page-expenses">
+          <div class="page-header">
+            <h1>Gastos Operativos</h1>
+            <p>Egresos de la tienda física (Arriendo, servicios, insumos)</p>
+          </div>
+          <div class="toolbar">
+            <button class="btn-accent" onclick="openExpenseModal()">
+              + Registrar Gasto
+            </button>
+            <div
+              class="phc-summary-box"
+              style="
+                margin-left: auto;
+                background: rgba(255, 107, 107, 0.1);
+                border-color: var(--red);
+              "
+            >
+              <label class="phcs-label" style="color: var(--red)"
+                >TOTAL GASTOS</label
+              >
+              <span
+                id="totalExpensesSum"
+                class="phcs-value"
+                style="color: white"
+                >$0</span
+              >
+            </div>
+          </div>
+          <div id="expensesList" class="messaging-grid"></div>
+        </div>
+
         <!-- ══ PAGE: INVENTARIO & QR ══ -->
         <div class="page" id="page-inventory">
           <div class="page-header">
-            <h1>Inventario &amp; Gestión QR</h1>
-            <p>Productos, stock por talla y códigos QR automáticos</p>
+            <h1>Inventario &amp; Logística</h1>
+            <p>
+              Productos, stock por talla y códigos de barras EAN-13 / Code 128
+            </p>
           </div>
           <div class="inv-stats-row">
             <div class="inv-stat">
@@ -462,10 +542,10 @@
             />
             <div
               class="phc-quick-filters"
-              style="margin-bottom: 10; flex: 1; display: flex; gap: 10px"
+              style="margin-bottom: 10; flex: 1; display: flex; gap: 2px"
             >
               <button
-                class="ph-tab active inv-tab"
+                class="ph-tab inv-tab"
                 data-cat="all"
                 onclick="setInvCategory('all')"
               >
@@ -500,7 +580,7 @@
                 Accesorios
               </button>
               <button
-                class="ph-tab inv-tab"
+                class="ph-tab inv-tab active"
                 data-cat="otros"
                 onclick="setInvCategory('otros')"
               >
@@ -521,7 +601,7 @@
               onchange="handleStockUpload(event)"
             />
             <button class="btn-ghost" onclick="printAllQRs()">
-              🖨 Imprimir todos los QR
+              🖨️ Imprimir Etiquetas de Barras
             </button>
           </div>
           <div class="inv-cards" id="invCards"></div>
@@ -737,184 +817,92 @@
         <!-- ══ PAGE: MÉTODOS DE PAGO ══ -->
         <div class="page" id="page-payments">
           <div class="page-header">
-            <h1>Gestión de Pagos</h1>
+            <h1>Gestión de pagos</h1>
             <p>
               Configura y administra todos tus canales de recaudo en un solo
               lugar
             </p>
           </div>
 
-          <!-- CENTRO DE CONTROL UNIFICADO -->
-          <div class="payment-control-center">
-            <!-- NACIONALES -->
-            <div class="pay-section-group">
-              <div class="pay-group-header">
-                <span class="pay-flag">🇨🇴</span> Pagos Nacionales
-              </div>
-              <div class="pay-methods-grid" id="payNational"></div>
-            </div>
-
-            <!-- BILLETERAS DIGITALES -->
-            <div class="pay-section-group">
-              <div class="pay-group-header">
-                <span class="pay-flag">📱</span> Billeteras Digitales
-              </div>
-              <div class="pay-methods-grid" id="payWallets"></div>
-            </div>
-
-            <!-- CONTRA ENTREGA -->
-            <div class="pay-section-group">
-              <div class="pay-group-header">
-                <span class="pay-flag">🚚</span> Contra Entrega
-              </div>
-              <div class="pay-methods-grid" id="payDelivery"></div>
-            </div>
-
-            <!-- INTERNACIONALES -->
-            <div class="pay-section-group">
-              <div class="pay-group-header">
-                <span class="pay-flag">🌎</span> Pagos Internacionales
-              </div>
-              <div class="pay-methods-grid" id="payIntl"></div>
+          <!-- MÉTODOS DE PAGO ACTIVOS -->
+          <div class="payment-methods-section">
+            <h3 class="section-heading">MÉTODOS DE PAGO ACTIVOS</h3>
+            <div class="payment-methods-grid" id="paymentMethodsGrid">
+              <!-- Se llena dinámicamente -->
             </div>
           </div>
-          <div style="margin-top: 20px"></div>
 
-          <!-- REGISTRAR PAGO -->
-          <div class="pay-register-card">
-            <h3 class="card-title">Registrar cobro</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Método</label>
-                <div
-                  id="payRegMethodSelector"
-                  class="custom-select-trigger"
-                  onclick="openPayRegMethodModal()"
-                >
-                  <span id="payRegMethodSelected">Seleccionar método...</span>
-                  <input type="hidden" id="payRegMethodValue" value="" />
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Monto (COP)</label>
-                <input
-                  type="number"
-                  id="payRegAmount"
-                  placeholder="89990"
-                  min="0"
-                />
-              </div>
-              <div class="form-group" id="payRegRefGroup">
-                <label>Referencia / #Transacción</label>
-                <input type="text" id="payRegRef" placeholder="REF-2026-001" />
-              </div>
-              <button class="btn-accent" onclick="registerPayment()">
-                REGISTRAR
-              </button>
+          <!-- KPIs DE PAGOS -->
+          <div class="payments-kpi-row" id="paymentsKpiRow">
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">TOTAL PERIODO</div>
+              <div class="dash-val-large" id="kpiPayTotalAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiPayTotalCount">0 ventas</div>
             </div>
-            <div
-              id="payRegMethodInstructions"
-              style="font-size: 12px; color: var(--gray-text); margin-top: 10px"
-            ></div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">ENVÍO / ONLINE</div>
+              <div class="dash-val-large" id="kpiPayOnlineAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiPayOnlinePercent">0%</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">FÍSICA</div>
+              <div class="dash-val-large" id="kpiPayPhysicalAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiPayPhysicalPercent">0%</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">TICKET PROM.</div>
+              <div class="dash-val-large" id="kpiPayAvgTicket">$0</div>
+              <div class="dash-sub-impact">por venta</div>
+            </div>
           </div>
 
-          <!-- HISTORIAL PAGOS -->
-          <div class="pay-register-card">
-            <div class="card-title-row">
-              <h3 class="card-title">Historial de Pagos y Transacciones</h3>
-              <button class="btn-export" onclick="exportPaymentsCSV()">
-                ⬇ EXPORTAR CSV
+          <!-- BARRA DE FILTROS -->
+          <div class="payments-filters-bar">
+            <div class="ph-input-wrap">
+              <label>Canal</label>
+              <select id="payFilterChannel" class="tb-select">
+                <option value="">Todos los canales</option>
+                <option value="online">Envío / Online</option>
+                <option value="fisica">Física</option>
+              </select>
+            </div>
+            <div class="ph-input-wrap">
+              <label>Método</label>
+              <select id="payFilterMethod" class="tb-select">
+                <option value="">Todos los métodos</option>
+              </select>
+            </div>
+            <div class="ph-input-wrap">
+              <label>Cliente</label>
+              <input
+                type="text"
+                id="payFilterClient"
+                placeholder="Nombre o email"
+                class="tb-search"
+              />
+            </div>
+            <div class="ph-input-wrap">
+              <label>Buscar</label>
+              <input
+                type="text"
+                id="paySearch"
+                placeholder="Ref, producto..."
+                class="tb-search"
+              />
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-end">
+              <button class="btn-accent" id="applyPayFilters">
+                Aplicar filtros
               </button>
+              <button class="btn-ghost" id="resetPayFilters">Limpiar</button>
             </div>
-            <!-- BARRA DE TIEMPO Y FILTROS INTELIGENTES -->
-            <div class="pay-history-controls">
-              <div class="phc-top">
-                <div class="phc-quick-filters">
-                  <button
-                    class="ph-tab active"
-                    onclick="setPayTimeFilter('today')"
-                  >
-                    Hoy
-                  </button>
-                  <button
-                    class="ph-tab"
-                    onclick="setPayTimeFilter('yesterday')"
-                  >
-                    Ayer
-                  </button>
-                  <button class="ph-tab" onclick="setPayTimeFilter('week')">
-                    Semana
-                  </button>
-                  <button class="ph-tab" onclick="setPayTimeFilter('month')">
-                    Mes
-                  </button>
-                  <button class="ph-tab" onclick="setPayTimeFilter('all')">
-                    Todo
-                  </button>
-                </div>
-                <div class="phc-summary">
-                  <div class="phc-summary-grid">
-                    <div class="phc-summary-box">
-                      <label class="phcs-label">TOTAL PERIODO</label>
-                      <span id="phSummaryTotal" class="phcs-value">$0</span>
-                    </div>
-                    <div class="phc-summary-box">
-                      <label class="phcs-label">TRANSACCIONES</label>
-                      <span id="phSummaryCount" class="phcs-value">0</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          </div>
 
-              <div class="phc-bottom">
-                <div class="phcb-filters">
-                  <div class="ph-input-wrap">
-                    <label>DESDE / HASTA</label>
-                    <input
-                      type="date"
-                      id="payFilterDate"
-                      onchange="renderPaymentsTable()"
-                    />
-                  </div>
-                  <div class="ph-input-wrap">
-                    <label>MÉTODO DE PAGO</label>
-                    <select
-                      id="payFilterMethod"
-                      onchange="renderPaymentsTable()"
-                    >
-                      <option value="">Todos los métodos</option>
-                      <option value="tarjeta">Tarjeta Crédito/Débito</option>
-                      <option value="pse">PSE/Transferencia</option>
-                      <option value="nequi">Nequi</option>
-                      <option value="daviplata">Daviplata</option>
-                      <option value="cash">Efectivo</option>
-                    </select>
-                  </div>
-                  <button class="btn-reset" onclick="resetPayFilters()">
-                    Limpiar filtros
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha/Hora</th>
-                    <th>Cliente</th>
-                    <th>Método de Pago</th>
-                    <th>Detalles</th>
-                    <th>Monto</th>
-                    <th>Estado</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="paymentsBody">
-                  <tr class="empty-row">
-                    <td colspan="7">Cargando pagos...</td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- HISTORIAL DE TRANSACCIONES -->
+          <div class="transactions-history">
+            <h3 class="section-heading">HISTORIAL DE TRANSACCIONES</h3>
+            <div id="transactionsGroupedContainer">
+              <div class="ls-empty">Cargando transacciones...</div>
             </div>
           </div>
         </div>
@@ -922,133 +910,259 @@
         <!-- ══ PAGE: REGISTRO DE VENTAS ══ -->
         <div class="page" id="page-sales">
           <div class="page-header">
-            <h1>Registro de Ventas</h1>
+            <h1>Registro de ventas</h1>
             <p>Historial completo · Tienda física y online</p>
           </div>
-          <!-- CENTRO DE CONTROL DE VENTAS INTELIGENTE -->
-          <div class="pay-history-controls">
-            <div class="phc-top">
-              <div class="phc-quick-filters">
-                <button
-                  class="ph-tab active"
-                  onclick="setSalesTimeFilter('today')"
-                >
-                  Hoy
-                </button>
-                <button
-                  class="ph-tab"
-                  onclick="setSalesTimeFilter('yesterday')"
-                >
-                  Ayer
-                </button>
-                <button class="ph-tab" onclick="setSalesTimeFilter('week')">
-                  Semana
-                </button>
-                <button class="ph-tab" onclick="setSalesTimeFilter('month')">
-                  Mes
-                </button>
-                <button class="ph-tab" onclick="setSalesTimeFilter('all')">
-                  Todo
-                </button>
-              </div>
-              <div class="phc-summary">
-                <div class="phc-summary-grid">
-                  <div
-                    class="phc-summary-box"
-                    style="border: none; background: transparent"
-                  >
-                    <label class="dash-label-impact">TOTAL PERIODO</label>
-                    <span id="sv1" class="dash-val-large">$0</span>
-                  </div>
-                  <div
-                    class="phc-summary-box"
-                    style="border: none; background: transparent"
-                  >
-                    <label class="dash-label-impact">TRANSACCIONES</label>
-                    <span id="sv2" class="dash-val-large">0</span>
-                  </div>
-                  <div
-                    class="phc-summary-box"
-                    style="border: none; background: transparent"
-                  >
-                    <label class="dash-label-impact">TICKET PROMEDIO</label>
-                    <span id="sv3" class="dash-val-large">$0</span>
-                  </div>
-                </div>
+
+          <!-- KPIs (tarjetas resumen) -->
+          <div
+            class="kpi-grid redesign"
+            id="salesKpiGrid"
+            style="margin-bottom: 28px"
+          >
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">TOTAL PERIODO</div>
+              <div class="dash-val-large" id="kpiTotalAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiTotalCount">0 ventas</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">ENVÍO / ONLINE</div>
+              <div class="dash-val-large" id="kpiOnlineAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiOnlinePercent">0%</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">FÍSICA / PRESENCIAL</div>
+              <div class="dash-val-large" id="kpiPhysicalAmount">$0</div>
+              <div class="dash-sub-impact" id="kpiPhysicalPercent">0%</div>
+            </div>
+            <div class="dash-neon-box">
+              <div class="dash-label-impact">TICKET PROMEDIO</div>
+              <div class="dash-val-large" id="kpiAvgTicket">$0</div>
+              <div class="dash-sub-impact">Todas las ventas</div>
+            </div>
+          </div>
+
+          <!-- Gráficos (tres columnas) -->
+          <div
+            class="sales-charts-row"
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+              margin-bottom: 30px;
+            "
+          >
+            <div
+              class="dash-card"
+              style="
+                background: var(--gray);
+                padding: 16px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  text-align: center;
+                  margin-bottom: 12px;
+                  color: var(--white);
+                  letter-spacing: 2px;
+                "
+              >
+                VENTAS POR DÍA
+              </h3>
+              <div style="height: 200px">
+                <canvas id="salesTimelineChart"></canvas>
               </div>
             </div>
-
-            <div class="phc-bottom">
-              <div class="phcb-filters">
-                <div class="ph-input-wrap">
-                  <label>DESDE / HASTA</label>
-                  <input
-                    type="date"
-                    id="sfDate"
-                    onchange="renderSalesTable()"
-                  />
-                </div>
-                <div class="ph-input-wrap">
-                  <label>MÉTODO DE PAGO</label>
-                  <select id="sfMethod" onchange="renderSalesTable()">
-                    <option value="">Todos los métodos</option>
-                    <option>Efectivo</option>
-                    <option>Nequi</option>
-                    <option>Daviplata</option>
-                    <option>PSE</option>
-                    <option>Tarjeta Débito</option>
-                    <option>Tarjeta Crédito</option>
-                  </select>
-                </div>
-                <div class="ph-input-wrap">
-                  <label>CANAL DE VENTA</label>
-                  <select id="sfChannel" onchange="renderSalesTable()">
-                    <option value="">Todos los canales</option>
-                    <option value="fisica">Tienda Física</option>
-                    <option value="online">Online / Web</option>
-                  </select>
-                </div>
-                <div class="ph-input-wrap">
-                  <label>ESTADO ENVÍO</label>
-                  <select id="sfShippingStatus" onchange="renderSalesTable()">
-                    <option value="">Todos los estados</option>
-                    <option value="PENDIENTE">PENDIENTE</option>
-                    <option value="DESPACHADO">DESPACHADO</option>
-                    <option value="EN CAMINO">EN CAMINO</option>
-                    <option value="ENTREGADO">ENTREGADO</option>
-                    <option value="CANCELADO">CANCELADO</option>
-                  </select>
-                </div>
-                <button class="btn-export" onclick="exportSalesCSV()">
-                  ⬇ EXPORTAR CSV
-                </button>
-                <button class="btn-reset" onclick="resetSalesFilters()">
-                  LIMPIAR FILTROS
-                </button>
+            <div
+              class="dash-card"
+              style="
+                background: var(--gray);
+                padding: 16px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  text-align: center;
+                  margin-bottom: 12px;
+                  color: var(--white);
+                  letter-spacing: 2px;
+                "
+              >
+                CANAL DE VENTA
+              </h3>
+              <div style="height: 200px">
+                <canvas id="salesChannelChart"></canvas>
+              </div>
+            </div>
+            <div
+              class="dash-card"
+              style="
+                background: var(--gray);
+                padding: 16px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  text-align: center;
+                  margin-bottom: 12px;
+                  color: var(--white);
+                  letter-spacing: 2px;
+                "
+              >
+                MÉTODO DE PAGO
+              </h3>
+              <div style="height: 200px">
+                <canvas id="salesMethodChart"></canvas>
               </div>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Fecha/Hora</th>
-                  <th>Canal</th>
-                  <th>Vendedor</th>
-                  <th>Cliente</th>
-                  <th>Productos</th>
-                  <th>Método</th>
-                  <th>Total</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="salesBody">
-                <tr class="empty-row">
-                  <td colspan="9">Sin ventas registradas</td>
-                </tr>
-              </tbody>
-            </table>
+
+          <!-- Barra de filtros -->
+          <div
+            class="toolbar"
+            style="
+              flex-wrap: wrap;
+              gap: 16px;
+              background: var(--gray2);
+              padding: 16px 20px;
+              border-radius: 12px;
+              margin-bottom: 24px;
+            "
+          >
+            <div class="ph-input-wrap">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Rango de fechas</label
+              >
+              <div style="display: flex; align-items: center; gap: 10px">
+                <input
+                  type="date"
+                  id="filterDateFrom"
+                  class="tb-select"
+                  style="min-width: 140px"
+                />
+                <span style="color: var(--gray-text)">–</span>
+                <input
+                  type="date"
+                  id="filterDateTo"
+                  class="tb-select"
+                  style="min-width: 140px"
+                />
+              </div>
+            </div>
+            <div class="ph-input-wrap">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Canal</label
+              >
+              <select
+                id="filterChannel"
+                class="tb-select"
+                style="min-width: 140px"
+              >
+                <option value="">Todos los canales</option>
+                <option value="fisica">Física</option>
+                <option value="online">Envío / Online</option>
+              </select>
+            </div>
+            <div class="ph-input-wrap">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Método de pago</label
+              >
+              <select
+                id="filterMethod"
+                class="tb-select"
+                style="min-width: 140px"
+              >
+                <option value="">Todos los métodos</option>
+              </select>
+            </div>
+            <div class="ph-input-wrap">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Logística</label
+              >
+              <select
+                id="filterLogistics"
+                class="tb-select"
+                style="min-width: 140px"
+              >
+                <option value="">Todos los estados</option>
+                <option value="PENDIENTE">PENDIENTE</option>
+                <option value="DESPACHADO">DESPACHADO</option>
+                <option value="EN CAMINO">EN CAMINO</option>
+                <option value="ENTREGADO">ENTREGADO</option>
+                <option value="CANCELADO">CANCELADO</option>
+              </select>
+            </div>
+            <div class="ph-input-wrap">
+              <label
+                style="
+                  font-size: 10px;
+                  color: var(--gray-text);
+                  text-transform: uppercase;
+                "
+                >Cliente</label
+              >
+              <input
+                type="text"
+                id="filterClient"
+                placeholder="Buscar..."
+                class="tb-search"
+                style="min-width: 140px"
+              />
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-end">
+              <button class="btn-accent" id="applySalesFilters">
+                Aplicar filtros
+              </button>
+              <button
+                class="btn-ghost"
+                id="resetSalesFilters"
+                onclick="
+                  document.getElementById('filterDateFrom').value = '';
+                  document.getElementById('filterDateTo').value = '';
+                  document.getElementById('filterChannel').value = '';
+                  document.getElementById('filterMethod').value = '';
+                  document.getElementById('filterClient').value = '';
+                  document.getElementById('filterLogistics').value = '';
+                  fetchSalesLog();
+                "
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabla de ventas -->
+          <div id="salesGroupedContainer">
+            <div class="ls-empty">Cargando registro de ventas...</div>
           </div>
         </div>
 
@@ -1256,8 +1370,10 @@
         <!-- ══ PAGE: ESCÁNER QR ══ -->
         <div class="page" id="page-qrscan">
           <div class="page-header">
-            <h1>Escáner QR</h1>
-            <p>Escanea para registrar producto nuevo o agregarlo a una venta</p>
+            <h1>Escáner de Barras</h1>
+            <p>
+              Usa la cámara como lector láser para inventario o ventas físicas
+            </p>
           </div>
           <div class="qr-mobile-help">
             <button class="btn-ghost" onclick="openMobileScannerLink()">
@@ -1286,19 +1402,8 @@
                   🛒 Agregar a Venta
                 </button>
               </div>
-              <div class="scanner-box" id="scannerBox">
-                <div class="scanner-overlay-line"></div>
-                <video
-                  id="scanVideo"
-                  autoplay
-                  playsinline
-                  style="
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                    border-radius: 0;
-                  "
-                ></video>
+              <!-- Contenedor optimizado para html5-qrcode -->
+              <div id="qr-reader-main" class="scanner-box" style="border: none">
                 <div class="scanner-corners">
                   <span class="sc-tl"></span><span class="sc-tr"></span>
                   <span class="sc-bl"></span><span class="sc-br"></span>
@@ -1308,14 +1413,14 @@
                 <button
                   class="btn-accent"
                   id="startScanBtn"
-                  onclick="startScanner()"
+                  onclick="startProductQRScanner()"
                 >
                   ▶ Iniciar cámara
                 </button>
                 <button
                   class="btn-ghost"
                   id="stopScanBtn"
-                  onclick="stopScanner()"
+                  onclick="stopProductQRScanner()"
                   style="display: none"
                 >
                   ⏹ Detener
@@ -1463,45 +1568,6 @@
             </div>
           </div>
           <div
-            class="form-row promo-section"
-            style="
-              background: rgba(0, 0, 0, 0);
-              padding: 12px;
-              border-radius: 8px;
-              border: 1px dashed rgba(0, 0, 0, 0);
-              margin-top: 10px;
-            "
-          >
-            <div class="form-group">
-              <label style="color: #ff6b6b; font-weight: 700"
-                >🔥 Precio Oferta (COP)</label
-              >
-              <input
-                type="number"
-                id="pPromoPrice"
-                placeholder="69990"
-                min="0"
-              />
-            </div>
-            <div
-              class="form-group"
-              style="
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding-top: 25px;
-              "
-            >
-              <label class="switch">
-                <input type="checkbox" id="pOnSale" />
-                <span class="slider round"></span>
-              </label>
-              <span style="font-weight: 600; font-size: 13px; color: #ff6b6b"
-                >Activar Oferta</span
-              >
-            </div>
-          </div>
-          <div
             id="pImgPreview"
             style="margin-top: 12px; text-align: center; display: none"
           >
@@ -1536,26 +1602,33 @@
         <!-- QR TAB -->
         <div class="ftab-content" id="ftab-qr">
           <p
+            id="barcodeHelpText"
             style="
               font-size: 13px;
               color: var(--gray-text);
               margin-bottom: 16px;
             "
           >
-            El QR se genera automáticamente con los datos del producto. Guarda
-            primero para obtener el QR final.
+            El código de barras se genera según el estándar GS1 Colombia (770).
+            Usa el SKU o el código asignado.
           </p>
-          <div id="qrPreviewBox" class="qr-preview-box">
-            <div style="color: var(--gray-text); font-size: 13px">
-              Guarda el producto para generar el QR
-            </div>
+          <div
+            id="barcodePreviewContainer"
+            style="
+              text-align: center;
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+            "
+          >
+            <svg id="barcodePreview"></svg>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 14px">
             <button class="btn-ghost" onclick="printProductQR()">
-              🖨 Imprimir QR
+              🖨️ Imprimir Etiqueta
             </button>
             <button class="btn-ghost" onclick="downloadProductQR()">
-              ⬇ Descargar QR
+              ⬇️ Descargar PNG
             </button>
           </div>
         </div>
@@ -1604,24 +1677,14 @@
             debe contener información del producto.
           </p>
           <div
-            id="productScanContainer"
+            id="qr-reader-modal"
             style="
               border: 2px dashed var(--border);
               border-radius: 8px;
-              padding: 20px;
-              text-align: center;
               margin-bottom: 16px;
+              overflow: hidden;
             "
           >
-            <video
-              id="productQRVideo"
-              style="
-                width: 100%;
-                max-width: 100%;
-                border-radius: 6px;
-                display: none;
-              "
-            ></video>
             <div
               id="productScanPlaceholder"
               style="color: var(--gray-text); padding: 40px 20px"
@@ -1684,19 +1747,20 @@
     ></div>
     <div class="modal modal-sm" id="qrModal">
       <div class="modal-header">
-        <h3 id="qrModalTitle">Código QR</h3>
+        <h3 id="qrModalTitle">Código de Barras</h3>
         <button class="modal-close" onclick="closeQRModal()">✕</button>
       </div>
       <div class="modal-body" style="text-align: center">
         <div
-          id="qrModalCanvas"
           style="
+            background: white;
+            padding: 20px;
             display: inline-block;
-            margin: 0 auto;
-            background: #fff;
-            padding: 16px;
+            border-radius: 4px;
           "
-        ></div>
+        >
+          <svg id="barcodeCanvas"></svg>
+        </div>
         <div
           id="qrModalInfo"
           style="margin-top: 16px; font-size: 13px; color: var(--gray-text)"
@@ -2290,16 +2354,102 @@
       </div>
     </div>
 
+    <!-- MODAL: REGISTRO DE GASTOS -->
+    <div
+      class="modal-overlay"
+      id="expenseModalOverlay"
+      onclick="closeExpenseModal()"
+    ></div>
+    <div class="modal modal-sm" id="expenseModal">
+      <div class="modal-header">
+        <h3>Registrar Nuevo Gasto</h3>
+        <button class="modal-close" onclick="closeExpenseModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Descripción del Gasto</label>
+          <input
+            type="text"
+            id="expDesc"
+            placeholder="Ej: Pago Arriendo local"
+          />
+        </div>
+        <div class="form-group" style="margin-top: 10px">
+          <label>Monto (COP)</label>
+          <input type="number" id="expAmount" placeholder="0" />
+        </div>
+        <div class="form-group" style="margin-top: 10px">
+          <label>Categoría</label>
+          <select id="expCat">
+            <option value="Servicios">Servicios Públicos</option>
+            <option value="Arriendo">Arriendo</option>
+            <option value="Nómina">Nómina / Sueldos</option>
+            <option value="Insumos">Insumos (Aseo/Papelería)</option>
+            <option value="Publicidad">Publicidad / Marketing</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeExpenseModal()">
+          Cancelar
+        </button>
+        <button class="btn-accent" onclick="saveExpense()">
+          GUARDAR GASTO
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL: RECORTAR IMAGEN (Cropper) ══ -->
+    <div
+      class="modal-overlay"
+      id="cropperModalOverlay"
+      onclick="closeCropperModal()"
+    ></div>
+    <div class="modal" id="cropperModal" style="max-width: 600px">
+      <div class="modal-header">
+        <h3>Ajustar Foto del Artículo</h3>
+        <button class="modal-close" onclick="closeCropperModal()">✕</button>
+      </div>
+      <div
+        class="modal-body"
+        style="
+          padding: 0;
+          background: #000;
+          min-height: 400px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <img id="cropperImage" style="max-width: 100%; display: block" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeCropperModal()">
+          Cancelar
+        </button>
+        <button class="btn-accent" onclick="confirmCrop()">
+          RECORTAR Y SUBIR
+        </button>
+      </div>
+    </div>
+
     <!-- TOAST -->
     <div class="toast" id="adminToast"><span id="adminToastMsg"></span></div>
 
     <!-- WINNER ADMIN MODULES (RAÍZ) -->
     <script src="core.js"></script>
     <script src="auth.js"></script>
+    <script src="storage-core.js"></script>
     <script src="inventory.js"></script>
     <script src="pos.js"></script>
-    <script src="sales.js"></script>
     <script src="scanner.js"></script>
+    <script src="themead/dashboard-themes.js"></script>
+    <script src="messaging.js"></script>
     <script src="dashboard.js"></script>
+    <script src="expenses.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="sales-logic.js"></script>
+    <script src="payments-logic.js"></script>
   </body>
 </html>

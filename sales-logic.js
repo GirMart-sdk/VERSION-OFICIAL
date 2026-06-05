@@ -1,0 +1,408 @@
+/* ═══════════════════════════════════════════════════════
+   WINNER — sales-logic.js (Módulo de Analítica)
+   ═══════════════════════════════════════════════════════ */
+"use strict";
+
+window.allSalesData = [];
+window.salesCharts = {};
+
+async function fetchSalesLog() {
+  try {
+    const res = await apiFetch(`${API_URL}/sales`);
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    window.allSalesData = data.map((s) => ({
+      ...s,
+      total: Number(s.total), // Asegurar que sea número
+      channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
+    }));
+
+    renderSalesKPIs();
+    renderSalesCharts();
+    renderSalesTable();
+  } catch (e) {
+    console.error("Error fetching sales:", e);
+  }
+}
+
+function renderSalesKPIs() {
+  const from = $("filterDateFrom")?.value;
+  const to = $("filterDateTo")?.value;
+  let filtered = applyDateFilter(window.allSalesData, from, to);
+
+  const totalAmount = filtered.reduce((sum, s) => sum + s.total, 0);
+  const onlineSales = filtered.filter((s) => s.channel === "online");
+  const onlineAmount = onlineSales.reduce((sum, s) => sum + s.total, 0);
+  const physicalAmount = totalAmount - onlineAmount;
+  const avgTicket = filtered.length ? totalAmount / filtered.length : 0;
+
+  if ($("kpiTotalAmount")) $("kpiTotalAmount").innerText = fmt(totalAmount);
+  if ($("kpiTotalCount"))
+    $("kpiTotalCount").innerText = `${filtered.length} ventas`;
+  if ($("kpiOnlineAmount")) $("kpiOnlineAmount").innerText = fmt(onlineAmount);
+  if ($("kpiPhysicalAmount"))
+    $("kpiPhysicalAmount").innerText = fmt(physicalAmount);
+  if ($("kpiAvgTicket"))
+    $("kpiAvgTicket").innerText = fmt(Math.round(avgTicket));
+
+  const onlinePercent = totalAmount ? (onlineAmount / totalAmount) * 100 : 0;
+  if ($("kpiOnlinePercent"))
+    $("kpiOnlinePercent").innerText = `${onlinePercent.toFixed(0)}%`;
+  if ($("kpiPhysicalPercent"))
+    $("kpiPhysicalPercent").innerText = `${(100 - onlinePercent).toFixed(0)}%`;
+}
+
+function renderSalesCharts() {
+  const from = $("filterDateFrom")?.value;
+  const to = $("filterDateTo")?.value;
+  let filtered = applyDateFilter(window.allSalesData, from, to);
+
+  // 1. Gráfico de Línea de Tiempo
+  const timelineData = {};
+  filtered.forEach((s) => {
+    const d = s.timestamp.split("T")[0];
+    timelineData[d] = (timelineData[d] || 0) + s.total;
+  });
+
+  const sortedLabels = Object.keys(timelineData).sort();
+  updateChart("salesTimelineChart", "bar", {
+    labels: sortedLabels.map((l) => l.split("-").slice(1).join("/")),
+    datasets: [
+      {
+        label: "Ventas",
+        data: sortedLabels.map((l) => timelineData[l]),
+        backgroundColor: "#e8ff47",
+      },
+    ],
+  });
+
+  // 2. Gráfico de Canales
+  const channelData = { online: 0, fisica: 0 };
+  filtered.forEach((s) => channelData[s.channel]++);
+  updateChart("salesChannelChart", "doughnut", {
+    labels: ["Física", "Online"],
+    datasets: [
+      {
+        data: [channelData.fisica, channelData.online],
+        backgroundColor: ["#3498db", "#e8ff47"],
+      },
+    ],
+  });
+
+  // 3. Gráfico de Métodos de Pago
+  const methodTotals = {};
+  filtered.forEach((s) => {
+    methodTotals[s.method] = (methodTotals[s.method] || 0) + s.total;
+  });
+  const sortedMethods = Object.entries(methodTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  updateChart("salesMethodChart", "bar", {
+    labels: sortedMethods.map((m) => m[0]),
+    datasets: [
+      {
+        label: "Total ($)",
+        data: sortedMethods.map((m) => m[1]),
+        backgroundColor: "#3498db",
+      },
+    ],
+  });
+
+  // Actualizar métodos en el filtro
+  const methodSelect = $("filterMethod");
+  if (methodSelect && methodSelect.options.length <= 1) {
+    const methods = [...new Set(window.allSalesData.map((s) => s.method))];
+    methods.forEach((m) => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      methodSelect.appendChild(opt);
+    });
+  }
+}
+
+function updateChart(id, type, data) {
+  const ctx = $(id)?.getContext("2d");
+  if (!ctx) return;
+  if (window.salesCharts[id]) window.salesCharts[id].destroy();
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: "#fff" } } },
+  };
+
+  // Usar eje Y para métodos de pago (barras horizontales)
+  if (id === "salesMethodChart") options.indexAxis = "y";
+
+  window.salesCharts[id] = new Chart(ctx, {
+    type,
+    data,
+    options,
+  });
+}
+
+function applyDateFilter(data, from, to) {
+  if (!from && !to) return data;
+  return data.filter((s) => {
+    const day = s.timestamp.split("T")[0];
+    if (from && day < from) return false;
+    if (to && day > to) return false;
+    return true;
+  });
+}
+
+function renderSalesTable() {
+  const channel = $("filterChannel")?.value;
+  const method = $("filterMethod")?.value;
+  const search = $("filterClient")?.value.toLowerCase();
+  const logistics = $("filterLogistics")?.value;
+  const from = $("filterDateFrom")?.value;
+  const to = $("filterDateTo")?.value;
+
+  let filtered = applyDateFilter(window.allSalesData, from, to);
+  if (channel) filtered = filtered.filter((s) => s.channel === channel);
+  if (method) filtered = filtered.filter((s) => s.method === method);
+
+  if (logistics) {
+    filtered = filtered.filter((s) => {
+      let d = s.payment_details || {};
+      if (typeof d === "string") {
+        try {
+          d = JSON.parse(d);
+        } catch (e) {
+          d = {};
+        }
+      }
+      return (d.shipping_status || "PENDIENTE") === logistics;
+    });
+  }
+
+  if (search)
+    filtered = filtered.filter((s) => s.client.toLowerCase().includes(search));
+
+  const container = $("salesGroupedContainer");
+  if (!container) return;
+
+  if (filtered.length === 0) {
+    container.innerHTML =
+      '<div class="ls-empty">No se encontraron ventas con los filtros seleccionados</div>';
+    return;
+  }
+
+  // Ordenar por fecha descendente
+  filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  // Agrupar por fecha
+  const groups = {};
+  filtered.forEach((s) => {
+    const date = s.timestamp.split("T")[0];
+    if (!groups[date]) groups[date] = { total: 0, items: [] };
+    groups[date].items.push(s);
+    groups[date].total += s.total;
+  });
+
+  container.innerHTML = Object.keys(groups)
+    .sort()
+    .reverse()
+    .map((date) => {
+      const g = groups[date];
+      const dObj = new Date(date + "T12:00:00");
+      const label = dObj.toLocaleDateString("es-CO", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      return `
+      <div class="transactions-group">
+        <div class="day-divider" style="cursor:pointer; background:rgba(255,255,255,0.02); display:flex; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border)" onclick="this.nextElementSibling.classList.toggle('hidden')">
+          <span style="font-family:'Bebas Neue'; letter-spacing:2px;">📅 ${label.toUpperCase()}</span>
+          <span style="color:var(--accent); font-weight:700;">${fmt(g.total)} — ${g.items.length} ventas ▾</span>
+        </div>
+        <div class="table-wrap hidden" style="border:none">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>HORA</th>
+                <th>CANAL</th>
+                <th>CLIENTE</th>
+                <th>MÉTODO</th>
+                <th>ESTADO</th>
+                <th>TOTAL</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${g.items
+                .map((s) => {
+                  let details = s.payment_details || {};
+                  if (typeof details === "string")
+                    try {
+                      details = JSON.parse(details);
+                    } catch (e) {
+                      details = {};
+                    }
+                  const shipStatus = details.shipping_status || "PENDIENTE";
+                  const time = new Date(s.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+
+                  return `
+                  <tr class="activity-item">
+                    <td style="font-size:11px; white-space:nowrap; color:var(--gray-text)">${time}</td>
+                    <td>
+                      <div style="display:flex; flex-direction:column; gap:2px;">
+                        <span class="status-badge s-${s.channel}" style="width:fit-content; font-size:9px;">${s.channel === "online" ? "📦 Envío" : "🏪 Física"}</span>
+                        ${s.channel === "online" ? `<span style="font-size:8px; color:var(--gray-text); opacity:0.7;">${shipStatus}</span>` : ""}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight:700; color:white; font-size:13px;">${esc(s.client)}</div>
+                      <div style="font-size:10px; color:var(--gray-text);">${s.customer_phone || ""}</div>
+                    </td>
+                    <td style="font-size:11px; color:var(--gray-text);">${s.method}</td>
+                    <td>
+                      <span class="status-badge ${s.payment_status === "completed" ? "s-ok" : "s-low"}" style="font-size:9px;">${s.payment_status.toUpperCase()}</span>
+                    </td>
+                    <td style="color:var(--accent); font-weight:700;">${fmt(s.total)}</td>
+                    <td style="text-align:right;">
+                      <button class="action-btn" onclick="viewSaleDetails('${s.id}')">🔗</button>
+                    </td>
+                  </tr>`;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+window.viewSaleDetails = (id) => {
+  const sale = window.allSalesData.find((x) => x.id === id);
+  if (!sale) return;
+
+  let details = sale.payment_details || {};
+  if (typeof details === "string") {
+    try {
+      details = JSON.parse(details);
+    } catch (e) {
+      details = {};
+    }
+  }
+
+  const shipStatus = details.shipping_status || "PENDIENTE";
+  const trackingNum = details.tracking_number || "";
+
+  let overlay = $("saleDetailsOverlay");
+  let modal = $("saleDetailsModal");
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "saleDetailsOverlay";
+    overlay.className = "modal-overlay";
+    overlay.onclick = window.closeSaleDetails;
+    document.body.appendChild(overlay);
+  }
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "saleDetailsModal";
+    modal.className = "modal";
+    modal.style.maxWidth = "600px";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>Gestión de Logística — Venta #${sale.id.slice(-6)}</h3>
+      <button class="modal-close" onclick="window.closeSaleDetails()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:20px; font-size:13px; color:var(--gray-text)">
+        <strong>Cliente:</strong> <span style="color:white">${esc(sale.client)}</span><br>
+        <strong>Canal:</strong> <span style="color:white">${sale.channel.toUpperCase()}</span><br>
+        <strong>Dirección:</strong> <span style="color:white">${esc(sale.shipping_address || "Mostrador / Sin envío")}</span>
+      </div>
+
+      <div class="form-group" style="margin-bottom:15px">
+        <label>Estado del Envío</label>
+        <select id="editShipStatus" class="tb-select" style="width:100%; background:var(--dark);">
+          <option value="PENDIENTE" ${shipStatus === "PENDIENTE" ? "selected" : ""}>PENDIENTE</option>
+          <option value="DESPACHADO" ${shipStatus === "DESPACHADO" ? "selected" : ""}>DESPACHADO (Enviado)</option>
+          <option value="EN CAMINO" ${shipStatus === "EN CAMINO" ? "selected" : ""}>EN CAMINO</option>
+          <option value="ENTREGADO" ${shipStatus === "ENTREGADO" ? "selected" : ""}>ENTREGADO (Recibido)</option>
+          <option value="CANCELADO" ${shipStatus === "CANCELADO" ? "selected" : ""}>CANCELADO</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:15px">
+        <label>Número de Guía / Tracking</label>
+        <input type="text" id="editTrackingNum" value="${trackingNum}" placeholder="Ej: 12345678" style="width:100%">
+      </div>
+
+      <p style="font-size:11px; color:var(--gray-text); margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">
+        💡 <strong>Info:</strong> Si marcas como 'ENTREGADO', el sistema cerrará automáticamente el saldo de la venta si estaba pendiente.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="window.closeSaleDetails()">Cerrar</button>
+      <button class="btn-accent" onclick="window.applyLogisticsChanges('${sale.id}', this)">GUARDAR LOGÍSTICA</button>
+    </div>
+  `;
+
+  overlay.classList.add("open");
+  modal.classList.add("open");
+};
+
+window.closeSaleDetails = () => {
+  $("saleDetailsOverlay")?.classList.remove("open");
+  $("saleDetailsModal")?.classList.remove("open");
+};
+
+window.applyLogisticsChanges = async (saleId, btn) => {
+  const newStatus = $("editShipStatus").value;
+  const newTracking = $("editTrackingNum").value.trim();
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⌛ Guardando...";
+
+  try {
+    const res = await apiFetch(`${API_URL}/sales/${saleId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        payment_details: {
+          shipping_status: newStatus,
+          tracking_number: newTracking,
+        },
+      }),
+    });
+
+    if (res.ok) {
+      toast("✅ Estado de logística actualizado");
+      window.closeSaleDetails();
+      fetchSalesLog(); // Recargar datos y refrescar UI
+    } else {
+      const err = await res.json();
+      toast("❌ Error: " + err.error);
+    }
+  } catch (e) {
+    toast("❌ Error al procesar solicitud");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+};
+
+// Event Listeners
+$("applySalesFilters")?.addEventListener("click", () => {
+  renderSalesKPIs();
+  renderSalesCharts();
+  renderSalesTable();
+});

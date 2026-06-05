@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // Cambiar a "sqlite" para desarrollo local
+  url      = env("DATABASE_URL")
 }
 
 model Product {
@@ -23,26 +24,33 @@ model Product {
   onSale      Boolean     @default(false) @map("on_sale")
   promoPrice  Float?      @map("promo_price")
   stockStatus String?     @map("stock_status")
+  metadata    Json?       // Para datos flexibles de Google Merchant, colores, etc.
   createdAt   DateTime    @default(now()) @map("created_at")
   inventory   Inventory[]
   saleItems   SaleItem[]
   reorderRules    ReorderRule[]
   demandForecasts DemandForecast[]
+  reviews         Review[]
 
   @@map("products")
+  @@index([category])
+  @@index([sku])
 }
 
 model Inventory {
   id           String   @id @default(cuid())
   productId    String   @map("product_id")
-  size         String?
-  quantity     Int?     @map("qty")
-  reorderLevel Int      @default(5) @map("reorder_level")
-  lastUpdated  DateTime @default(now()) @map("last_updated")
+  size         String
+  quantity     Int      @default(0)
+  barcode      String?  @unique
+  minStock     Int      @default(2) @map("min_stock")
+  location     String?
+  lastUpdated  DateTime @default(now()) @updatedAt @map("last_updated")
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, size])
   @@map("inventory")
+  @@index([barcode])
 }
 
 model Sale {
@@ -61,6 +69,8 @@ model Sale {
   orders          Order[]
 
   @@map("sales")
+  @@index([createdAt])
+  @@index([paymentStatus])
 }
 
 model SaleItem {
@@ -68,8 +78,8 @@ model SaleItem {
   saleId    String  @map("sale_id")
   productId String  @map("product_id")
   size      String?
-  quantity  Int?
-  unitPrice Float?  @map("unit_price")
+  quantity  Int     @default(1)
+  unitPrice Float   @map("unit_price")
   discount  Float?  @default(0)
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -83,6 +93,8 @@ model CustomerProfile {
   phone        String?
   name         String?
   document     String?
+  country      String?   @default("CO")
+  vipStatus    String?   @default("regular") @map("vip_status")
   lastPurchase DateTime? @map("last_purchase")
   totalSpent   Float     @default(0) @map("total_spent") // total_spent
   totalOrders  Int       @default(0) @map("total_orders") // total_orders
@@ -92,13 +104,13 @@ model CustomerProfile {
 }
 
 model SalePayment {
-  id        String    @id @default(cuid())
-  saleId    String    @map("sale_id")
+  id        Int      @id @default(autoincrement())
+  saleId    String   @map("sale_id")
   amount    Float
-  method    String?
+  method    String
   notes     String?
-  timestamp DateTime  @default(now()) @map("timestamp")
-  sale      Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now()) @map("created_at")
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   @@map("sale_payments")
 }
@@ -154,4 +166,28 @@ model DemandForecast {
   product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("demand_forecast")
+}
+
+model Expense {
+  id          String   @id
+  description String
+  amount      Float
+  category    String   @default("General")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("expenses")
+}
+
+model Review {
+  id          String   @id
+  name        String
+  rating      Int
+  comment     String
+  suggestion  String?
+  productId   String?  @map("product_id")
+  status      String   @default("APPROVED")
+  createdAt   DateTime @default(now()) @map("created_at")
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@map("reviews")
 }

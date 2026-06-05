@@ -66,7 +66,15 @@ window.processManualQR = () => {
 };
 
 window.openMobileScannerLink = () => {
-  const url = window.location.href.split("#")[0] + "#qrscan";
+  let baseUrl = window.location.origin;
+
+  // Si detectamos localhost, avisamos al usuario que el QR podría no funcionar en el cel
+  if (window.location.hostname === "localhost") {
+    toast("⚠️ Nota: Entra por IP local para que el QR funcione en tu celular");
+  }
+
+  const url = baseUrl + window.location.pathname + "#qrscan";
+
   const box = $("mobileScanQR");
   box.innerHTML = "";
   new QRCode(box, { text: url, width: 200, height: 200 });

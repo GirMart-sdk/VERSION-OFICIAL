@@ -1,5 +1,5 @@
 
--- WINNER STORE v3.0 - SCHEMA COMPLETO POSTGRESQL
+-- WINNER STORE v3.5 - SCHEMA COMPLETO POSTGRESQL
 
 -- 1. Tabla de Productos
 CREATE TABLE IF NOT EXISTS products (
@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS inventory (
     product_id VARCHAR(50) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     size VARCHAR(10) NOT NULL,
-    qty INTEGER DEFAULT 0,
+    quantity INTEGER DEFAULT 0, -- Renombrado para consistencia con Prisma
+    barcode VARCHAR(100) UNIQUE, -- Para lector de códigos de barras
+    min_stock INTEGER DEFAULT 2, -- Alerta de bajo stock por talla
+    location VARCHAR(100), -- Bodega, Vitrina, Estante A1, etc.
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (product_id, size)
 );
@@ -32,7 +35,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 -- 3. Tabla de Ventas
 CREATE TABLE IF NOT EXISTS sales (
     id VARCHAR(50) PRIMARY KEY,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     channel VARCHAR(50),
     vendor VARCHAR(100),
     client VARCHAR(255),
@@ -98,7 +101,7 @@ CREATE TABLE IF NOT EXISTS demand_forecast (
 -- Índices para optimización
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
-CREATE INDEX IF NOT EXISTS idx_sales_timestamp ON sales(timestamp);
+CREATE INDEX IF NOT EXISTS idx_sales_timestamp ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
 CREATE INDEX IF NOT EXISTS idx_customer_email ON customer_profiles(email);
 

@@ -48,13 +48,15 @@ function renderPOSProducts() {
     list.innerHTML = items
       .map((p) => {
         const ts = totalStock(p);
+        const stat = stockStatus(ts);
+
         return `
-        <div class="pos-product-card" data-product-id="${p.id}" style="cursor:pointer">
-          <img src="${p.img}" alt="${p.name}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200&q=60'"/>
+        <div class="pos-product-card" data-product-id="${p.id}" id="prod-card-${p.id}">
+          <img src="${p.img || p.image}" alt="${p.name}" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%231a1a1a%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23333%22 font-family=%22sans-serif%22 font-size=%2212%22%3ESin foto%3C/text%3E%3C/svg%3E'"/>
+          <span class="ppc-stock-tag ${stat.cls}">${ts} DISP.</span>
           <div class="pos-product-card-info">
-            <div class="ppc-cat">${p.cat} <span style="float:right; color:${ts < 10 ? "var(--orange)" : "var(--gray-text)"}">Stock: ${ts}</span></div>
+            <div class="ppc-cat">${p.cat}</div>
             <div class="ppc-name">${p.name}</div>
-            <div class="ppc-sku">${p.sku}</div>
             <div class="ppc-price">${fmt(p.price)}</div>
           </div>
         </div>`;
@@ -87,11 +89,16 @@ window.posSearchProducts = renderPOSProducts;
 function openQRScannerPOS() {
   if (typeof setScanMode === "function") setScanMode("pos");
   navigateTo("qrscan");
-  if (typeof startScanner === "function") startScanner();
+  if (typeof startProductQRScanner === "function") startProductQRScanner();
 }
 
 function printReceipt(sale) {
   const win = window.open("", "_blank", "width=380,height=600");
+  if (!win) {
+    console.warn("⚠️ Ventana de impresión bloqueada por el navegador.");
+    toast("⚠️ Permite las ventanas emergentes para imprimir el ticket.");
+    return;
+  }
   const method = (sale.method || "Efectivo").toUpperCase();
   win.document.write(`<html><head><meta charset="UTF-8">
     <style>body{font-family:monospace;padding:20px;font-size:13px;max-width:320px;margin:0 auto}
@@ -140,19 +147,46 @@ function openPOSSizeSelector(product) {
   const modal = $("posSizeModal");
   const overlay = $("posSizeOverlay");
   const grid = $("posSizeGrid");
+
+  // Si es accesorio, omitimos el modal de tallas y usamos la talla única "U"
+  if (
+    product.cat.toLowerCase().includes("accesorio") ||
+    product.cat.toLowerCase().includes("reloj") ||
+    product.cat.toLowerCase().includes("joya") ||
+    product.cat.toLowerCase().includes("loción") ||
+    product.cat.toLowerCase().includes("gorra")
+  ) {
+    return addToPOSCart(product, "U");
+  }
+
   if (!hasSizes(product.cat)) {
     addToPOSCart(product, "U");
     return;
   }
   const sizes = getSizesForCategory(product.cat);
+  const isShoes =
+    product.cat.toLowerCase().includes("calzado") ||
+    product.cat.toLowerCase().includes("tenis");
+
   grid.innerHTML = sizes
     .map((sz, index) => {
       const qty = product.stock[sz] || 0;
       const isDisabled = qty <= 0;
+
+      let label = sz;
+      if (isShoes) {
+        const corr = getFootwearCorrespondence(sz);
+        label = `
+          <div style="line-height:1.1">
+            <span style="font-size:16px; color:var(--white)">${sz} <small>EU</small></span><br>
+            <span style="font-size:11px; color:var(--accent); font-weight:bold;">NAL: ${corr.nal}</span>
+          </div>`;
+      }
+
       return `<button class="ftab pos-size-item ${isDisabled ? "disabled" : ""}" 
           style="width:100%; border:1px solid var(--border); padding:15px; font-weight:bold; cursor:pointer;"
           ${isDisabled ? "disabled" : `onclick="addToPOSCartById('${product.id}', '${sz}'); closePOSSizeModal();"`}>
-          ${sz}<br><small style="font-size:9px; opacity:0.6">${qty} u.</small></button>`;
+          ${label}<br><small style="font-size:9px; opacity:0.6">${qty} u.</small></button>`;
     })
     .join("");
   overlay.classList.add("open");
@@ -205,13 +239,45 @@ function addToPOSCart(product, size) {
   else
     window.WinnerApp.pos.cart.push({
       id: product.id,
+      sku: product.sku || "",
       name: product.name,
       price: product.price,
       size,
       qty: 1,
     });
+
+  // Disparar animación visual
+  animateAddToCart(product.id);
   renderPOSCart();
   toast(`✓ ${product.name} (${size}) agregado`);
+}
+
+function animateAddToCart(productId) {
+  const card = document.getElementById(`prod-card-${productId}`);
+  const cart = document.getElementById("posRightPanel");
+  if (!card || !cart) return;
+
+  const rect = card.getBoundingClientRect();
+  const cartRect = cart.getBoundingClientRect();
+
+  const fly = document.createElement("div");
+  fly.className = "fly-item";
+  fly.style.left = rect.left + "px";
+  fly.style.top = rect.top + "px";
+  document.body.appendChild(fly);
+
+  setTimeout(() => {
+    fly.style.left = cartRect.left + "px";
+    fly.style.top = cartRect.top + "px";
+    fly.style.opacity = "0";
+    fly.style.transform = "scale(0.2)";
+    cart.classList.add("cart-glow");
+  }, 10);
+
+  setTimeout(() => {
+    fly.remove();
+    cart.classList.remove("cart-glow");
+  }, 600);
 }
 
 function renderPOSCart() {
@@ -316,21 +382,15 @@ window.selectPOSPaymentMethod = function (id, name, type) {
 
   // Mostrar el formulario relevante según el ID del método seleccionado
   let formToShow = null;
+
   if (id === "cod") {
-    // "Contra Entrega" se comporta como un pago en efectivo
     formToShow = $("posPayFormCash");
-  } else if (id === "payu" || id === "stripe") {
-    // PayU y Stripe suelen involucrar pagos con tarjeta
+  } else if (id === "wompi") {
+    // Para Wompi en tienda física, usualmente registramos los detalles de la tarjeta o voucher
     formToShow = $("posPayFormCard");
-  } else if (id === "epayco") {
-    // ePayco para Nequi/Daviplata
-    formToShow = $("posPayFormMobile");
+    if ($("posPayCardRef"))
+      $("posPayCardRef").placeholder = "Ref. Voucher o Aprobación";
   }
-  // Para otros métodos como 'addi', 'sistecredito', 'qr_tienda', 'paypal',
-  // que no requieren campos de entrada específicos en el POS, no se mostrará
-  // ningún formulario adicional. Solo se verá el total y el nombre del método.
-  // Si se desea un formulario específico para estos, se debería añadir a admin-panel.html
-  // y mapearlo aquí.
 
   if (formToShow) {
     formToShow.style.display = "block";
@@ -375,6 +435,7 @@ async function confirmPOSPaymentWithDetails() {
   let shippingAddress = "";
   let customerPhone = "";
   let shippingCarrier = "";
+  let customerEmail = $("posPayEmail").value.trim(); // Capturar el email del campo
   let shippingStatus = "";
 
   if (needsShipping) {
@@ -387,6 +448,8 @@ async function confirmPOSPaymentWithDetails() {
     shippingStatus = "PENDIENTE"; // Estado inicial para envíos desde POS
   }
 
+  if (confirmBtn) confirmBtn.disabled = true;
+
   try {
     const sale = {
       id: genId(),
@@ -397,6 +460,7 @@ async function confirmPOSPaymentWithDetails() {
       channel: "fisica",
       vendor: $("posVendor")?.value || "Admin",
       client: $("posClient")?.value || "Mostrador",
+      customer_email: customerEmail, // Añadir el email del cliente a los datos de la venta
       payment_status: isLayaway ? "partial" : "completed",
       // Añadir detalles de envío al objeto de venta si aplica
       ...(needsShipping && {
@@ -416,13 +480,13 @@ async function confirmPOSPaymentWithDetails() {
     };
 
     toast("⌛ Procesando...");
-    if (confirmBtn) confirmBtn.disabled = true;
 
     const res = await apiFetch(`${window.API_URL}/sales`, {
       method: "POST",
       body: JSON.stringify(sale),
     });
     if (res.ok) {
+      if (typeof toast.clear === "function") toast.clear(); // Ocultar "Procesando"
       toast("✅ Venta registrada");
       printReceipt(sale);
       if (isLayaway && abono > 0) {
@@ -439,6 +503,7 @@ async function confirmPOSPaymentWithDetails() {
       renderPOSCart();
       closePOSPaymentModal();
       refreshAll();
+      if (typeof renderDashboard === "function") renderDashboard();
     } else {
       const err = await res.json().catch(() => ({}));
       toast("❌ Error: " + (err.error || "No se pudo registrar"));
@@ -462,57 +527,112 @@ window.openPOSPaymentModal = openPOSPaymentModal;
 window.closePOSPaymentModal = closePOSPaymentModal;
 window.confirmPOSPaymentWithDetails = confirmPOSPaymentWithDetails;
 
-/* ══════════════════════════════════════════════════════════
-   PAYMENT METHODS MANAGEMENT (Gestión de Pagos)
-══════════════════════════════════════════════════════════ */
+let activeScannerInstance = null;
 
-window.renderPayMethods = function () {
-  const renderPaySection = (containerId, methods) => {
-    const el = $(containerId);
-    if (!el) return;
-    el.innerHTML = methods
-      .map(
-        (m) => `
-      <div class="pay-method-card ${m.enabled ? "enabled" : ""}" onclick="togglePayMethod('${containerId}','${m.id}')">
-        <div class="pmc-main">
-          <span class="pmc-icon">${m.icon}</span>
-          <div class="pmc-info">
-            <div class="pmc-name">${m.name}</div>
-            <div class="pmc-type">${m.type}</div>
-          </div>
-        </div>
-        <button class="toggle-switch ${m.enabled ? "on" : ""}"
-          aria-label="${m.enabled ? "Desactivar" : "Activar"} ${m.name}">
-        </button>
-      </div>`,
-      )
-      .join("");
+/**
+ * Detiene la cámara y restablece los botones de la interfaz.
+ */
+window.stopProductQRScanner = async function () {
+  if (activeScannerInstance) {
+    try {
+      await activeScannerInstance.stop();
+      activeScannerInstance = null;
+    } catch (err) {
+      console.warn("Scanner stop error:", err);
+    }
+  }
+  // Restablecer botones (Principal y Modal)
+  if ($("startScanBtn")) $("startScanBtn").style.display = "inline-block";
+  if ($("stopScanBtn")) $("stopScanBtn").style.display = "none";
+  if ($("productScanBtn")) $("productScanBtn").style.display = "inline-block";
+  if ($("productScanStopBtn")) $("productScanStopBtn").style.display = "none";
+};
+
+/**
+ * Inicia el escáner de productos para la tienda física.
+ * Al detectar un código de barras, busca la talla exacta y la agrega al carrito.
+ */
+window.startProductQRScanner = function () {
+  // Verificación de seguridad de navegador (Cámara requiere HTTPS o Localhost)
+  if (!window.isSecureContext && window.location.hostname !== "localhost") {
+    return toast(
+      "❌ Error: El acceso a la cámara requiere conexión segura (HTTPS)",
+    );
+  }
+
+  // Detectar dinámicamente qué contenedor usar
+  let containerId = "qr-reader-main";
+  const isModalActive = $("productModal")?.classList.contains("open");
+  if (isModalActive) containerId = "qr-reader-modal";
+
+  const scannerContainer = $(containerId);
+  if (!scannerContainer) {
+    return toast("⚠️ No se encontró el área de proyección de cámara");
+  }
+
+  // Ocultar placeholder si existe
+  const placeholder = $("productScanPlaceholder");
+  if (placeholder) placeholder.style.display = "none";
+
+  // Cambiar texto de botón para feedback UX
+  const startBtn = $("startScanBtn") || $("productScanBtn");
+  const stopBtn = $("stopScanBtn") || $("productScanStopBtn");
+
+  if (startBtn) startBtn.style.display = "none";
+  if (stopBtn) stopBtn.style.display = "inline-block";
+
+  activeScannerInstance = new Html5Qrcode(scannerContainer.id);
+  // Optimización para códigos de barras: qrbox más ancho que alto
+  const config = {
+    fps: 20,
+    qrbox: { width: 300, height: 150 },
+    aspectRatio: 1.0,
   };
 
-  if (window.payMethods) {
-    renderPaySection("payNational", window.payMethods.national || []);
-    renderPaySection("payWallets", window.payMethods.wallets || []);
-    renderPaySection("payDelivery", window.payMethods.delivery || []);
-    renderPaySection("payIntl", window.payMethods.intl || []);
-  }
-};
+  activeScannerInstance
+    .start(
+      { facingMode: "environment" },
+      config,
+      async (decodedText) => {
+        // Éxito al escanear
+        console.log("🔍 Código detectado:", decodedText);
 
-const PAY_SECTION_MAP = {
-  payNational: "national",
-  payWallets: "wallets",
-  payDelivery: "delivery",
-  payIntl: "intl",
-};
+        try {
+          // 1. Detener cámara inmediatamente para evitar múltiples lecturas y limpiar UI
+          await window.stopProductQRScanner();
+          toast("⌛ Buscando producto...");
 
-window.togglePayMethod = function (sectionId, methodId) {
-  const key = PAY_SECTION_MAP[sectionId];
-  if (!key) return;
-  const m = window.payMethods[key].find((x) => x.id === methodId);
-  if (m) {
-    m.enabled = !m.enabled;
-    LS.set("payMethods", window.payMethods);
-    window.renderPayMethods();
-  }
+          // 2. Si estamos en el modal de productos, intentamos autocompletar en lugar de agregar al carrito
+          if (isModalActive) {
+            if ($("pSku")) $("pSku").value = decodedText;
+            toast("✅ Código asignado al producto");
+            return;
+          }
+
+          // Consultar a nuestro backend por el código de barras
+          const res = await apiFetch(
+            `${API_URL}/inventory/barcode/${decodedText}`,
+          );
+          if (!res.ok) throw new Error("Producto no registrado");
+
+          const item = await res.json();
+
+          // Usamos la función existente para agregar al carrito con la talla detectada
+          window.addToPOSCartById(item.productId, item.size);
+        } catch (err) {
+          toast("❌ " + err.message);
+          console.error("Error Scanner:", err);
+        }
+      },
+      (errorMessage) => {
+        /* Ignorar errores de frame */
+      },
+    )
+    .catch((err) => {
+      window.stopProductQRScanner();
+      toast("❌ No se pudo acceder a la cámara");
+      console.error(err);
+    });
 };
 
 /* ── MANUAL PAYMENT REGISTRATION ── */
@@ -651,19 +771,25 @@ window.resetPayFilters = () => {
 };
 
 window.renderPaymentsTable = function () {
-  const tbody = $("paymentsBody");
-  if (!tbody) return;
+  const container = $("paymentsBody")?.parentElement?.parentElement; // Contenedor table-wrap o similar
+  if (!container) return;
 
   const sLog = Array.isArray(window.salesLog) ? window.salesLog : [];
   const pLog = Array.isArray(window.payLog) ? window.payLog : [];
 
   let payList = [
-    ...sLog.map((s) => ({
-      ...s,
-      ts: s.timestamp,
-      amount: s.total,
-      isSale: true,
-    })),
+    ...sLog
+      .map((s) => ({
+        ...s,
+        ts: s.timestamp,
+        amount: s.total,
+        isSale: true,
+      }))
+      .filter((p) => {
+        // Solo incluir ventas que NO estén canceladas
+        const status = p.payment_details?.shipping_status || "PENDIENTE";
+        return status !== "CANCELADO";
+      }),
     ...pLog.map((p) => ({ ...p, isManual: true })),
   ];
 
@@ -696,27 +822,113 @@ window.renderPaymentsTable = function () {
 
   payList.sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
-  let totalAmount = 0;
-  if (!payList.length) {
-    tbody.innerHTML =
-      '<tr class="empty-row"><td colspan="7">Sin transacciones registradas</td></tr>';
-  } else {
-    tbody.innerHTML = payList
-      .map((p) => {
-        totalAmount += Number(p.amount) || 0;
-        return `
-        <tr>
-          <td>${fmtDate(p.ts)}</td>
-          <td>${esc(p.client || "Mostrador")}</td>
-          <td>${esc(p.method || "Efectivo")}</td>
-          <td style="font-size:11px; color:var(--gray-text);">${esc(p.ref || p.id.slice(-6))}</td>
-          <td style="font-weight:700; color:var(--accent);">${fmt(p.amount)}</td>
-          <td><span class="status-badge s-ok">${p.isSale ? "VENTA" : "COBRO"}</span></td>
-          <td><button class="btn-ghost-sm" onclick="${p.isSale ? `viewSaleDetails('${p.id}')` : `alert('Ref: ${esc(p.ref)}')`}">👁</button></td>
-        </tr>`;
-      })
+  // ── DIVISIÓN DE DATOS ──────────────────────────────────
+  const orders = payList.filter(
+    (p) =>
+      (p.method || "").startsWith("WOMPI") ||
+      p.method === "COD" ||
+      p.channel === "online",
+  );
+
+  const locals = payList.filter(
+    (p) =>
+      !(
+        (p.method || "").startsWith("WOMPI") ||
+        p.method === "COD" ||
+        p.channel === "online"
+      ),
+  );
+
+  const totalAmount = payList.reduce(
+    (sum, p) => sum + (Number(p.amount) || 0),
+    0,
+  );
+
+  // Helper para renderizar las filas de cada sección
+  const renderRows = (list) => {
+    if (!list.length)
+      return '<div style="text-align:center; padding:20px; color:var(--gray-text)">No hay registros</div>';
+    return list
+      .map(
+        (p) => `
+        <div class="activity-item" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.01)">
+          <div style="display:flex; gap:15px; align-items:center;">
+            <div style="font-size:20px">${(p.method || "").includes("WOMPI") ? "💎" : p.method === "COD" ? "🚚" : "💵"}</div>
+            <div>
+              <div style="font-weight:600; font-size:14px; color:white;">${esc(p.client || "Mostrador")}</div>
+              <div style="font-size:11px; color:var(--gray-text); margin-top:2px;">
+                ${fmtDate(p.ts)} • <span style="color:var(--accent)">${esc(p.method || "Efectivo")}</span>
+              </div>
+              <div style="font-size:10px; color:var(--gray3); font-family:monospace; margin-top:2px;">REF: ${esc(p.ref || p.id.slice(-6))}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700; color:var(--accent); font-size:17px;">${fmt(p.amount)}</div>
+            <div style="margin-top:5px; display:flex; gap:5px; justify-content:flex-end;">
+               <span class="status-badge s-ok" style="font-size:9px; padding:2px 6px;">${p.isSale ? "VENTA" : "COBRO"}</span>
+               <button class="btn-ghost-sm" style="padding:2px 8px" onclick="${p.isSale ? `viewSaleDetails('${p.id}')` : `alert('Ref: ${esc(p.ref)}')`}">👁 VER</button>
+            </div>
+          </div>
+        </div>`,
+      )
       .join("");
-  }
+  };
+
+  // Reemplazamos la tabla entera por una estructura de "Ventanitas" (Acordeones)
+  container.innerHTML = `
+    <div class="payments-accordion-wrap" style="display:flex; flex-direction:column; gap:15px;">
+      
+      <!-- SECCIÓN DE RESUMEN VERTICAL (KPIs) -->
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:5px;">
+        <div class="dash-neon-box" style="padding:15px 25px; flex-direction:row; justify-content:space-between; align-items:center;">
+           <div style="text-align:left">
+             <span class="dash-label-impact" style="margin-bottom:2px">TOTAL RECAUDADO</span>
+             <span class="dash-val-large" style="font-size:32px; color:var(--white)">${fmt(totalAmount)}</span>
+           </div>
+           <div style="text-align:right">
+             <span class="dash-label-impact" style="margin-bottom:2px">OPERACIONES</span>
+             <span class="dash-val-large" style="font-size:32px; color:var(--accent)">${payList.length}</span>
+           </div>
+        </div>
+      </div>
+
+      <!-- VENTANITA 1: PEDIDOS ONLINE -->
+      <div class="dash-neon-box" style="padding:0; overflow:hidden; display:block;">
+        <div class="accordion-header" onclick="this.nextElementSibling.classList.toggle('hidden')" 
+             style="padding:15px 20px; background:rgba(232, 255, 71, 0.08); display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Bebas Neue'; letter-spacing:2px; color:var(--accent); font-size:20px;">
+            📦 PEDIDOS ONLINE & PASARELAS (${orders.length})
+          </span>
+          <div style="text-align:right">
+            <div style="font-size:14px; font-weight:800; color:white">${fmt(orders.reduce((s, p) => s + (Number(p.amount) || 0), 0))}</div>
+            <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
+          </div>
+        </div>
+        <div class="accordion-body hidden" style="padding:0; background:rgba(0,0,0,0.2)">
+          <div class="activity-feed">${renderRows(orders)}</div>
+        </div>
+      </div>
+
+      <!-- VENTANITA 2: PAGOS LOCALES -->
+      <div class="dash-neon-box" style="padding:0; overflow:hidden; display:block;">
+        <div class="accordion-header" onclick="this.nextElementSibling.classList.toggle('hidden')" 
+             style="padding:15px 20px; background:rgba(255,255,255,0.03); display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Bebas Neue'; letter-spacing:2px; color:white; font-size:20px;">
+            🏪 VENTAS LOCALES & CAJA (${locals.length})
+          </span>
+          <div style="text-align:right">
+            <div style="font-size:14px; font-weight:800; color:var(--accent)">${fmt(locals.reduce((s, p) => s + (Number(p.amount) || 0), 0))}</div>
+            <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
+          </div>
+        </div>
+        <div class="accordion-body hidden" style="padding:0; background:rgba(0,0,0,0.2)">
+          <div class="activity-feed">${renderRows(locals)}</div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
   if ($("phSummaryTotal")) $("phSummaryTotal").textContent = fmt(totalAmount);
   if ($("phSummaryCount")) $("phSummaryCount").textContent = payList.length;
 };
@@ -754,4 +966,18 @@ window.exportPaymentsCSV = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+/**
+ * Alterna la visibilidad de un grupo de filas basado en la fecha
+ */
+window.toggleDayGroup = function (headerRow, dateKey) {
+  const tbody = headerRow.parentElement;
+  const rows = tbody.querySelectorAll(`tr[data-day-group="${dateKey}"]`);
+  const isHidden = rows[0] && rows[0].style.display === "none";
+
+  rows.forEach((r) => {
+    r.style.display = isHidden ? "" : "none";
+  });
+  headerRow.style.opacity = isHidden ? "1" : "0.6";
 };

@@ -1,5 +1,5 @@
 window.verifySession = () => {
-  const s = LS.get("session");
+  const s = SS.get("session");
   return s && s.user && s.token;
 };
 
@@ -32,7 +32,7 @@ function doLogin(event) {
       };
       window.AUTH_TOKEN = data.token;
       if (data.apiKey) localStorage.setItem("w_api_key", data.apiKey);
-      LS.set("session", window.session);
+      SS.set("session", window.session);
       window.showApp();
     })
     .catch((e) => {
@@ -49,13 +49,17 @@ function doLogin(event) {
         btn.disabled = false;
         btn.textContent = "INGRESAR AL PANEL";
       }
+      // Limpiar el campo de la contraseña por seguridad
+      if ($("loginPass")) {
+        $("loginPass").value = "";
+      }
     });
 }
 
 async function doLogout(forced = false) {
   if (!forced)
     await apiFetch(`${API_URL}/logout`, { method: "POST" }).catch((e) => {});
-  LS.set("session", null);
+  SS.set("session", null);
   window.AUTH_TOKEN = null;
   location.reload();
 }
@@ -69,13 +73,34 @@ function showApp() {
     if (nameEl) nameEl.textContent = window.session.role;
   }
   refreshAll();
-  navigateTo("dashboard");
+
+  // Lógica de redirección inteligente:
+  // Si la URL tiene un # (hash), vamos a esa página, si no, al dashboard.
+  const hash = window.location.hash.replace("#", "");
+  if (hash && hash !== "" && hash !== "dashboard") {
+    navigateTo(hash);
+  } else {
+    navigateTo("dashboard");
+  }
 }
 
 function togglePass() {
   const p = $("loginPass");
   if (p) p.type = p.type === "password" ? "text" : "password";
 }
+
+// --- Inicialización de Eventos para evitar bloqueos CSP ---
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("loginForm");
+  if (form) {
+    form.addEventListener("submit", doLogin);
+  }
+
+  const toggleBtn = document.getElementById("btnTogglePass");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", togglePass);
+  }
+});
 
 window.doLogin = doLogin;
 window.doLogout = doLogout;

@@ -831,7 +831,7 @@ nav.scrolled {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 48px;
+  margin-bottom: 12px;
 }
 
 .section-label {
@@ -844,7 +844,7 @@ nav.scrolled {
 
 .section-title {
   font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(40px, 5vw, 62px);
+  font-size: clamp(40px, 2vw, 62px);
   letter-spacing: 2px;
   line-height: 1;
 }
@@ -1139,7 +1139,7 @@ nav.scrolled {
 .promo-banner {
   margin: 0 80px 100px;
   background: var(--accent);
-  padding: 55px 70px;
+  padding: 14px 96px;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -1310,7 +1310,7 @@ nav.scrolled {
 }
 
 .testimonials {
-  background: var(--gray);
+  background: var(--black);
 }
 
 .test-grid {
@@ -1443,16 +1443,16 @@ nav.scrolled {
 }
 
 footer {
-  background: var(--gray);
+  background: var(--black);
   border-top: 1px solid var(--border);
-  padding: 80px 80px 40px;
+  padding: 80px 80px 70px;
 }
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 56px;
-  margin-bottom: 56px;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 35px;
+  margin-bottom: 42px;
 }
 
 .footer-logo {
@@ -1612,7 +1612,7 @@ footer {
   .featured,
   .testimonials,
   .newsletter {
-    padding: 72px 40px;
+    padding: 25px 40px;
   }
 
   footer {

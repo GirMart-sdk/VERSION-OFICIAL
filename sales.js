@@ -2,7 +2,7 @@
    WINNER — sales.js (Registro de Ventas & VIP)
    ═══════════════════════════════════════════════════════ */
 
-let _salesTimeRange = "today";
+let _salesTimeRange = "all"; // Cambiado a 'all' para que el historial no se vea vacío al entrar
 
 async function fetchSalesLog() {
   try {
@@ -262,9 +262,20 @@ function renderSalesTable() {
   const sLog = Array.isArray(window.salesLog) ? window.salesLog : [];
   let filtered = [...sLog];
 
+  const getSaleDate = (s) => s.createdAt || s.timestamp || "";
+
+  // Filtrar ventas canceladas por defecto para coincidir con Dashboard
+  filtered = filtered.filter((s) => {
+    const d =
+      typeof s.payment_details === "string"
+        ? JSON.parse(s.payment_details || "{}")
+        : s.payment_details || {};
+    return d.shipping_status !== "CANCELADO";
+  });
+
   // 1. Filtro por Tiempo / Fecha
   if (dateFilter) {
-    filtered = filtered.filter((s) => s.timestamp.startsWith(dateFilter));
+    filtered = filtered.filter((s) => getSaleDate(s).startsWith(dateFilter));
     _salesTimeRange = "custom";
     const container = document.querySelector("#page-sales .phc-quick-filters");
     if (container)
@@ -274,16 +285,16 @@ function renderSalesTable() {
   } else if (_salesTimeRange !== "all") {
     const todayStr = getTodayStr();
     if (_salesTimeRange === "today") {
-      filtered = filtered.filter((s) => s.timestamp.startsWith(todayStr));
+      filtered = filtered.filter((s) => getSaleDate(s).startsWith(todayStr));
     } else if (_salesTimeRange === "yesterday") {
       const yestStr = getPastDate(1);
-      filtered = filtered.filter((s) => s.timestamp.startsWith(yestStr));
+      filtered = filtered.filter((s) => getSaleDate(s).startsWith(yestStr));
     } else if (_salesTimeRange === "week") {
       const weekAgoStr = getPastDate(7);
-      filtered = filtered.filter((s) => s.timestamp >= weekAgoStr);
+      filtered = filtered.filter((s) => getSaleDate(s) >= weekAgoStr);
     } else if (_salesTimeRange === "month") {
       const monthAgoStr = getPastDate(30);
-      filtered = filtered.filter((s) => s.timestamp >= monthAgoStr);
+      filtered = filtered.filter((s) => getSaleDate(s) >= monthAgoStr);
     }
   }
 
@@ -317,6 +328,7 @@ function renderSalesTable() {
     tbody.innerHTML =
       '<tr class="empty-row"><td colspan="9">Sin ventas en este periodo</td></tr>';
   } else {
+    let lastDate = "";
     filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     tbody.innerHTML = filtered
       .map((s, idx) => {
@@ -334,10 +346,28 @@ function renderSalesTable() {
           : `<span class="status-badge s-ok">${s.channel || "Física"}</span>`;
 
         totalRevenue += Number(s.total) || 0;
-        return `
-        <tr>
+        const sDate = getSaleDate(s);
+        const dateObj = new Date(sDate);
+        const dateKey = dateObj.toLocaleDateString("sv-SE");
+        let divider = "";
+
+        if (dateKey !== lastDate) {
+          const displayDate = dateObj.toLocaleDateString("es-CO", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+          divider = `<tr class="day-divider" onclick="toggleDayGroup(this, '${dateKey}')" style="cursor:pointer"><td colspan="9">📅 ${displayDate.toUpperCase()} <small style="opacity:0.5; float:right; font-size:9px">CLICK PARA CONTRAER/EXPANDIR</small></td></tr>`;
+          lastDate = dateKey;
+        }
+
+        return (
+          divider +
+          `
+        <tr data-day-group="${dateKey}">
           <td style="color:var(--gray-text);font-size:11px">#${filtered.length - idx}</td>
-          <td style="font-size:12px">${fmtDate(s.timestamp)}</td>
+          <td style="font-size:12px">${fmtDate(sDate)}</td>
           <td>${channelBadge}</td>
           <td>${s.vendor || "---"}</td>
           <td style="color:var(--gray-text)">${esc(s.client || "Mostrador")}</td>
@@ -352,7 +382,8 @@ function renderSalesTable() {
               <button class="action-btn" onclick="window.printReceiptById('${s.id}')">🖨</button>
             </div>
           </td>
-        </tr>`;
+        </tr>`
+        );
       })
       .join("");
   }

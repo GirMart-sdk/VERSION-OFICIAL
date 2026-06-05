@@ -9,10 +9,13 @@ REM ================================================
 
 cd /d "%~dp0"
 
+REM Configurar la consola para usar UTF-8
+chcp 65001 >nul
+
 echo.
 echo ================================================
 echo  WINNER STORE - install-and-run
-echo  http://localhost:3000
+echo  http://192.168.1.8:3000
 echo ================================================
 
 echo.
@@ -44,18 +47,15 @@ echo.
 echo [Configurando Prisma y BD...]
 echo Generando cliente Prisma...
 call npx prisma generate
-
-echo Sincronizando esquema de base de datos...
-call npx prisma db push --accept-data-loss
-
-echo Poblando base de datos (Seed)...
-call node backend/seed.js
-if %errorlevel% neq 0 (
-  echo ERROR: El proceso de base de datos fallo.
-  pause
-  exit /b 1
-)
+echo.
+echo [!] OMITIENDO DB PUSH Y SEED para proteger datos existentes.
+echo [!] Si es la primera vez que instalas, ejecuta: 
+echo     npx prisma db push 
+echo     node backend/seed.js
 
 echo.
 echo [+] Arrancando servidor...
+echo [!] Acceso: http://192.168.1.8:3000
+echo.
+start http://192.168.1.8:3000/admin-panel.html
 node backend/server.js

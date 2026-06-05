@@ -1,8 +1,8 @@
-# 📊 REPORTE FINAL DEL PROYECTO - WINNER STORE v3.2
+# 📊 REPORTE FINAL - WINNER STORE v3.5 (Dezpy Inventory Edition)
 
 **Fecha:** 15 de mayo de 2026  
-**Versión:** 3.2 Dual-DB Production  
-**Estado:** ✅ DESPLEGABLE Y ESCALABLE
+**Versión:** 3.5 PostgreSQL Native (Foco Tienda Física)  
+**Estado:** ✅ OPERATIVO PARA CONTROL DE STOCK
 
 ---
 
@@ -20,23 +20,24 @@
 
 ---
 
-## 📌 RESUMEN EJECUTIVO
+## 📌 RESUMEN EJECUTIVO (CONTROL DE INVENTARIO)
 
-**WINNER STORE v3.0** es una plataforma de e-commerce profesional, modular y escalable diseñada específicamente para comerciantes de ropa streetwear en Colombia.
+**WINNER STORE v3.5** está optimizada para la gestión de inventario en tiempo real para tiendas físicas, con soporte latente para ventas online.
 
 ### Logros Implementados ✅
 
-| Componente            | Estado | Detalles                                                             |
-| --------------------- | ------ | -------------------------------------------------------------------- |
-| Base de Datos         | ✅     | Prisma 7 ORM (PostgreSQL Oficial) con prisma.config.ts               |
-| Backend Node.js       | ✅     | 40+ endpoints, JWT, Adaptador unificado v3.2                         |
-| Frontend POS          | ✅     | Panel administrativo completo                                        |
-| Sistema de Pagos      | ✅     | Captura de metadatos (Voucher, Teléfono, Cambio)                     |
-| Gestión de Inventario | ✅     | Stock por talla + QR + Alertas automáticas                           |
-| Inteligencia          | ✅     | Predicción de demanda y Reorden automático                           |
-| Sistema de Tallas     | ✅     | Categórico: Ropa (letras), Calzado (números), Accesorios (sin talla) |
-| Datos de Prueba       | ✅     | Seed optimizado para PostgreSQL y SQLite                             |
-| Documentación         | ✅     | APIs, setup, y guías operacionales                                   |
+| Componente            | Estado | Detalles                                                                               |
+| --------------------- | ------ | -------------------------------------------------------------------------------------- |
+| Base de Datos         | ✅     | Prisma 7 (PostgreSQL: `dezpy_v01`) con **Barcodes** y **Stock Mínimo** por tallas.     |
+| Backend Node.js       | ✅     | 40+ endpoints, JWT, Nodemailer (Actor Directo) para emails.                            |
+| Frontend POS          | ✅     | **Rediseño premium**, animaciones, captura de email para factura.                      |
+| Sistema de Pagos      | ✅     | Captura de metadatos (Voucher, Teléfono, Cambio, Email).                               |
+| Gestión de Inventario | ✅     | Stock por talla + QR + Alertas + **Carga masiva inteligente CSV**.                     |
+| Inteligencia          | ✅     | Predicción de demanda y Reorden automático.                                            |
+| Sistema de Tallas     | ✅     | Categórico: Ropa (letras), Calzado (números), Accesorios (**talla U**).                |
+| Datos de Prueba       | ✅     | Seed optimizado para PostgreSQL y SQLite.                                              |
+| Documentación         | ✅     | APIs, setup, y guías operacionales.                                                    |
+| Dashboard             | ✅     | **Layout GRID dinámico, ApexCharts, KPIs con Sparklines, Actividad en vivo, Heatmap.** |
 
 ---
 
@@ -73,16 +74,15 @@ Frontend:
 
 Backend:
   - Node.js v18+
-  - Express.js v5.2.1
-  - Prisma ORM (Gestión de DB)
+  - Express.js v5.x
+  - Prisma 7 ORM (PostgreSQL)
   - dotenv (configuración)
   - CORS habilitado
 
 Base de Datos:
-  - SQLite3 (persistencia local)
-  - Migrations automáticas
-  - Índices optimizados
-  - Foreign keys activadas
+  - PostgreSQL (Supabase / Render / Local)
+  - Persistencia relacional segura
+  - Esquema gestionado por Prisma Client
 ```
 
 ### Requisitos del Sistema
@@ -131,37 +131,15 @@ ACCESORIOS:
 ### 2. Sistema de Pagos Multicanal ✅
 
 ```
-6 MÉTODOS DE PAGO IMPLEMENTADOS:
+METODOLOGÍA DE PAGO CENTRALIZADA:
 
-1. EFECTIVO
-   └─ Validación: Moneda descarga manual
-      Campos: N/A
-      Status: Inmediato
+1. **Motor Wompi (Bancolombia):**
+   └─ Procesa: Tarjetas (Visa/MC), PSE y Nequi.
+   └─ Seguridad: Firma SHA-256 de integridad.
+   └─ Confirmación: Webhook automático `/api/webhooks/wompi`.
 
-2. NEQUI
-   └─ Validación: Número de teléfono
-      Campos: Teléfono, referencia
-      Status: Confirmación manual
-
-3. DAVIPLATA
-   └─ Validación: Cédula + teléfono
-      Campos: CC, Teléfono
-      Status: Confirmación manual
-
-4. PSE
-   └─ Validación: Banco selector
-      Campos: Banco, referencia
-      Status: Confirmación manual
-
-5. TARJETA DÉBITO
-   └─ Validación: PAN 16 dígitos
-      Campos: Número, expiry, CVV
-      Status: Procesa inmediato
-
-6. TARJETA CRÉDITO
-   └─ Validación: PAN 16 dígitos
-      Campos: Número, expiry, CVV, cuotas
-      Status: Procesa inmediato
+2. **Efectivo (Contra Entrega):**
+   └─ Status: Pendiente hasta confirmación manual en panel.
 ```
 
 **Modal de 2 Pasos:**
@@ -278,8 +256,7 @@ Crear archivo `.env` en la raíz:
 PORT=3000
 
 # DATABASE
-DB_TYPE=sqlite
-DB_PATH=winner_store.db
+DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/dezpy_v01?sslmode=disable"
 
 # ADMIN CREDENTIALS
 ADMIN_USER=admin
@@ -289,6 +266,12 @@ ADMIN_PASSWORD=winner2026
 API_KEY=winner-store-api-key-2026
 JWT_SECRET=your-jwt-secret-key-here
 
+# EMAIL (Nodemailer)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=tu-correo@gmail.com
+EMAIL_PASS=tu-contrasena-de-aplicacion
+
 # ENVIRONMENT
 NODE_ENV=development
 ```
@@ -296,7 +279,8 @@ NODE_ENV=development
 ### Paso 4: Inicializar Base de Datos
 
 ```bash
-npm run seed
+npx prisma db push
+node backend/seed.js
 ```
 
 **Resultado esperado:**

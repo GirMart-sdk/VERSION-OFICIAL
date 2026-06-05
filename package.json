@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package",
   "name": "winner-store",
   "version": "2.0.0",
   "description": "🏆 WINNER STORE - Plataforma de e-commerce moderna para tiendas de ropa streetwear colombianas",
@@ -11,10 +12,11 @@
     "npm": ">=6.0.0"
   },
   "scripts": {
+    "prestart": "prisma generate",
     "start": "node backend/server.js",
     "start:dev": "NODE_ENV=development node backend/server.js",
     "start:prod": "NODE_ENV=production node backend/server.js",
-    "start:local": "node start-local.bat",
+    "start:local": "start-local.bat",
     "develop": "watch 'npm start' .",
     "seed": "prisma db seed",
     "init": "npm install && npm run seed && npm start",
@@ -28,7 +30,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:check": "prisma db pull && echo '✅ Conexión con PostgreSQL establecida'",
-    "clean": "del /s /q backend\\*.db 2>nul || rm -f backend/*.db && echo '✅ BD limpiada'",
+    "clean": "del /s /q backend\\*.db 2>nul || rm -f backend/*.db",
+    "reinstall": "rmdir /s /q node_modules && del package-lock.json && npm install",
     "reset": "npm run clean && npm run seed && echo '✅ Proyecto reseteado'",
     "logs": "type .env | findstr DB || echo 'Revisa backend/server.js para logs'",
     "postinstall": "prisma generate"
@@ -44,21 +47,24 @@
     "daviplata"
   ],
   "dependencies": {
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-pg": "^6.19.3",
+    "@prisma/client": "^6.19.3",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "helmet": "^7.2.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.10",
+    "pdfkit": "^0.18.0",
     "pg": "^8.11.3",
-    "sqlite3": "^6.0.1"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
-    "@prisma/config": "^7.8.0",
-    "prisma": "^7.8.0",
+    "@prisma/config": "^6.19.3",
+    "prisma": "^6.19.3",
     "watch": "^0.13.0"
   },
   "repository": {
@@ -69,7 +75,5 @@
     "url": "https://github.com/GirMart-sdk/winner_dezpy/issues"
   },
   "homepage": "https://github.com/GirMart-sdk/winner_dezpy#readme",
-  "prisma": {
-    "seed": "node backend/seed.js"
-  }
+  "prettier": {}
 }

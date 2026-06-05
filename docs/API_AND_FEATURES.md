@@ -1,6 +1,6 @@
 # API_AND_FEATURES.md
 
-# 🔌 API REST Y CARACTERÍSTICAS - WINNER STORE v3.2
+# 🔌 API REST Y CARACTERÍSTICAS -WINNER STORE v3.5 (Prisma Edition)
 
 **Documentación completa de APIs, características, métodos de pago y troubleshooting**
 
@@ -22,12 +22,14 @@
 
 **Frontend Responsivo:**
 
-- Catálogo dinámico de productos
+- Catálogo dinámico de productos con filtros de talla
 - Búsqueda y filtros activos
 - Carrito persistente (LocalStorage)
 - Interfaz intuitiva (móvil, tablet, desktop)
-- Integración WhatsApp automática
-- Confirmación de pago
+- Checkout premium con animaciones "fly-to-cart"
+- Confirmación de pago y envío de factura por email
+- **Notificaciones automáticas por Email (Actor Directo)**
+- Preparado para WhatsApp API (sin redirección)
 
 **Funcionalidades:**
 
@@ -36,18 +38,22 @@
 - ✅ Filtrar por precio/talla
 - ✅ Agregar/quitar de carrito
 - ✅ Checkout en 3 pasos
-- ✅ 5 métodos de pago
-- ✅ Confirmación automática
+- ✅ Múltiples métodos de pago (simulados, listos para integración real)
+- ✅ Confirmación automática por email
 - ✅ Historial de compras
 
 ---
 
 ### 👨‍💼 PANEL ADMINISTRATIVO
 
-**Dashboard Principal:**
+**Dashboard Principal (Rediseño Neón con ApexCharts):**
 
+- **Layout GRID dinámico:** KPIs, gráficas de ventas, actividad en vivo, heatmap.
+- **KPIs inteligentes:** Iconos, sparklines (mini-gráficas de tendencia) y glow suave.
+- **Gráficas avanzadas:** Uso de ApexCharts con gradients, glassmorphism, animaciones y tooltips modernos.
+- **Actividad en vivo:** Panel lateral con notificaciones de nuevas ventas en tiempo real.
+- **Heatmap de horarios de venta:** Identifica las horas de mayor actividad para optimizar operaciones.
 - Ventas hoy/mes/año
-- Gráficas en tiempo real
 - Productos más vendidos
 - Clientes nuevos
 - Ingresos totales
@@ -60,12 +66,13 @@
    - Crear nuevo
    - Editar producto
    - Eliminar producto
-   - Ver inventario por talla
+   - Ver inventario por talla (con talla "U" para accesorios)
    - Marcar como oferta/badge
 
 2. **Ventas**
    - Registrar venta
    - Ver historial completo
+   - **Gestión de logística y despacho (estados de envío, tracking)**
    - Filtrar por período
    - Buscar por cliente
    - Detalles de cada venta
@@ -74,7 +81,7 @@
 3. **Inventario**
    - Stock actual por talla
    - Alerts de bajo stock
-   - Reorden automático
+   - **Carga masiva inteligente de inventario (CSV compatible con Treinta)**
    - Predicción de demanda
    - Movimientos de inventario
    - Exportar reporte
@@ -87,6 +94,9 @@
    - Últimas órdenes
 
 5. **Estadísticas**
+   - **Conversión dinámica**
+   - **Gráficas de rendimiento con ApexCharts**
+   - **Actividad en vivo**
    - Gráficas de tendencia
    - Top 10 productos
    - Ventas por canal (online/física)
@@ -98,6 +108,7 @@
    - Cambiar contraseña
    - Datos de tienda
    - Métodos de pago
+   - **Configuración de notificaciones por Email (Actor Directo)**
    - Usuarios admin
 
 ---
@@ -105,14 +116,12 @@
 ### 💳 MÉTODOS DE PAGO SOPORTADOS
 
 Ver sección "Métodos de Pago (Guía Completa)" más abajo.
+**Checkout premium estilo Apple/Shopify.**
 
 En resumen:
 
-- ✅ Tarjeta de crédito
-- ✅ PSE
-- ✅ Nequi
-- ✅ Daviplata
-- ✅ Efectivo
+- ✅ **Pasarela Wompi (Bancolombia):** Unificada para Tarjetas, PSE y Nequi.
+- ✅ **Pago Contra Entrega (COD):** Gestión manual para entregas físicas.
 
 ---
 
@@ -122,11 +131,11 @@ En resumen:
 - ✅ Autenticación JWT
 - ✅ Validación de datos
 - ✅ Error handling global
+- ✅ **Nodemailer para envío de emails (Actor Directo)**
 - ✅ Logging estructurado
 - ✅ Rate limiting
 - ✅ CORS configurado
-- ✅ SQLite + PostgreSQL
-- ✅ Auto-switch BD
+- ✅ PostgreSQL (Prisma ORM)
 - ✅ Respaldos automáticos
 
 ---
@@ -765,7 +774,6 @@ CREATE TABLE products (
   id              TEXT PRIMARY KEY,
   name            TEXT NOT NULL,
   price           REAL NOT NULL,
-  oldPrice        REAL,
   cost            REAL DEFAULT 0,
   category        TEXT,
   image           TEXT,

@@ -2,75 +2,24 @@
    WINNER STORE — app.js
    ═══════════════════════════════════════════════════════ */
 
-/* ── API CONFIG ─────────────────────────────────────────── */
-const API_URL = (() => {
-  const origin = window.location.origin;
+// ── CONFIGURACIÓN DINÁMICA DE API ────────────────────────
+// Detecta automáticamente si estamos en localhost o en la IP 192.168.1.8
+window.API_URL = window.location.origin + "/api";
+window.API_KEY = "dev-api-key"; // Key por defecto para desarrollo
 
-  // Si se abre como archivo local, usamos el puerto 3000 por defecto.
-  // En cualquier otro caso, usamos el origin actual (soporta cambios de puerto dinámicos).
-  const base = origin.startsWith("file:") ? "http://localhost:3000" : origin;
-
-  return `${base.replace(/\/$/, "")}/api`;
-})();
-
-window.API_URL = API_URL;
-
-// Helpers globales para el Admin Panel
-window.$ = (id) => document.getElementById(id);
-window.toast = (msg) => showToast(msg);
-window.fmt = (val) => formatPrice(Number(val) || 0);
-
-// Helpers de lógica de negocio compartidos (Globales)
-window.totalStock = function (p) {
-  if (!p.stock) return 0;
-  return Object.values(p.stock).reduce((a, b) => a + (parseInt(b) || 0), 0);
-};
-window.stockStatus = function (ts) {
-  if (ts === 0) return { label: "AGOTADO", cls: "out" };
-  if (ts <= 5) return { label: "BAJO", cls: "low" };
-  return { label: "OK", cls: "ok" };
-};
-window.nowStr = () => new Date().toISOString();
-
-const API_KEY = localStorage.getItem("w_api_key") || "dev-api-key";
-
-const apiFetch = (url, options = {}) => {
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-    "x-api-key": API_KEY,
+// Fallback para apiFetch si core.js no carga
+if (typeof window.apiFetch !== "function") {
+  window.apiFetch = async function (url, options = {}) {
+    options.headers = options.headers || {};
+    options.headers["x-api-key"] = window.API_KEY;
+    return fetch(url, options);
   };
-  return fetch(url, { ...options, headers });
-};
-
-/* ── HELPERS ─────────────────────────────────────────── */
-const esc = (str) => {
-  if (!str) return "";
-  return String(str).replace(
-    /[&<>"']/g,
-    (m) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[m],
-  );
-};
-
-const formatPrice = (val) => {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(val);
-};
+}
 
 /* ── STATE ──────────────────────────────────────────────── */
-let PRODUCTS = [];
+window.PRODUCTS = [];
 let cart = loadCart();
-let activeFilter = "all";
+window.activeFilter = "all";
 let selectedMethodForFinalize = null;
 
 // Payment flow state
@@ -95,7 +44,7 @@ let paymentData = {
 // ═══════════════════════════════════════════════════════
 // TRANSPORTADORAS COLOMBIANAS
 // ═══════════════════════════════════════════════════════
-const SHIPPING_OPTIONS = [
+window.SHIPPING_OPTIONS = [
   {
     id: "servientrega_express",
     name: "Servientrega Express",
@@ -165,50 +114,11 @@ const SHIPPING_OPTIONS = [
 // CONFIGURACIÓN DE PASARELAS DE PAGO
 // ═══════════════════════════════════════════════════════
 const PAYMENT_GATEWAYS = {
-  NEQUI: {
-    name: "Nequi",
-    icon: "📱",
-    color: "#e91e8b",
-    url: "https://www.equifax.com.co/nequi",
-    instructions: "Te enviaremos un link de pago seguro via WhatsApp",
-  },
-  DAVIPLATA: {
-    name: "Daviplata",
-    icon: "📱",
-    color: "#ff6b00",
-    url: "https://www.davivienda.com/daviplata",
-    instructions: "Recibirás instrucciones de pago por WhatsApp",
-  },
-  PSE: {
-    name: "PSE / Transferencia",
-    icon: "🏦",
-    color: "#1e90ff",
-    url: "https://www.pagofacil.com.co",
-    instructions: "Serás redirigido a PSE para confirmar tu pago",
-  },
-  PAYU: {
-    name: "PayU Latam",
-    icon: "🟢",
-    color: "#a5c312",
-    instructions: "Paga con PSE, Tarjeta o Efecty a través de PayU",
-  },
-  ADDI: {
-    name: "Addi",
-    icon: "💸",
-    color: "#00FFC2",
-    instructions: "Paga a 3 cuotas sin interés con tu cédula",
-  },
-  SISTECREDITO: {
-    name: "Sistecredito",
-    icon: "🔵",
-    color: "#004b93",
-    instructions: "Usa tu crédito personal de Sistecredito",
-  },
-  EPAYCO: {
-    name: "ePayco (Nequi/Daviplata)",
-    icon: "📱",
-    color: "#ff5a00",
-    instructions: "Pago rápido por Nequi o Daviplata",
+  WOMPI: {
+    name: "Wompi (PSE/Tarjetas/Nequi)",
+    icon: "💎",
+    color: "#e8ff47",
+    instructions: "Procesado de forma segura por Bancolombia.",
   },
   COD: {
     name: "Contra Entrega",
@@ -220,12 +130,24 @@ const PAYMENT_GATEWAYS = {
 
 async function fetchProducts() {
   try {
-    const res = await apiFetch(`${API_URL}/products`);
-    PRODUCTS = await res.json();
-    renderProducts(activeFilter);
+    const res = await apiFetch(`${window.API_URL}/products`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || `Error del servidor: ${res.status}`);
+    }
+
+    window.PRODUCTS = Array.isArray(data) ? data : [];
+    renderProducts(window.activeFilter);
+
+    // Ejecutar render de destacados si el módulo existe
+    if (window.FeaturedModule) window.FeaturedModule.render();
+
+    // Ejecutar lógica de promoción inteligente
+    if (window.PromoModule) window.PromoModule.init();
   } catch (err) {
-    console.error("Error fetching products:", err);
-    showToast("❌ Error al conectar con el servidor");
+    console.error("❌ Error al cargar productos:", err);
+    showToast(`❌ ${err.message || "Error de conexión"}`);
   }
 }
 
@@ -243,10 +165,10 @@ async function registerOnlineSale(methodName) {
     customer_email: paymentData.customer.email,
     customer_phone: paymentData.customer.phone,
     shipping_address: paymentData.customer.address, // Directamente en saleData
-    shipping_carrier: paymentData.shipping.carrier, // Para etiquetas en Admin
+    shipping_carrier: paymentData.shipping.carrier || "Estándar",
     method: methodName,
     payment_method: methodName, // Añadido para consistencia
-    payment_status: methodName === "Contra Entrega" ? "pending" : "completed", // 'pending' para COD
+    payment_status: "pending", // Todas las ventas online inician en pendiente hasta que se confirme el pago
     reference_number: saleId, // Usar saleId como referencia
     channel: "online",
     subtotal: subtotal,
@@ -254,7 +176,7 @@ async function registerOnlineSale(methodName) {
     total: total,
     items: cart.map((i) => ({
       id: i.id,
-      productId: i.id, // Enviamos ambos para asegurar compatibilidad con el backend
+      productId: i.id,
       name: i.name,
       qty: i.qty,
       price: i.price,
@@ -264,7 +186,7 @@ async function registerOnlineSale(methodName) {
 
   try {
     console.log("📤 Guardando venta online:", saleData);
-    const res = await apiFetch(`${API_URL}/sales`, {
+    const res = await apiFetch(`${window.API_URL}/sales`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(saleData),
@@ -295,7 +217,7 @@ async function registerOnlineSale(methodName) {
 }
 
 /* ── DOM REFS ───────────────────────────────────────────── */
-const DOM = {
+window.DOM = {
   // cursor: document.getElementById('cursor'),
   // cursorRing: document.getElementById('cursor-ring'),
   toast: document.getElementById("toast"),
@@ -411,7 +333,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 function addToCart(productId, sizeId) {
-  const product = PRODUCTS.find((p) => p.id === productId);
+  const product = (window.PRODUCTS || []).find((p) => p.id === productId);
   if (!product) return;
 
   // Encontrar qué talla seleccionó el usuario si no se pasó por argumento.
@@ -466,8 +388,14 @@ function addToCart(productId, sizeId) {
   saveCart();
   renderCart();
   bumpCartCount();
+
+  // Service Intelligence: Abrir carrito automáticamente en el primer item (UX)
+  if (cart.length === 1) {
+    setTimeout(openCart, 500);
+  }
   showToast(`✓ ${product.name} agregado al carrito`);
 }
+window.addToCart = addToCart;
 
 function removeFromCart(cartId) {
   cart = cart.filter((i) => i.cartId !== cartId);
@@ -501,7 +429,7 @@ function renderCart() {
       (item) => `
     <div class="cart-item">
       <img
-        src="${esc(item.img)}"
+        src="${esc(item.img || item.image)}"
         alt="${esc(item.alt)}"
         class="cart-item-img"
         onerror="this.style.background='#252525'"
@@ -525,7 +453,7 @@ function renderCart() {
 /* ══════════════════════════════════════════════════════════
    PAYMENT & CHECKOUT FLOW
 ══════════════════════════════════════════════════════════ */
-const WHATSAPP_PHONE = "573166019030";
+// WHATSAPP_PHONE ya está declarado al inicio del archivo
 
 function openPaymentModal() {
   if (cart.length === 0) {
@@ -594,6 +522,12 @@ function continueToPaymentMethod() {
   // Store customer data
   paymentData.customer = { name, email, phone, address, city };
 
+  // Persistencia de seguridad: Si se cae el internet, guardamos el progreso
+  localStorage.setItem(
+    "pending_checkout_customer",
+    JSON.stringify(paymentData.customer),
+  );
+
   // Show shipping options (step 2)
   showPaymentStep("2");
   renderShippingOptions();
@@ -612,7 +546,7 @@ function renderShippingOptions() {
 
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   // Regla: Envío gratis por compras superiores a $199.900
-  const isFreeShippingEligible = subtotal >= 199900;
+  const isFreeShippingEligible = subtotal >= 100000; // Por ejemplo, bajar a 100k
 
   shippingContainer.innerHTML = SHIPPING_OPTIONS.map((option) => {
     const finalCost =
@@ -663,6 +597,30 @@ function selectShippingMethod(methodId, cost) {
   renderPaymentMethods();
 }
 
+/**
+ * Carga datos del checkout persistidos en localStorage
+ */
+function initCheckoutPersistence() {
+  const saved = localStorage.getItem("pending_checkout_customer");
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (document.getElementById("customerName"))
+        document.getElementById("customerName").value = data.name || "";
+      if (document.getElementById("customerEmail"))
+        document.getElementById("customerEmail").value = data.email || "";
+      if (document.getElementById("customerPhone"))
+        document.getElementById("customerPhone").value = data.phone || "";
+      if (document.getElementById("customerAddress"))
+        document.getElementById("customerAddress").value = data.address || "";
+      if (document.getElementById("customerCity"))
+        document.getElementById("customerCity").value = data.city || "";
+    } catch (e) {
+      console.warn("No se pudo cargar la persistencia del checkout");
+    }
+  }
+}
+
 function updatePaymentSummary() {
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const shipping = paymentData.shipping.cost || 0;
@@ -701,78 +659,64 @@ function renderPaymentMethods() {
   const container = document.getElementById("checkoutPayMethods");
   const methods = [
     {
-      name: "PayU Latam",
-      icon: "🟢",
-      color: "#a5c312",
-      bg: "rgba(165,195,18,0.12)",
-      info: "Tarjetas, PSE y Efectivo",
+      id: "WOMPI_CARD",
+      name: "Tarjetas de Crédito",
+      icon: "💳",
+      color: "#00d4ff",
+      info: "Visa, Mastercard, Amex",
+      badge: "PROCESO SEGURO",
     },
     {
-      name: "Addi",
-      icon: "💸",
-      color: "#00FFC2",
-      bg: "rgba(0,255,194,0.12)",
-      info: "3 cuotas sin interés",
+      id: "WOMPI_PSE",
+      name: "PSE / Transferencia",
+      icon: "🏦",
+      color: "#1e90ff",
+      info: "Cualquier banco en Colombia",
+      badge: "SIN COMISIÓN",
     },
     {
-      name: "Sistecredito",
-      icon: "🔵",
-      color: "#004b93",
-      bg: "rgba(0,75,147,0.12)",
-      info: "Crédito al instante",
-    },
-    {
-      name: "Nequi / Daviplata",
+      id: "WOMPI_NEQUI",
+      name: "Nequi / Bancolombia",
       icon: "📱",
-      color: "#ff5a00",
-      bg: "rgba(255,90,0,0.12)",
-      info: "Vía ePayco",
+      color: "#e91e8b",
+      info: "Pago inmediato desde tu App",
+      badge: "RECOMENDADO",
     },
     {
+      id: "COD",
       name: "Contra Entrega",
       icon: "🚚",
       color: "#ffffff",
-      bg: "rgba(255,255,255,0.1)",
       info: "Pago al recibir",
+      badge: "TIENDA FÍSICA",
     },
   ];
 
-  let html = "";
-
-  // Add info banner
-  html += `
-    <div style="background: rgba(52,152,219,0.1); border-left: 3px solid #3498db; padding: 12px; border-radius: 4px; margin-bottom: 16px; font-size: 12px; color: var(--gray-text);">
-      🔒 <strong>Pago Seguro:</strong> Tu información está protegida y encriptada. Serás redirigido a la plataforma de pago de tu banco.
-    </div>
-  `;
-
-  // Add payment methods
-  html += methods
-    .map((m) => {
-      const isSelected = selectedMethodForFinalize === m.name;
-      return `
-    <div class="pm-card enabled" style="border: 2px solid ${isSelected ? m.color : m.color + "33"}; background: ${isSelected ? m.bg : "transparent"}; padding: 16px; border-radius: 6px; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; ${isSelected ? "box-shadow: 0 0 15px " + m.color + "44;" : ""}" 
-         onmouseover="this.style.borderColor='${m.color}'; this.style.opacity='0.9';"
-         onmouseout="this.style.borderColor='${m.color}33'; this.style.opacity='1';"
-         onclick="setPaymentMethod('${m.name}')">
-      <div style="display: flex; gap: 12px; align-items: center;">
-        <span style="font-size: 32px;">${m.icon}</span>
-        <div style="flex: 1;">
-          <div class="pm-name" style="color: ${m.color}; font-weight: 600; font-size: 14px;">${m.name}</div>
-          <div class="pm-status" style="color: var(--gray-text); font-size: 12px;">${m.info}</div>
+  container.innerHTML = methods
+    .map(
+      (m) => `
+    <div class="pm-card ${selectedMethodForFinalize === m.id ? "selected" : ""}" onclick="setPaymentMethod('${m.id}')">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="font-size: 28px; background: rgba(0,0,0,0.3); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid ${m.color}44;">
+          ${m.icon}
         </div>
-        <div style="color: ${m.color}; font-size: 20px;">→</div>
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: bold; color: white; font-size: 14px;">${m.name}</span>
+            <span style="font-size: 9px; background: ${m.color}; color: ${m.id === "CARD" || m.id === "COD" ? "#000" : "#fff"}; padding: 2px 6px; border-radius: 4px; font-weight: 900;">${m.badge}</span>
+          </div>
+          <div style="color: rgba(255,255,255,0.5); font-size: 11px; margin-top: 4px;">${m.info}</div>
+        </div>
+        <div style="color: ${m.color}; opacity: 0.5;">●</div>
       </div>
     </div>
-  `;
-    })
+  `,
+    )
     .join("");
-
-  container.innerHTML = html;
 }
 
 function setPaymentMethod(methodName) {
-  selectedMethodForFinalize = methodName;
+  selectedMethodForFinalize = methodName; // Usamos el ID (WOMPI_CARD, etc)
   paymentData.payment.method = methodName;
 
   // Actualizar visualmente la selección
@@ -787,7 +731,7 @@ async function finalizePurchase() {
   if (!selectedMethodForFinalize)
     return showToast("⚠️ Por favor selecciona un método de pago");
 
-  const methodName = selectedMethodForFinalize;
+  const methodId = selectedMethodForFinalize;
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const total = subtotal + (paymentData.shipping.cost || 0);
 
@@ -796,37 +740,153 @@ async function finalizePurchase() {
 
   showToast("⌛ Procesando pedido...");
 
-  const saleId = await registerOnlineSale(methodName);
+  // 1. Registramos la venta en nuestro servidor primero (estado pendiente)
+  const saleId = await registerOnlineSale(methodId);
 
-  if (saleId) {
+  if (saleId && saleId.startsWith("ON")) {
+    paymentData.reference = saleId;
+    paymentData.amount = total;
     localStorage.setItem("lastSaleId", saleId);
     localStorage.setItem(
       "paymentData",
       JSON.stringify({
-        method: methodName,
+        method: methodId,
         customer: paymentData.customer,
         shipping: paymentData.shipping,
         timestamp: new Date().toISOString(),
       }),
     );
 
-    // Preparamos datos para la confirmación
-    paymentData.reference = saleId;
-    paymentData.amount = total;
+    // 2. Si es un pago de Wompi, iniciamos el widget
+    if (methodId.startsWith("WOMPI_")) {
+      try {
+        const response = await apiFetch(`${window.API_URL}/checkout/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            saleId,
+            amount: total,
+            email: paymentData.customer.email,
+            paymentType: methodId.replace("WOMPI_", ""),
+          }),
+        });
 
-    simulateNotifications(paymentData.customer);
-    showOrderConfirmation(paymentData, methodName);
+        if (!response.ok) {
+          throw new Error("No se pudo conectar con la pasarela de pagos.");
+        }
+
+        const data = await response.json();
+        console.log("🔍 Parámetros recibidos de Wompi:", data);
+
+        // Si no hay llaves de Wompi, disparamos el flujo manual por WhatsApp
+        if (data.isManual) {
+          handleManualWhatsAppPayment(saleId, total, paymentData.customer);
+          // Limpiamos carrito y mostramos confirmación
+          cart = [];
+          saveCart();
+          renderCart();
+          showOrderConfirmation(paymentData, methodId);
+          return;
+        }
+
+        // Abrir el widget oficial de Wompi
+        // Intentar obtener la clase de múltiples fuentes posibles
+        const WompiClass =
+          window.WidgetCheckout ||
+          (window.Wompi && window.Wompi.WidgetCheckout);
+
+        if (!WompiClass) {
+          showToast(
+            "❌ Error: La librería de pagos no cargó. Revisa tu conexión o desactiva AdBlock.",
+          );
+          if (finalizeBtn) finalizeBtn.disabled = false;
+          return;
+        }
+
+        if (!data.config || !data.config.publicKey) {
+          throw new Error(
+            "Los parámetros de pago (config) llegaron incompletos del servidor.",
+          );
+        }
+
+        // Debug de integridad
+        console.log("📦 Configuración final enviada al Widget:", data.config);
+
+        if (!data.config.signature || !data.config.signature.integrity) {
+          console.error(
+            "❌ CRÍTICO: El sello de integridad no está presente. Wompi rechazará el pago.",
+          );
+        }
+
+        const checkout = new WompiClass(data.config);
+        console.log("🚀 Iniciando Widget interno de Wompi...");
+
+        checkout.open(function (result) {
+          // Al abrir el widget, podrías ocultar cualquier spinner local si tuvieras uno
+          const transaction = result.transaction;
+          console.log("🏁 Transacción finalizada:", transaction.status);
+
+          if (transaction.status === "APPROVED") {
+            showToast("✅ ¡Pago Exitoso! Generando factura...");
+
+            // Guardamos una copia de los items para la factura antes de limpiar
+            paymentData.items = [...cart];
+
+            // Limpiamos el carrito local
+            cart = [];
+            saveCart();
+            renderCart();
+
+            showOrderConfirmation(paymentData, methodId);
+          } else {
+            if (finalizeBtn) finalizeBtn.disabled = false;
+            // Si el pago es rechazado, el usuario sigue en tu página y puede reintentar
+            showToast(
+              `❌ Transacción ${transaction.status.toLowerCase()}. Puedes intentar con otro medio.`,
+            );
+          }
+        });
+
+        // Salvaguarda: Si el widget no abre en 10 segundos, re-habilitar interfaz
+        setTimeout(() => {
+          if (finalizeBtn && finalizeBtn.disabled) finalizeBtn.disabled = false;
+        }, 10000);
+
+        return; // Detenemos aquí, el widget toma el control
+      } catch (err) {
+        console.error("Error iniciando Wompi:", err);
+        showToast("❌ " + (err.message || err || "Error desconocido"));
+        if (finalizeBtn) finalizeBtn.disabled = false;
+        return;
+      }
+    }
+
+    // 3. Para Contra Entrega (COD), notificamos por WhatsApp y mostramos confirmación
+    handleManualWhatsAppPayment(saleId, total, paymentData.customer, true);
+    showOrderConfirmation(paymentData, methodId);
 
     setTimeout(() => {
       cart = [];
       saveCart();
       renderCart();
-      fetchProducts(); // ACTUALIZACIÓN AUTOMÁTICA: Refresca el inventario en pantalla
     }, 500);
   } else {
     showToast("❌ Error al procesar el pedido. Intenta de nuevo.");
     if (finalizeBtn) finalizeBtn.disabled = false;
   }
+}
+
+function handleManualWhatsAppPayment(saleId, total, customer, isCOD = false) {
+  const orderRef = saleId.slice(-8).toUpperCase();
+  const type = isCOD ? "CONTRA ENTREGA" : "PAGO ELECTRÓNICO";
+  const message = `¡Hola Winner Store! 👋 Acabo de generar el pedido *#${orderRef}* (${type}) por valor de *${formatPrice(total)}*.\n\nMis datos: ${customer.name} - ${customer.phone}.\n\nQuedo atento a la confirmación. ¡Gracias!`;
+
+  const waUrl = `https://wa.me/${window.WHATSAPP_PHONE || "573135642283"}?text=${encodeURIComponent(message)}`;
+
+  showToast("📱 Abriendo WhatsApp para confirmar tu pedido...");
+  setTimeout(() => {
+    window.location.href = waUrl;
+  }, 1500);
 }
 
 function simulateNotifications(customer) {
@@ -849,30 +909,30 @@ function showOrderConfirmation(params, gatewayKey) {
   let subInstruction = `Hemos enviado el detalle a <strong>${params.customer.email}</strong> y un SMS de confirmación.`;
   let actionBox = "";
 
-  if (gatewayKey === "NEQUI") {
+  if (gatewayKey === "NEQUI" || gatewayKey === "PSE" || gatewayKey === "CARD") {
     statusIcon = "📱";
-    title = "NOTIFICACIÓN PUSH ENVIADA";
+    title = gatewayKey === "CARD" ? "PAGO PROCESADO" : "TRANSACCIÓN INICIADA";
     subInstruction =
-      "Por favor, abre la app de <strong>Nequi</strong> en tu celular y aprueba el pago para finalizar.";
+      gatewayKey === "NEQUI"
+        ? "Abre tu app de <strong>Nequi</strong> y aprueba el pago para finalizar."
+        : "Tu transacción está siendo validada por el sistema de seguridad de Wompi.";
     actionBox = `
-      <div style="background: rgba(233,30,139,0.1); border: 1px solid #e91e8b; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="font-size: 13px; color: #e91e8b;">Esperando aprobación en tu dispositivo...</p>
+      <div style="background: rgba(232, 255, 71, 0.05); border: 1px solid var(--accent); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="font-size: 12px; color: white; text-align:center;">Referencia Wompi: <strong style="color:var(--accent)">${params.reference}</strong></p>
       </div>
     `;
-  } else if (gatewayKey === "CASH") {
-    statusIcon = "🧾";
-    title = "REFERENCIA GENERADA";
+  } else if (gatewayKey === "COD") {
+    statusIcon = "🚚";
+    title = "ORDEN RECIBIDA";
     subInstruction =
-      "Presenta este comprobante en cualquier punto de pago físico para completar tu compra.";
-    actionBox = `
-      <div style="background: rgba(46,204,113,0.1); border: 1px dashed #2ecc71; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="font-size: 12px; color: var(--gray-text);">Válido en: <strong>Efecty, Baloto, Su Red, Paga Todo</strong></p>
-      </div>
-      <button class="adm-btn-ghost" onclick="printPaymentVoucher(${JSON.stringify(params).replace(/"/g, "&quot;")})" style="width: 100%; margin-bottom: 10px; border-color: var(--accent); color: var(--accent);">
-        🖨 IMPRIMIR COMPROBANTE
-      </button>
-    `;
+      "Tu pedido bajo <strong>Pago Contra Entrega</strong> ha sido registrado. Te contactaremos pronto para confirmar el envío.";
   }
+
+  const printBtn = `
+    <button class="adm-btn-ghost" onclick="printInvoice(${JSON.stringify(params).replace(/"/g, "&quot;")})" style="width: 100%; margin-bottom: 10px; border-color: var(--accent); color: var(--accent); font-weight:bold;">
+      🖨️ IMPRIMIR FACTURA
+    </button>
+  `;
 
   modalBody.innerHTML = `
     <div style="text-align: center; padding: 20px 0;">
@@ -892,6 +952,7 @@ function showOrderConfirmation(params, gatewayKey) {
       </div>
 
       ${actionBox}
+      ${printBtn}
 
       <button class="adm-btn" onclick="window.location.reload()" style="width: 100%; height: 50px;">
         VOLVER AL INICIO
@@ -900,49 +961,64 @@ function showOrderConfirmation(params, gatewayKey) {
   `;
 }
 
-window.printPaymentVoucher = function (params) {
-  const win = window.open("", "_blank", "width=600,height=800");
-  const fakeBarcode = params.reference
-    .split("")
-    .map((c) => c.charCodeAt(0) % 10)
-    .join("")
-    .slice(0, 12);
+window.printInvoice = function (params) {
+  const win = window.open("", "_blank", "width=800,height=900");
+  const date = new Date().toLocaleString("es-CO");
+  const itemsHtml = (params.items || [])
+    .map(
+      (i) => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${i.name} (${i.size})</td>
+      <td style="text-align: center; padding: 10px; border-bottom: 1px solid #eee;">${i.qty}</td>
+      <td style="text-align: right; padding: 10px; border-bottom: 1px solid #eee;">$${i.price.toLocaleString("es-CO")}</td>
+    </tr>
+  `,
+    )
+    .join("");
 
   win.document.write(`
     <html>
       <head>
+        <title>Factura Winner Store - #${params.reference.slice(-8)}</title>
         <style>
-          body { font-family: 'Courier New', Courier, monospace; padding: 40px; color: #000; line-height: 1.4; }
-          .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 20px; }
-          .logo { font-weight: bold; font-size: 40px; letter-spacing: 8px; margin: 0; }
-          .voucher-title { margin: 25px 0; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #000; padding: 10px; }
-          .details { margin-top: 20px; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-          .barcode { margin-top: 40px; text-align: center; font-size: 40px; letter-spacing: 5px; }
-          .footer { margin-top: 50px; font-size: 12px; text-align: center; font-style: italic; }
-          .payment-points { display: flex; justify-content: center; gap: 15px; margin-top: 20px; font-weight: bold; font-size: 14px; }
+          body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; align-items: center; }
+          .logo { font-size: 40px; font-weight: 900; letter-spacing: 5px; }
+          .client-info { margin: 30px 0; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+          th { background: #f8f8f8; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+          .total { text-align: right; font-size: 22px; font-weight: bold; border-top: 2px solid #000; padding-top: 10px; }
+          .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #777; border-top: 1px dashed #ccc; padding-top: 20px; }
+          .wompi-branding { margin-top: 15px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <p class="logo">WINNER</p>
-          <p>STREETWEAR COLOMBIA - RECAUDOS</p>
+          <div class="logo">WINNER</div>
+          <div style="text-align: right;">
+            <strong style="font-size: 18px;">FACTURA DE VENTA</strong><br>
+            <span style="color: #777;">REF: ${params.reference}</span><br>
+            <span>${date}</span>
+          </div>
         </div>
-        <div class="voucher-title">REFERENCIA: ${params.reference}</div>
-        <div class="details">
-          <div class="row"><span>CONVENIO WINNER:</span> <span>#772910</span></div>
-          <div class="row"><span>CLIENTE:</span> <span>${params.customer.name.toUpperCase()}</span></div>
-          <div class="row"><span>VALOR A PAGAR:</span> <span style="font-size: 22px; font-weight: bold;">$${params.amount.toLocaleString("es-CO")}</span></div>
-          <div class="row"><span>FECHA LÍMITE:</span> <span>${new Date(Date.now() + 172800000).toLocaleDateString()}</span></div>
+        <div class="client-info">
+          <strong>CLIENTE:</strong> ${params.customer.name.toUpperCase()}<br>
+          <strong>EMAIL:</strong> ${params.customer.email}<br>
+          <strong>TELÉFONO:</strong> ${params.customer.phone}<br>
+          <strong>CIUDAD:</strong> ${params.customer.city}
         </div>
-        <div class="barcode">|||| || | || |||| | ||</div>
-        <div style="text-align:center; font-size: 12px;">${fakeBarcode}</div>
-        <div class="payment-points">
-          EFECTY | BALOTO | SU RED | PAGA TODO
-        </div>
+        <table>
+          <thead><tr><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+        <div class="total">TOTAL: $${params.amount.toLocaleString("es-CO")}</div>
         <div class="footer">
-          Este documento es una referencia de pago. Al realizar el depósito, 
-          tu pedido será procesado automáticamente por nuestro sistema.
+          ¡Gracias por tu compra! Winner Store Streetwear Colombia.<br>
+          Este documento es un soporte de pago electrónico.<br>
+          <div class="wompi-branding">
+            <img src="https://wompi.com/assets/img/logos/wompi-logo.png" width="90" style="opacity:0.7;"><br>
+            <small>Transacción segura procesada por Wompi Bancolombia</small>
+          </div>
         </div>
         <script>window.onload = () => { window.print(); window.close(); }</script>
       </body>
@@ -950,114 +1026,6 @@ window.printPaymentVoucher = function (params) {
   `);
   win.document.close();
 };
-
-function handleNequiPayment(params) {
-  // Enviar por WhatsApp con link de pago
-  const message = `Hola, para confirmar tu compra de $${formatPrice(params.amount)}, por favor accede a: ${window.location.origin}/pagar?ref=${params.reference}`;
-  const whatsappUrl = `https://wa.me/+573166019030?text=${encodeURIComponent(message)}`;
-
-  showToast("📱 Abriendo WhatsApp para confirmar pago...");
-  setTimeout(() => {
-    window.open(whatsappUrl, "_blank");
-  }, 500);
-}
-
-function handleDaviplataPayment(params) {
-  // Enviar por WhatsApp con instrucciones
-  const message = `Hola, para pagar tu compra de $${formatPrice(params.amount)} con Daviplata, por favor responde este mensaje. Te enviaremos las instrucciones.`;
-  const whatsappUrl = `https://wa.me/+573166019030?text=${encodeURIComponent(message)}`;
-
-  showToast("📱 Abriendo WhatsApp para instrucciones...");
-  setTimeout(() => {
-    window.open(whatsappUrl, "_blank");
-  }, 500);
-}
-
-function handlePSEPayment(params) {
-  // Redirigir a PSE
-  const pseUrl = buildPSEUrl(params);
-
-  showToast("🏦 Redirigiendo a PSE...");
-  setTimeout(() => {
-    window.location.href = pseUrl;
-  }, 800);
-}
-
-function handleCardPayment(params) {
-  // Redirigir a Wompi o similar
-  const wompiUrl = buildWompiUrl(params);
-
-  showToast("💳 Redirigiendo a plataforma de pago...");
-  setTimeout(() => {
-    window.location.href = wompiUrl;
-  }, 800);
-}
-
-function handleCashPayment(params) {
-  // Mostrar instrucciones y contacto
-  const instructions = `
-    ✅ Tu pedido ha sido registrado.
-    
-    💵 PAGO EN EFECTIVO
-    
-    📦 Envío seleccionado: ${paymentData.shipping.method}
-    💸 Total: ${formatPrice(params.amount)}
-    
-    📱 Te contactaremos al: ${paymentData.customer.phone}
-    📧 Confirmación enviada a: ${paymentData.customer.email}
-    
-    Options:
-    ▪ Pagar contra entrega
-    ▪ Pagar en tienda al recoger
-    
-    WhatsApp de soporte: https://wa.me/+573166019030
-  `;
-
-  showToast("💵 Instrucciones enviadas a tu email y WhatsApp");
-
-  // Enviar por WhatsApp
-  const whatsappUrl = `https://wa.me/+573166019030?text=${encodeURIComponent(`Hola, realizé una compra de $${formatPrice(params.amount)} para pagar en efectivo. Mi referencia es ${params.reference}`)}`;
-  setTimeout(() => {
-    window.open(whatsappUrl, "_blank");
-  }, 500);
-}
-
-function buildPSEUrl(params) {
-  // URL base de PSE (requiere integración real con tu proveedor)
-  const pseBaseUrl = "https://www.pagofacil.com.co/checkout";
-  const pseParams = new URLSearchParams({
-    amount: params.amount,
-    currency: params.currency,
-    reference: params.reference,
-    description: params.description,
-    name: params.customer.name,
-    email: params.customer.email,
-    phone: params.customer.phone,
-    returnUrl: params.returnUrl,
-    cancelUrl: params.cancelUrl,
-  });
-
-  return `${pseBaseUrl}?${pseParams.toString()}`;
-}
-
-function buildWompiUrl(params) {
-  // URL de Wompi para checkout (requiere integración real)
-  const wompiBaseUrl = "https://checkout.wompi.co";
-  const wompiParams = new URLSearchParams({
-    "public-key": "YOUR_WOMPI_PUBLIC_KEY", // Reemplazar con tu key real
-    reference: params.reference,
-    currency: params.currency,
-    amount_in_cents: params.amount * 100,
-    customer_email: params.customer.email,
-    customer_data: JSON.stringify({
-      name: params.customer.name,
-      phone_number: params.customer.phone,
-      email: params.customer.email,
-    }),
-  });
-
-  return `${wompiBaseUrl}?${wompiParams.toString()}`;
-}
 
 function formatCardNumber(input) {
   let value = input.value.replace(/\s/g, "");
@@ -1159,10 +1127,10 @@ window.checkoutWhatsApp = openPaymentModal;
 function renderProducts(filter) {
   const list =
     filter === "all"
-      ? PRODUCTS
+      ? window.PRODUCTS
       : filter === "sale"
-        ? PRODUCTS.filter((p) => p.oldPrice)
-        : PRODUCTS.filter((p) => p.cat === filter);
+        ? window.PRODUCTS.filter((p) => p.oldPrice)
+        : window.PRODUCTS.filter((p) => (p.cat || p.category) === filter);
 
   if (list.length === 0) {
     DOM.productsGrid.innerHTML = `
@@ -1178,7 +1146,7 @@ function renderProducts(filter) {
     <div class="product-card reveal" style="transition-delay:${i * 0.07}s">
       <div class="product-img-wrap">
         <img
-          src="${esc(p.img)}"
+          src="${esc(p.img || p.image)}"
           alt="${esc(p.alt)}"
           loading="lazy"
           onerror="this.src='https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=500&q=80'"
@@ -1223,7 +1191,7 @@ function renderProducts(filter) {
 
   // Re-observe new cards for reveal animation
   observeRevealElements();
-  injectProductJsonLd(PRODUCTS);
+  injectProductJsonLd(window.PRODUCTS);
 }
 
 function buildProductUrl(productId) {
@@ -1314,23 +1282,13 @@ DOM.filterBar.addEventListener("click", (e) => {
   const btn = e.target.closest(".filter-btn");
   if (!btn) return;
 
-  activeFilter = btn.dataset.filter;
+  window.activeFilter = btn.dataset.filter;
   DOM.filterBar
     .querySelectorAll(".filter-btn")
     .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
-  renderProducts(activeFilter);
+  renderProducts(window.activeFilter);
 });
-
-/* External trigger from categories section */
-function filterByCategory(cat) {
-  activeFilter = cat;
-  DOM.filterBar.querySelectorAll(".filter-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.filter === cat);
-  });
-  renderProducts(cat);
-  document.getElementById("productos").scrollIntoView({ behavior: "smooth" });
-}
 
 /* ══════════════════════════════════════════════════════════
    FEATURED CTA BUTTONS
@@ -1363,24 +1321,14 @@ document.body.addEventListener("click", (e) => {
    PROMO CODE COPY
 ══════════════════════════════════════════════════════════ */
 function copyCode() {
-  const code = DOM.promoCode.textContent.trim();
+  const el = document.getElementById("promoCode");
+  if (!el) return;
+  const code = el.textContent.trim();
   navigator.clipboard
     .writeText(code)
     .then(() => showToast(`📋 Código "${code}" copiado`))
     .catch(() => showToast(`Código: ${code}`));
 }
-
-DOM.promoCode && DOM.promoCode.addEventListener("click", copyCode);
-
-/* ══════════════════════════════════════════════════════════
-   NEWSLETTER
-══════════════════════════════════════════════════════════ */
-DOM.newsletterForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const input = DOM.newsletterForm.querySelector("input");
-  showToast("🎉 ¡Bienvenido a la comunidad Winner!");
-  input.value = "";
-});
 
 /* ══════════════════════════════════════════════════════════
    SCROLL REVEAL (IntersectionObserver)
@@ -1475,4 +1423,7 @@ function initHeroCounters() {
   renderCart();
   observeRevealElements();
   initHeroCounters();
+  initCheckoutPersistence();
+  if (typeof window.loadDynamicConfig === "function")
+    window.loadDynamicConfig();
 })();

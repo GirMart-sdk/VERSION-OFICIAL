@@ -1,224 +1,73 @@
-# 🏆 WINNER STORE v3.2 — PostgreSQL Edition
+# 🏆 WINNER STORE - Streetwear POS & E-commerce v3.5
 
-**WINNER STORE** es la plataforma de e-commerce más completa y profesional para tiendas de ropa streetwear en Colombia. ✨
+Bienvenido a la plataforma definitiva para la gestión de tiendas de ropa urbana en Colombia. **Winner Store** combina un potente punto de venta (POS) físico con una tienda online integrada, todo bajo una arquitectura moderna, segura y optimizada para el rendimiento local.
 
-**Estado:** ✅ **v3.2 STABLE** — Soporte para Nube y Local
+## 🚀 Características de Vanguardia
 
----
+- **Core Tecnológico:** Backend en Node.js impulsado por **Prisma ORM** y **PostgreSQL**.
+- **Tienda Online 2.0:** Checkout fluido con integración oficial de **Wompi (Bancolombia)** y soporte para pagos Contra Entrega (COD).
+- **Punto de Venta (POS):** Interfaz táctil, impresión de tickets térmicos y gestión de apartados (Layaway) con abonos parciales.
+- **Procesamiento de Imágenes:** Optimización automática a formato **WebP** mediante **Sharp**, garantizando tiempos de carga ínfimos.
+- **Seguridad Avanzada:** Autenticación mediante **JWT**, protección de API Keys y hashing de contraseñas con **Scrypt**.
+- **WhatsApp Center:** Sistema de notificaciones centralizado para enviar tickets, guías de envío y recordatorios de cobro.
+- **Analytics:** Panel de control con KPIs en tiempo real y gráficas interactivas mediante **ApexCharts**.
 
-## 📚 CONFIGURACIÓN: 100% SERVIDOR LOCAL
+## 🛠️ Requisitos Previos
 
-**Tu tienda en tu máquina — Sin servicios externos**
+1.  **Node.js** (v16 o superior).
+2.  **PostgreSQL** (Instalado y con una base de datos creada, ej: `winner_db`).
+3.  **NPM** (Incluido con Node.js).
 
-Consulta:
+## 📦 Instalación Rápida
 
-- **[API_AND_FEATURES.md](API_AND_FEATURES.md)** — Documentación de API y características
+1.  **Clonar/Extraer:** Asegúrate de estar en la carpeta `c:\DEZPY_v01`.
+2.  **Configurar Entorno:** Crea un archivo `.env` basado en el siguiente ejemplo:
+    ```env
+    PORT=3000
+    DATABASE_URL="postgresql://usuario:password@localhost:5432/winner_db?schema=public"
+    JWT_SECRET="tu_secreto_aleatorio"
+    ADMIN_SALT="tu_salt_aleatorio"
+    ADMIN_PASSWORD="winner2026"
+    API_KEY="dev-api-key"
+    WOMPI_PUBLIC_KEY="pub_test_..."
+    WOMPI_INTEGRITY_SECRET="test_integrity_..."
+    ```
+3.  **Instalar y Preparar:**
+    ```bash
+    npm install
+    npx prisma generate
+    npx prisma db push
+    node backend/seed.js
+    ```
 
----
+## 🏁 Inicio del Sistema
 
-## 🎯 Características Principales
+Puedes usar el iniciador automático:
 
-- ✅ **Tienda Online Moderna** - Frontend responsive con diseño premium
-- ✅ **5 Métodos de Pago** - Tarjeta, PSE, Nequi, Daviplata, Efectivo
-- ✅ **Admin Panel Completo** - Gestión de productos, ventas, inventario
-- ✅ **Sistema de Inventario** - Control por talla con códigos QR
-- ✅ **Inteligencia de Negocio** - Predicción de demanda y VIP
-- ✅ **25 Productos Precargados** - 73 ventas de ejemplo
-- ✅ **Autenticación Segura** - API Key + JWT
-- ✅ **BD Dual Compatible** - SQLite (dev) + PostgreSQL (prod)
-- ✅ **Base de Datos Persistente** - Con backup automático
-- ✅ **30+ API Endpoints** - REST completa y documentada
-- ✅ **API REST Completa** - 30+ endpoints documentados
+- Doble clic en `start-local.bat`.
 
----
-
-## 🚀 Inicio Rápido (60 segundos)
-
-### Paso 1: Instalar
-
-```bash
-npm install
-```
-
-### Paso 2: Inicializar datos
-
-```bash
-npm run seed
-```
-
-### Paso 3: Iniciar servidor
+O mediante comandos:
 
 ```bash
 npm start
 ```
 
-### Paso 4: Acceder ✨
+Acceso al Panel: `http://192.168.1.8:3000/admin-panel.html`
+Acceso a la Tienda: `http://192.168.1.8:3000`
 
-- **Tienda:** http://localhost:3000
-- **Admin:** http://localhost:3000/admin-panel.html
-- **Usuario Admin:** `admin` / `winner2026`
+## 📂 Estructura del Proyecto
 
----
+- `/backend`: Lógica del servidor, controladores y configuración de base de datos.
+- `/prisma`: Esquema de datos y migraciones.
+- `/uploads`: Almacenamiento físico de imágenes optimizadas.
+- `/emails`: Plantillas para notificaciones transaccionales.
+- `app.js / pos.js / inventory.js`: Módulos principales del frontend.
 
-## 🌐 Métodos de Pago Soportados
+## 🔒 Seguridad y Privacidad
 
-| Método             | Código      | Validación                                       |
-| ------------------ | ----------- | ------------------------------------------------ |
-| Tarjeta de Crédito | `tarjeta`   | ✅ Detección de marca (Visa, MC, Amex, Discover) |
-| PSE                | `pse`       | ✅ Banco + documento validado                    |
-| Nequi              | `nequi`     | ✅ Teléfono colombiano validado                  |
-| Daviplata          | `daviplata` | ✅ Teléfono colombiano validado                  |
-| Efectivo C.O.D.    | `efectivo`  | ✅ Opciones de entrega                           |
-
-**Todos con validación en tiempo real y formularios personalizados.**
+El sistema está diseñado para funcionar en entornos locales seguros. Las imágenes se procesan localmente para evitar dependencias de terceros (como Cloudflare o S3), manteniendo el control total de los datos en tu infraestructura.
 
 ---
 
-## 📁 Estructura
-
-```
-├── index.html              # Tienda online
-├── admin-panel.html        # Dashboard admin
-├── app.js                  # Lógica main
-├── styles.css              # Estilos tienda
-├── admin-panel.js/css      # Lógica y estilos admin
-│
-├── backend/
-│   ├── server.js           # API Express
-│   ├── database.js         # Adaptador Dual (SQLite/Postgres)
-│   ├── seed.js             # Script datos
-│   ├── postgres_schema.sql # Esquema SQL profesional
-│   └── .env.example        # Plantilla config
-│
-└── SETUP_COMPLETE_LOCAL.md # Guía de instalación local
-```
-
----
-
-## 📦 API Endpoints
-
-```
-GET  /api/products              # Listar todos
-GET  /api/products/:id          # Detalle
-GET  /api/sales                 # Historial
-POST /api/payments              # Registrar pago
-POST /api/login                 # Admin login
-```
-
-Todos requieren header: `x-api-key: dev-api-key`
-
----
-
-## 🏠 Arquitectura: 100% Local
-
-```
-TU MÁQUINA
-├── Frontend: http://localhost:3000
-├── Backend API: http://localhost:3000/api
-└── Base de Datos: SQLite (./backend/winner_store.db)
-```
-
-**Ventajas:**
-
-- ✅ Completamente tuyo
-- ✅ $0 USD (cero costo)
-- ✅ Rápido y sin latencia
-- ✅ Control total
-- ✅ Datos privados en tu máquina
-
-**Limitaciones:**
-
-- ⚠️ Solo accesible localmente
-- ⚠️ Tu máquina debe estar encendida
-- ⚠️ No escalable para miles de usuarios
-
----
-
-## 🔐 Configuración Local
-
-### Variables (.env)
-
-```env
-PORT=3000
-DB_TYPE=postgres  # o sqlite
-DATABASE_URL=postgresql://user:pass@localhost:5432/winner_store
-ADMIN_USER=admin
-ADMIN_PASSWORD=winner2026
-JWT_SECRET=dev-jwt-secret-winner-2026
-API_KEY=dev-api-key
-```
-
-**Archivo .env no necesita estar en GitHub — ya está en .gitignore**
-
----
-
-## 📊 Base de Datos
-
-**Storage:** SQLite (desarrollo local)
-
-- ✅ 25 productos (mujer, hombre, accesorios)
-- ✅ Stock por talla (XS-XXL)
-- ✅ 73 ventas de ejemplo
-- ✅ 5 métodos de pago integrados
-
-### Reset de datos:
-
-```bash
-npm run seed      # Reinicializa la BD con datos de ejemplo
-npm run clean     # Elimina la BD completamente
-```
-
----
-
-## 🛠️ Tecnologías
-
-| Componente    | Stack                             |
-| ------------- | --------------------------------- |
-| Frontend      | HTML5, CSS3, Vanilla JS, Chart.js |
-| Backend       | Node.js, Express 5.x              |
-| Base de Datos | SQLite3                           |
-| Autenticación | JWT + API Key                     |
-| Persistencia  | Local filesystem                  |
-
----
-
-## 📞 Troubleshooting
-
-| Problema               | Solución                                  |
-| ---------------------- | ----------------------------------------- |
-| Productos no cargan    | `npm run seed`                            |
-| Admin no funciona      | Limpiar cookies, usar admin/winner2026    |
-| Puertos en uso         | Cambiar PORT en .env                      |
-| Base de datos corrupta | `npm run clean && npm run seed`           |
-| Conexión rechazada     | Verificar que npm start está ejecutándose |
-
----
-
-## 📖 Documentación
-
-- **[API_AND_FEATURES.md](API_AND_FEATURES.md)** - Endpoints y características
-
-## ✅ Checklist de Funcionamiento
-
-- [x] 5 métodos de pago funcionando
-- [x] Admin panel operativo
-- [x] 25 productos con stock
-- [x] API en localhost:3000
-- [x] Diseño responsive
-- [x] Base de datos SQLite
-- [x] Error handling completo
-- [x] Totalmente configurado (listo para usar)
-
----
-
-## 🎉 ¡LISTO PARA USAR!
-
-```bash
-npm install
-npm run seed
-npm start
-```
-
-Abre http://localhost:3000 en tu navegador.
-
-**¡Bienvenido a WINNER STORE! 🚀**
+**Desarrollado por GirMart-SDK**  
+_Winner Store — Estilo de vida urbano, tecnología de vanguardia._

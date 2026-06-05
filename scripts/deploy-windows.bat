@@ -1,9 +1,9 @@
 @echo off
 REM ═══════════════════════════════════════════════════════════
-REM Winner Store v3.2 - Deploy Script para Windows Server
+REM Winner Store v3.5 (Prisma Edition) - Deploy para Windows Server
 REM ═══════════════════════════════════════════════════════════
 echo.
-echo 🚀 DESPLIEGUE WINNER STORE v3.2 - Windows Server
+echo 🚀 DESPLIEGUE WINNER STORE v3.5 - PostgreSQL Native
 echo =============================================
 echo.
 
@@ -31,11 +31,15 @@ if not exist backup mkdir backup
 echo 📦 Instalar dependencias de producción...
 npm install --production
 
-echo 🌱 Sembrar base de datos (productos + ventas)...
-npm run seed
+echo 🗄️ Sincronizando esquema con Prisma...
+call npx prisma generate
+call npx prisma db push
+
+echo 🌱 Cargando datos iniciales (Seed)...
+node backend/seed.js
 
 echo 🔄 Probar servidor local...
-npm start &
+start /B npm start
 timeout /t 3 >nul 2>&1
 taskkill /f /im node.exe >nul 2>&1
 
@@ -55,8 +59,8 @@ pm2 save
 echo.
 echo 🎉 ¡DESPLIEGUE COMPLETADO!
 echo.
-echo 🔗 Accede: http://localhost:3000
-echo 👨‍💼 Admin: http://localhost:3000/admin-panel.html
+echo 🔗 Accede: http://192.168.1.8:3000
+echo 👨‍💼 Admin: http://192.168.1.8:3000/admin-panel.html
 echo           Usuario: admin / Password: winner2026
 echo.
 echo 📊 PM2 Status:

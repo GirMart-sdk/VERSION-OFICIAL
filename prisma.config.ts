@@ -1,9 +1,12 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { defineConfig } from '@prisma/config';
 
-// 1. Carga garantizada del .env desde la raíz del proyecto
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// 1. Carga inteligente de configuración (prioriza .env.production)
+const prodEnv = path.resolve(process.cwd(), '.env.production');
+const envPath = fs.existsSync(prodEnv) ? prodEnv : path.resolve(process.cwd(), '.env');
+dotenv.config({ path: envPath });
 
 const databaseUrl = process.env.DATABASE_URL;
 

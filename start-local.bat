@@ -1,10 +1,14 @@
 @echo off
 REM ════════════════════════════════════════════════════════════════
-REM WINNER STORE v3.2 - Iniciador Local Automático
+REM WINNER STORE v3.5 (Prisma Edition) - Iniciador Local Automático
 REM Script para iniciar la tienda automáticamente en Windows
 REM ════════════════════════════════════════════════════════════════
+set NODE_ENV=development
 
 setlocal enabledelayedexpansion
+
+REM Configurar la consola para usar UTF-8 (corrige los caracteres extraños y emojis)
+chcp 65001 >nul
 
 REM Colores (ASCII codes)
 for /F %%A in ('echo prompt $H ^| cmd') do set "BS=%%A"
@@ -17,7 +21,7 @@ echo ╔════════════════════════
 echo ║                                                                ║
 echo ║         🏆  WINNER STORE - SERVIDOR LOCAL                    ║
 echo ║                                                                ║
-echo ║         🌐  http://localhost:3000                            ║
+echo ║         🌐  http://192.168.1.8:3000                          ║
 echo ║         👤  Admin: admin / winner2026                        ║
 echo ║                                                                ║
 echo ║         ⏱️   Iniciando en 2 segundos...                       ║
@@ -25,79 +29,78 @@ echo ║                                                                ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 
-timeout /t 2 /nobreak
+echo [*] Calentando motores...
+timeout /t 2 /nobreak > nul
 
 REM Verificar que npm está instalado
 echo [Verificando npm...]
-npm -v >nul 2>&1
+where npm >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
-    echo ❌ ERROR: npm no está instalado
+    echo ❌ ERROR: No se encontró el motor Node.js.
     echo.
-    echo Soluciones:
-    echo 1. Instala Node.js: https://nodejs.org
-    echo 2. Descarga LTS (versión recomendada)
-    echo 3. Ejecuta el instalador
-    echo 4. Reinicia esta ventana
+    echo 🛠️  SOLUCIÓN:
+    echo 1. Descarga Node.js (LTS) de: https://nodejs.org
+    echo 2. Instálalo y REINICIA tu PC.
+    echo 3. El sistema NO FUNCIONARÁ hasta que Node.js esté instalado.
     echo.
     pause
     exit /b 1
 )
-echo ✅ npm encontrado
+echo ✅ Motor detectado correctamente.
 
 REM Verificar dependencias
 echo [Verificando dependencias...]
 if not exist "node_modules" (
-    echo ⚠️  Primera vez? Instalando node_modules...
+    echo ⏳ Instalando librerías necesarias (Esto tomará 2 minutos, espera)...
     call npm install
     if %errorlevel% neq 0 (
-        echo ❌ Error en npm install
+        echo ❌ Error al instalar librerías. Revisa tu conexión a internet.
         pause
         exit /b 1
     )
-    echo ✅ Dependencias instaladas
+    echo ✅ Librerías listas.
 ) else (
-    echo ✅ node_modules existe
+    echo ✅ Librerías encontradas.
+)
+
+REM Verificar .env
+if not exist ".env" (
+    echo ❌ ERROR: No se encontro el archivo .env
+    echo Por favor, crea uno con tu DATABASE_URL de PostgreSQL.
+    pause
+    exit /b 1
 )
 
 REM Verificar BD
-echo [Verificando base de datos...]
-if not exist "backend\winner_store.db" if "%DB_TYPE%"=="sqlite" (
-    echo ⚠️  SQLite detectado pero el archivo no existe, inicializando...
-    call npm run seed
-    if %errorlevel% neq 0 (
-        echo ❌ Error inicializando BD
-        pause
-        exit /b 1
-    )
-    echo ✅ BD creada con datos iniciales
-) else (
-    echo ✅ Conexión de base de datos preparada (Modo: %DB_TYPE%)
+echo [Conectando Base de Datos PostgreSQL...]
+echo [*] Verificando estructura de tablas...
+call npx prisma generate >nul
+
+REM Eliminado --accept-data-loss para preservar tus productos y ventas locales
+call npx prisma db push
+
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: Fallo en la sincronización. Verifica tu DATABASE_URL o si el servidor PostgreSQL está activo.
+    pause
+    exit /b 1
 )
+echo ✅ Conexión de base de datos PostgreSQL preparada
 
 echo.
 echo ════════════════════════════════════════════════════════════════
+echo 🚀 SERVIDOR ACTIVO - SISTEMA WINNER STORE
+echo 🔗 Acceso: http://192.168.1.8:3000/admin-panel.html
 echo.
-echo 🚀 INICIANDO SERVIDOR...
-echo.
-echo 📍 Frontend:   http://localhost:3000
-echo 📍 API:        http://localhost:3000/api
-echo 📍 Admin:      http://localhost:3000/admin-panel.html
-echo.
-echo 👤 Credenciales Admin:
-echo    Usuario: admin
-echo    Password: winner2026
-echo.
-echo 🛑 Para detener: Presiona Ctrl+C en esta ventana
-echo.
+echo 💡 CONSEJO: Si realizaste cambios en la DB, presiona F5 en la tienda
+echo           para sincronizar los IDs de productos en el navegador.
+echo ⚠️  No cierres esta ventana mientras uses el sistema.
 echo ════════════════════════════════════════════════════════════════
 echo.
+
+REM Abrir navegador automáticamente
+start http://192.168.1.8:3000/admin-panel.html
 
 REM Iniciar servidor
-call npm start
-
-REM Si llega aquí, servidor se detuvo
-echo.
-echo ⚠️  Servidor detenido
-echo.
+node backend/server.js
 pause

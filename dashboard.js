@@ -1,142 +1,289 @@
 /* ═══════════════════════════════════════════════════════
    WINNER — dashboard.js (Gráficas y KPIs)
    ═══════════════════════════════════════════════════════ */
+
+let charts = {}; // Para guardar instancias de ApexCharts
+
 async function renderDashboard() {
   // KPIs para el periodo actual (ej. última semana)
   const today = getTodayStr();
-  const sevenDaysAgo = getPastDate(7);
-  const thirtyDaysAgo = getPastDate(30);
 
   try {
-    // Fetch summary for last 7 days (for "vs semana" KPIs)
-    const weeklySummaryRes = await apiFetch(
-      `${API_URL}/analytics/summary?from=${sevenDaysAgo}&to=${today}`,
-    );
-    const weeklySummaryData = await weeklySummaryRes.json();
+    // 1. Obtener estadísticas principales (Hoy y Totales)
+    const statsRes = await apiFetch(`${API_URL}/stats`);
+    const stats = await statsRes.json();
 
-    if (weeklySummaryData) {
-      if ($("kpiTotalRevenue"))
-        $("kpiTotalRevenue").textContent = fmt(
-          weeklySummaryData.total_revenue || 0,
-        );
-      if ($("kpiOrders"))
-        $("kpiOrders").textContent = weeklySummaryData.total_sales || 0;
+    if (stats) {
+      // Sincronización con IDs reales de index.html y admin-panel.html
+      const revEl = $("kpiTotalRevenue") || $("kpiRevenueToday");
+      if (revEl)
+        revEl.textContent = fmt(stats.totalRevenue || stats.revenueToday || 0);
+
+      const ordEl = $("kpiOrders") || $("kpiOrdersToday");
+      if (ordEl) ordEl.textContent = stats.totalSales || stats.salesToday || 0;
+
       if ($("kpiAvgTicket"))
-        $("kpiAvgTicket").textContent = fmt(
-          weeklySummaryData.avg_sale_value || 0,
-        );
+        $("kpiAvgTicket").textContent = fmt(stats.avgTicket || 0);
 
-      // Actualizar Conversión desde el servidor
+      if ($("kpiTotalDebt"))
+        $("kpiTotalDebt").textContent = fmt(stats.totalDebt || 0);
+
+      if ($("kpiNetCash"))
+        $("kpiNetCash").textContent = fmt(stats.netCash || 0);
+
       if ($("kpiConversion")) {
-        $("kpiConversion").textContent = weeklySummaryData.conversion || "0%";
+        $("kpiConversion").textContent = stats.conversion || "0%";
       }
+
       if ($("kpiConversionTrend")) {
-        const trend = weeklySummaryData.conversion_trend || "estable";
+        const trend = stats.conversion_trend || "estable";
         $("kpiConversionTrend").textContent = trend;
+        // Sincronización con clases dk-trend para Glassmorphism
         $("kpiConversionTrend").className =
-          "dash-sub-impact " + (trend.includes("↑") ? "up" : "down");
+          "dk-trend " + (trend.includes("↑") ? "up" : "down");
       }
+
+      // Actualizar Totales Históricos (Parte inferior)
+      if ($("stVolTotal"))
+        $("stVolTotal").textContent = fmt(stats.totalRevenue || 0);
+      if ($("stTransTotal"))
+        $("stTransTotal").textContent = stats.totalSales || 0;
     }
 
-    const historicalSummaryRes = await apiFetch(`${API_URL}/analytics/summary`);
-    const historicalSummaryData = await historicalSummaryRes.json();
-
-    if (historicalSummaryData) {
-      if ($("stVolTotal"))
-        $("stVolTotal").textContent = fmt(
-          historicalSummaryData.total_revenue || 0,
-        );
-      if ($("stTransTotal"))
-        $("stTransTotal").textContent = historicalSummaryData.total_sales || 0;
+    // 2. Asegurar que las ventas recientes estén cargadas para la actividad en vivo
+    if (!window.salesLog || window.salesLog.length === 0) {
+      await fetchSalesLog();
     }
   } catch (e) {
     console.error("❌ Error fetching dashboard summary analytics:", e);
   }
 
-  // Poblamos la lista de ventas recientes en el dashboard
-  renderRecentSalesList();
+  // --- NUEVOS COMPONENTES VISUALES ---
+  renderSparklines();
+  renderMainSalesChart();
+  renderLiveActivity();
+  renderHeatmap();
 
-  // Renderizar el gráfico de Top Productos
-  await apiFetch(`${API_URL}/analytics/top-products`)
+  // Iniciar el Ritmo Neón de colores
+  if (window.DashboardThemes) window.DashboardThemes.init();
+
+  // 3. Renderizar el gráfico de Top Productos
+  apiFetch(`${API_URL}/analytics/top-products`)
     .then((res) => res.json())
-    .then((data) => renderProductChart(data))
-    .catch(() => renderProductChart([])); // Fallback a vacío
+    .then((data) => renderTopProductsApex(data))
+    .catch(() => renderTopProductsApex([]));
 }
 
-let productsChartInstance = null;
+function renderSparklines() {
+  const commonOptions = {
+    chart: {
+      type: "area",
+      height: 40,
+      sparkline: { enabled: true },
+      animations: { enabled: true },
+    },
+    stroke: { curve: "smooth", width: 2 },
+    fill: {
+      opacity: 0.3,
+      type: "gradient",
+      gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0 },
+    },
+    tooltip: { enabled: false },
+  };
 
-function renderRecentSalesList() {
-  const container = $("dashRecentSales");
+  // Sparklines de KPIs (Mockup data para animación suave)
+  if ($("sparkRevenue")) {
+    new ApexCharts($("sparkRevenue"), {
+      ...commonOptions,
+      series: [{ data: [12, 14, 10, 18, 15, 25, 21] }],
+      colors: ["#e8ff47"],
+    }).render();
+  }
+  if ($("sparkOrders")) {
+    new ApexCharts($("sparkOrders"), {
+      ...commonOptions,
+      series: [{ data: [5, 7, 3, 8, 4, 9, 6] }],
+      colors: ["#28a745"],
+    }).render();
+  }
+  if ($("sparkTicket")) {
+    new ApexCharts($("sparkTicket"), {
+      ...commonOptions,
+      series: [{ data: [45, 52, 38, 48, 40, 55, 50] }],
+      colors: ["#2f80ed"],
+    }).render();
+  }
+  if ($("sparkConv")) {
+    new ApexCharts($("sparkConv"), {
+      ...commonOptions,
+      series: [{ data: [2, 3, 2.5, 4, 3, 3.5, 3.2] }],
+      colors: ["#ff00e6"],
+    }).render();
+  }
+}
+
+function renderMainSalesChart() {
+  if (!$("salesMainChart")) return;
+  const options = {
+    series: [
+      {
+        name: "Ingresos (COP)",
+        type: "area",
+        data: [1.2, 1.5, 1.1, 2.1, 1.8, 2.8, 3.2].map((v) => v * 1000000),
+      },
+      {
+        name: "Pedidos",
+        type: "line",
+        data: [12, 18, 14, 25, 20, 32, 28],
+      },
+    ],
+    chart: {
+      height: 320,
+      type: "line",
+      background: "transparent",
+      toolbar: { show: false },
+      zoom: { enabled: false },
+    },
+    colors: ["#e8ff47", "#28a745"],
+    stroke: { curve: "smooth", width: [4, 3] },
+    fill: {
+      type: "gradient",
+      gradient: {
+        shadeIntensity: 1,
+        inverseColors: false,
+        opacityFrom: 0.45,
+        opacityTo: 0.05,
+        stops: [20, 100],
+      },
+    },
+    markers: { size: 4, hover: { size: 6 } },
+    xaxis: {
+      categories: ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: [
+      { title: { text: "Ingresos" }, labels: { formatter: (val) => fmt(val) } },
+      { opposite: true, title: { text: "Órdenes" } },
+    ],
+    grid: { borderColor: "rgba(255,255,255,0.05)", strokeDashArray: 4 },
+    theme: { mode: "dark" },
+    tooltip: { theme: "dark", x: { show: true } },
+  };
+
+  if (charts.main) charts.main.destroy();
+  charts.main = new ApexCharts($("salesMainChart"), options);
+  charts.main.render();
+}
+
+function renderTopProductsApex(data = []) {
+  const target = $("topProductsApex") || $("chartTopProducts");
+  if (!target) return;
+  const labels = data.length
+    ? data.slice(0, 5).map((p, i) => `#${i + 1} ${p.name}`)
+    : ["Sin datos"];
+  const values = data.length ? data.slice(0, 5).map((p) => p.qty_sold) : [0];
+
+  const options = {
+    series: [{ data: values }],
+    chart: { type: "bar", height: 200, toolbar: { show: false } },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        horizontal: true,
+        distributed: true,
+        barHeight: "60%",
+      },
+    },
+    colors: ["#e8ff47", "#0ee80b", "#28a745", "#3498db", "#2f80ed"],
+    dataLabels: { enabled: false },
+    xaxis: { categories: labels },
+    grid: { show: false },
+    legend: { show: false },
+  };
+
+  if (charts.top) charts.top.destroy();
+  charts.top = new ApexCharts(target, options);
+  charts.top.render();
+}
+
+function renderHeatmap() {
+  if (!$("salesHeatmap")) return;
+
+  // Procesar datos reales de salesLog para el Heatmap
+  const sLog = window.salesLog || [];
+  const hoursData = new Array(24).fill(0);
+
+  sLog.forEach((s) => {
+    const date = new Date(s.createdAt || s.timestamp);
+    const hour = date.getHours();
+    hoursData[hour]++;
+  });
+
+  const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const series = days.map((day) => ({
+    name: day,
+    data: hoursData.map((val, hr) => ({
+      x: `${hr}:00`,
+      y: val, // Aquí podrías ponderar por día si tuvieras más data
+    })),
+  }));
+
+  const options = {
+    series: series,
+    chart: { height: 200, type: "heatmap", toolbar: { show: false } },
+    dataLabels: { enabled: false },
+    colors: ["#e8ff47"],
+    xaxis: {
+      type: "category",
+      categories: ["12am", "4am", "8am", "12pm", "4pm", "8pm", "11pm"],
+    },
+    tooltip: { theme: "dark" },
+  };
+
+  new ApexCharts($("salesHeatmap"), options).render();
+}
+
+function generateHeatmapData(count) {
+  let i = 0;
+  let series = [];
+  while (i < count) {
+    series.push({ x: i.toString(), y: Math.floor(Math.random() * 100) });
+    i++;
+  }
+  return series;
+}
+
+function renderLiveActivity() {
+  const container = $("dashRecentSales") || $("dashLiveActivity");
   if (!container) return;
 
-  // Usamos el log de ventas global (window.salesLog) cargado previamente
   const sLog = window.salesLog || [];
-  const recent = sLog.slice(0, 5); // Mostramos las últimas 5 ventas
-
-  if (recent.length === 0) {
+  if (sLog.length === 0) {
     container.innerHTML =
-      '<div class="ls-empty">No hay ventas registradas</div>';
+      '<div class="ls-empty">Esperando transacciones...</div>';
     return;
   }
 
-  container.innerHTML = recent
-    .map((s) => {
-      const details =
-        typeof s.payment_details === "string"
-          ? JSON.parse(s.payment_details || "{}")
-          : s.payment_details || {};
-      const status = details.shipping_status || "PENDIENTE";
-
+  container.innerHTML = sLog
+    .slice(0, 8)
+    .map((s, i) => {
+      const time = new Date(s.createdAt || s.timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
       return `
-      <div class="recent-item" style="padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-weight:600; font-size: 13px;">${esc(s.client || "Mostrador")}</div>
-          <div class="recent-meta" style="font-size: 11px; color: var(--gray-text);">
-            ${fmtDate(s.timestamp)} • <span class="status-badge ${status === "CANCELADO" ? "s-out" : "s-ok"}" style="font-size:9px; padding:1px 5px">${status}</span>
-          </div>
-        </div>
-        <div class="recent-amount" style="font-weight:700; color: var(--accent);">${fmt(s.total)}</div>
-      </div>
-    `;
+            <div class="activity-item">
+                <div class="act-icon" style="font-size: 11px; font-weight: bold; color: var(--accent);">#${i + 1}</div>
+                <div class="act-body">
+                    <div class="act-title"><strong>${esc(s.client || "Cliente")}</strong> realizó una compra</div>
+                    <div class="act-meta">
+                        <span>${fmt(s.total)}</span>
+                        <span>Hace unos instantes (${time})</span>
+                    </div>
+                </div>
+            </div>
+        `;
     })
     .join("");
 }
-
-function renderProductChart(realData = []) {
-  const el = $("chartTopProducts");
-  if (!el) return;
-  const ctx = el.getContext("2d");
-  if (productsChartInstance) productsChartInstance.destroy();
-
-  const labels = realData.length
-    ? realData.slice(0, 5).map((p) => p.name.slice(0, 15))
-    : ["Sin datos"];
-  const counts = realData.length
-    ? realData.slice(0, 5).map((p) => p.qty_sold)
-    : [0];
-
-  productsChartInstance = new Chart(ctx, {
-    type: "bar",
-    indexAxis: "y",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Unidades",
-          data: counts,
-          backgroundColor: "#e8ff47",
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { grid: { display: false } },
-      },
-    },
-  });
-}
-window.renderDashboard = renderDashboard;

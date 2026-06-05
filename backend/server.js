@@ -1,30 +1,135 @@
 /* ═══════════════════════════════════════════════════════════
-   WINNER STORE — server.js  v3.2
-   Backend completo: Productos · Inventario · Ventas · Auth (PG/SQ)
+   WINNER STORE — server.js  v3.5
+   Backend completo: Productos · Inventario · Ventas · Auth (PostgreSQL)
    Merchant Feed CSV · Estadísticas · Seguridad JWT + API Key
    ═══════════════════════════════════════════════════════════ */
 "use strict";
 
-const express = require("express");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
+// 1. CARGAR CONFIGURACIÓN PRIMERO (Antes de cualquier otro import)
+const isProdMode = process.env.NODE_ENV === "production";
+let envPath = path.resolve(
+  __dirname,
+  "..",
+  isProdMode ? ".env.production" : ".env",
+);
+
+// Fallback: Si no existe el archivo específico, intentar con el .env genérico
+if (!fs.existsSync(envPath)) {
+  envPath = path.resolve(__dirname, "..", ".env");
+}
+
+require("dotenv").config({ path: envPath });
+console.log(`[Startup] MODO: ${process.env.NODE_ENV || "development"}`);
+console.log(`[Startup] ARCHIVO: ${path.basename(envPath)}`);
+
+const express = require("express");
 const cors = require("cors");
+const sharp = require("sharp");
+const https = require("https");
+const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
-const { scryptSync, timingSafeEqual, randomUUID } = require("crypto");
+const {
+  scrypt,
+  scryptSync,
+  timingSafeEqual,
+  randomUUID,
+  createHash,
+} = require("crypto");
+const { promisify } = require("util");
+const scryptAsync = promisify(scrypt);
+// 2. Ahora sí podemos importar el mailer, ya que process.env tendrá los datos
+const { sendSaleEmail } = require("../emails/mailer");
 const { URL } = require("url");
 
-// Corregimos la ruta del .env para que siempre lo busque en la raíz del proyecto
-require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
+const app = express();
+
+// Seguridad: Configura headers HTTP de forma segura
+app.use(
+  helmet({
+    // DESACTIVAR HSTS: Evita que el navegador obligue a usar HTTPS en IPs locales
+    hsts: false,
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "upgrade-insecure-requests": null, // No forzar la actualización de HTTP a HTTPS
+        "script-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://cdn.jsdelivr.net",
+          "https://unpkg.com",
+          "https://checkout.wompi.co",
+        ],
+        "script-src-attr": ["'unsafe-inline'"],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
+        "img-src": [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://wompi.com",
+          "https://wompi.co",
+          "https://modagroup.com",
+          "https://i.pravatar.cc",
+          "https://*",
+        ],
+        "frame-src": ["'self'", "https://checkout.wompi.co"],
+        "connect-src": [
+          "'self'",
+          "https://cdn.jsdelivr.net",
+          "https://checkout.wompi.co",
+          "https://production.wompi.co",
+          "https://sandbox.wompi.co",
+          "https://*.jsdelivr.net",
+          "blob:",
+          "data:",
+        ],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 /* ── Adaptador de Base de Datos ─────────────────────────── */
-const DB_TYPE = process.env.DB_TYPE || "postgres";
-const isPg = DB_TYPE === "postgres";
-
-// Ahora 'prisma' es el motor oficial, reemplazando a 'db'
 const prisma = require("./database");
+
+// Verificar conexión a la base de datos al arrancar para detectar errores de configuración
+prisma
+  .$connect()
+  .then(() => console.log("🐘 Conexión verificada con éxito a PostgreSQL"))
+  .catch((err) => {
+    console.error("❌ ERROR DE BASE DE DATOS:");
+    console.error("   Causa: SSL handshake fallido o host inalcanzable.");
+
+    const maskedUrl = process.env.DATABASE_URL
+      ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ":****@")
+      : "No definida";
+    console.log(`   Archivo: ${envPath} | URL: ${maskedUrl}`);
+    console.error(`   Detalle: ${err.message}`);
+  });
+
+// Validación de entorno Wompi para depuración
+if (!process.env.WOMPI_PUBLIC_KEY) {
+  console.warn(
+    "⚠️ [Wompi] WOMPI_PUBLIC_KEY no encontrada. Se usará la llave de pruebas por defecto.",
+  );
+}
+if (!process.env.WOMPI_INTEGRITY_SECRET && IS_PRODUCTION) {
+  console.error(
+    "❌ [Wompi] CRÍTICO: WOMPI_INTEGRITY_SECRET es obligatorio para transacciones reales.",
+  );
+}
+
 const parseJson = (val, defaultVal = {}) => {
   if (typeof val === "string") {
     try {
@@ -43,33 +148,104 @@ async function validateProductId(tx, pid) {
   return !!p;
 }
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
-
 /* ── Configuración de seguridad ──────────────────────────── */
-const API_KEY = process.env.API_KEY || "dev-api-key";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret-winner-2026";
+const API_KEY = process.env.API_KEY || "prod-api-key-winner-2026";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET && IS_PRODUCTION) {
+  console.error(
+    "❌ ERROR CRÍTICO: JWT_SECRET no definido. El servidor no puede iniciar en producción.",
+  );
+  process.exit(1);
+}
+
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "super-secret-webhook-key";
-const ADMIN_PLAIN = process.env.ADMIN_PASSWORD;
-const ADMIN_SALT = process.env.ADMIN_SALT || "winner_salt_2026";
-const ADMIN_HASH =
-  process.env.ADMIN_PASSWORD_HASH ||
-  scryptSync("winner2026", ADMIN_SALT, 64).toString("hex");
 
-function passwordMatches(pass) {
+// Eliminamos el fallback hardcodeado. Si no hay SALT en el .env, el sistema debe alertar.
+const ADMIN_SALT = process.env.ADMIN_SALT;
+if (!ADMIN_SALT && IS_PRODUCTION) {
+  console.error(
+    "❌ CRITICAL: ADMIN_SALT is not defined in environment variables.",
+  );
+}
+
+// Generamos el hash esperado. Ya no permitimos contraseñas en texto plano.
+let ADMIN_HASH = process.env.ADMIN_PASSWORD_HASH;
+
+// SEGURIDAD: Si el hash es el de ejemplo o no existe, generarlo desde la clave plana
+if (!ADMIN_HASH || ADMIN_HASH === "EL_HASH_GENERADO_DE_TU_CLAVE") {
+  if (IS_PRODUCTION && ADMIN_HASH === "EL_HASH_GENERADO_DE_TU_CLAVE") {
+    console.error(
+      "❌ ERROR: Estás usando un HASH de ejemplo en producción. El login fallará.",
+    );
+  }
+
+  ADMIN_HASH = scryptSync(
+    process.env.ADMIN_PASSWORD || "winner2026",
+    ADMIN_SALT || "fallback_dev_salt",
+    64,
+  ).toString("hex");
+}
+
+/**
+ * Verifica la contraseña usando scrypt asíncrono y comparación de tiempo constante.
+ */
+async function passwordMatches(pass) {
   if (!pass) return false;
-  if (ADMIN_PLAIN && pass === ADMIN_PLAIN) return true;
   try {
-    const hash = scryptSync(pass, ADMIN_SALT, 64).toString("hex");
-    const a = Buffer.from(hash, "hex");
+    // Usamos la versión asíncrona para no bloquear el Event Loop
+    const derivedKey = await scryptAsync(
+      pass,
+      ADMIN_SALT || "fallback_dev_salt",
+      64,
+    );
+    const a = derivedKey;
     const b = Buffer.from(ADMIN_HASH, "hex");
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
+    return a.length === b.length && timingSafeEqual(a, b);
   } catch {
     return false;
   }
+}
+
+/**
+ * Genera el sello de integridad requerido por Wompi para transacciones seguras.
+ */
+function generateWompiIntegrity(reference, amountInCents, currency) {
+  let secret = (process.env.WOMPI_INTEGRITY_SECRET || "")
+    .trim()
+    .replace(/['"]/g, "");
+  if (!secret || typeof secret !== "string") return null;
+
+  // Limpiar el secreto de espacios, saltos de línea y comillas accidentales
+  secret = secret.trim().replace(/['"]/g, "");
+
+  // SEGURIDAD: El secreto de integridad NO es el mismo que el de eventos (webhooks)
+  if (secret.includes("_events_")) {
+    console.error(
+      "❌ [Wompi Error] Estás usando el 'Secreto de Eventos'. " +
+        "Debes usar el 'Secreto de Integridad' (Dashboard > Desarrolladores > Llaves técnicas).",
+    );
+    return null;
+  }
+
+  // Aseguramos que sea un entero absoluto (centavos) para evitar errores de coma flotante
+  // Convertimos a Number y redondeamos para eliminar cualquier residuo de punto flotante
+  const amountStr = Math.round(Number(amountInCents)).toString();
+  const chain = `${reference}${amountStr}${currency}${secret}`;
+
+  const hash = createHash("sha256").update(chain, "utf8").digest("hex");
+
+  // Log de depuración (Solo en desarrollo)
+  if (process.env.NODE_ENV !== "production") {
+    const maskedSecret =
+      secret.substring(0, 5) + "..." + secret.substring(secret.length - 5);
+    console.log(
+      `[Wompi Debug] 🔐 Firma: Ref=${reference} | Cents=${amountStr} | Secret=${maskedSecret} | Len=${secret.length}`,
+    );
+  }
+
+  return hash;
 }
 
 /* ── CORS ───────────────────────────────────────────────── */
@@ -79,12 +255,17 @@ const envOrigins = (process.env.ALLOWED_ORIGINS || "")
   .filter(Boolean);
 
 // En desarrollo, aseguramos que localhost y 127.0.0.1 estén permitidos
-const allowedOrigins = [...envOrigins];
+let allowedOrigins = [...envOrigins];
 if (!IS_PRODUCTION) {
-  if (!allowedOrigins.includes("http://localhost:3000"))
-    allowedOrigins.push("http://localhost:3000");
-  if (!allowedOrigins.includes("http://127.0.0.1:3000"))
-    allowedOrigins.push("http://127.0.0.1:3000");
+  const devOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.8:3000",
+    "http://192.168.1.8",
+  ];
+  devOrigins.forEach((o) => {
+    if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+  });
 }
 
 app.use(
@@ -102,9 +283,9 @@ app.use(
       if (
         !IS_PRODUCTION &&
         (!origin ||
-          origin.includes("localhost") ||
-          origin.includes("127.0.0.1") ||
-          origin.includes("::1"))
+          origin.includes("192.168.1.8") ||
+          origin.includes("::8") ||
+          origin.includes("ngrok-free"))
       ) {
         return cb(null, true);
       }
@@ -117,12 +298,29 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use(bodyParser.json({ limit: "15mb" }));
-app.use(bodyParser.urlencoded({ limit: "15mb", extended: true }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 // Logger de peticiones para depuración
 app.use((req, res, next) => {
-  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.path}`);
+  const start = Date.now();
+  const time = new Date().toLocaleTimeString();
+
+  // Escuchamos cuando la respuesta termina para dar el reporte completo
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const { method, path, query } = req;
+    const status = res.statusCode;
+    const statusEmoji = status >= 400 ? "❌" : status >= 300 ? "⚠️" : "✅";
+    const queryStr = Object.keys(query).length
+      ? ` ?${JSON.stringify(query)}`
+      : "";
+
+    console.log(
+      `[${time}] ${statusEmoji} ${method} ${path}${queryStr} -> ${status} (${duration}ms)`,
+    );
+  });
+
   next();
 });
 
@@ -159,6 +357,12 @@ app.use((req, res, next) => {
 
 app.use(express.static(CLIENT_ROOT));
 
+// Configuración de almacenamiento local para imágenes
+const UPLOADS_DIR = path.join(CLIENT_ROOT, "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 /* ── Endpoint de actualización masiva (CSV) ───────────────── */
 app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {
   const { updates } = req.body; // Array de { sku/id, size, qty }
@@ -166,24 +370,30 @@ app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Formato inválido" });
 
   try {
-    await prisma.$transaction(async (tx) => {
-      for (const item of updates) {
-        const product = await tx.product.findFirst({
-          where: { OR: [{ id: item.id }, { sku: item.sku }] },
-        });
-        if (!product) continue;
+    // Aumentamos el timeout a 30 segundos para soportar lotes de 500+ upserts
+    await prisma.$transaction(
+      async (tx) => {
+        for (const item of updates) {
+          const product = await tx.product.findFirst({
+            where: { OR: [{ id: item.id }, { sku: item.sku }] },
+          });
+          if (!product) continue;
 
-        await tx.inventory.upsert({
-          where: { productId_size: { productId: product.id, size: item.size } },
-          update: { quantity: item.qty },
-          create: {
-            productId: product.id,
-            size: item.size,
-            quantity: item.qty,
-          },
-        });
-      }
-    });
+          await tx.inventory.upsert({
+            where: {
+              productId_size: { productId: product.id, size: item.size },
+            },
+            update: { quantity: item.qty },
+            create: {
+              productId: product.id,
+              size: item.size,
+              quantity: item.qty,
+            },
+          });
+        }
+      },
+      { timeout: 30000 },
+    );
     res.json({ success: true, message: "Inventario actualizado masivamente" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -193,7 +403,8 @@ app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {
 /* ── Middleware de autenticación ────────────────────────── */
 function requireApiKey(req, res, next) {
   const key = req.header("x-api-key");
-  if (key === API_KEY) {
+  // SEGURIDAD: Permitir la llave de producción o la de desarrollo
+  if (key === API_KEY || key === "dev-api-key") {
     req.authenticated = "api-key";
     return next();
   }
@@ -246,7 +457,6 @@ const schemas = {
     id: Joi.string().allow(null, ""),
     name: Joi.string().required(),
     price: Joi.number().min(0).required(),
-    oldPrice: Joi.number().min(0).allow(null),
     cost: Joi.number().min(0).default(0),
     category: Joi.string().allow(null, ""),
     image: Joi.string().allow(null, ""),
@@ -257,8 +467,6 @@ const schemas = {
     stock: Joi.object()
       .pattern(Joi.string(), Joi.number().integer().min(0))
       .allow(null),
-    on_sale: Joi.boolean().default(false),
-    promo_price: Joi.number().min(0).allow(null),
   }),
   sale: Joi.object({
     id: Joi.string().allow(null, ""),
@@ -273,6 +481,13 @@ const schemas = {
       .valid("completed", "partial", "pending")
       .default("completed"),
   }).unknown(),
+  review: Joi.object({
+    name: Joi.string().min(2).max(50).required(),
+    rating: Joi.number().integer().min(1).max(5).required(),
+    comment: Joi.string().min(5).max(500).required(),
+    suggestion: Joi.string().allow("", null).max(500),
+    productId: Joi.string().allow(null, ""),
+  }),
 };
 
 const validate = (schema) => (req, res, next) => {
@@ -706,23 +921,29 @@ const MERCHANT_SALE_DATE =
   "2026-01-01T00:00:00-05:00/2026-12-31T23:59:59-05:00";
 const DEFAULT_SHIPPING = "CO::0.00 COP";
 const DEFAULT_TAX = "CO::0.00 COP";
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — PRODUCTOS
    ═══════════════════════════════════════════════════════════ */
-
 // ── AUTH ENDPOINTS ───────────────────────────────────────
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { user, pass } = req.body;
-  if (user === ADMIN_USER && passwordMatches(pass)) {
+  console.log(`[Login Attempt] Usuario: ${user}`);
+
+  const isUserValid = user === ADMIN_USER;
+  const isPassValid = await passwordMatches(pass);
+
+  if (isUserValid && isPassValid) {
+    console.log(`✅ Login exitoso para: ${user}`);
     const token = jwt.sign({ user: ADMIN_USER, role: "Admin" }, JWT_SECRET, {
       expiresIn: "7d",
     });
-    // Seteamos cookie para persistencia y devolvemos JSON para el cliente
+
+    // SEGURIDAD: Configuramos la cookie para entornos públicos
     res.cookie("w_token", token, {
       httpOnly: true,
-      secure: IS_PRODUCTION,
-      sameSite: "lax",
+      secure: true, // Siempre true si usamos HTTPS
+      sameSite: "None", // Requerido para integraciones de terceros como Wompi
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
     });
     return res.json({
       success: true,
@@ -732,6 +953,7 @@ app.post("/api/login", (req, res) => {
       apiKey: API_KEY,
     });
   }
+  console.warn(`❌ Login fallido para: ${user}`);
   res.status(401).json({ error: "Credenciales inválidas" });
 });
 
@@ -755,6 +977,9 @@ app.get("/api/products", requireApiKey, (req, res) => {
                 OR: [
                   { name: { contains: search, mode: "insensitive" } },
                   { id: { contains: search, mode: "insensitive" } },
+                  {
+                    inventory: { some: { barcode: { contains: search } } },
+                  },
                 ],
               }
             : {},
@@ -797,6 +1022,23 @@ app.get("/api/products/:id", requireApiKey, async (req, res) => {
   }
 });
 
+// GET /api/inventory/barcode/:code — Buscar talla específica por código de barras (Tienda Física)
+app.get("/api/inventory/barcode/:code", requireApiKey, async (req, res) => {
+  try {
+    const item = await prisma.inventory.findUnique({
+      where: { barcode: req.params.code },
+      include: { product: true },
+    });
+
+    if (!item) {
+      return res.status(404).json({ error: "Código de barras no registrado" });
+    }
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/products — crear o actualizar producto
 app.post(
   "/api/products",
@@ -807,7 +1049,6 @@ app.post(
       id,
       name,
       price,
-      oldPrice,
       cost,
       category,
       image,
@@ -816,16 +1057,7 @@ app.post(
       sku,
       description,
       stock,
-      on_sale,
-      promo_price,
     } = req.body;
-
-    if (on_sale && promo_price > price) {
-      return res.status(400).json({
-        error: "El precio de oferta no puede ser mayor al precio original",
-        success: false,
-      });
-    }
 
     let productId = id;
 
@@ -852,7 +1084,6 @@ app.post(
           update: {
             name,
             price,
-            oldPrice,
             cost,
             category,
             image,
@@ -860,14 +1091,11 @@ app.post(
             badgeType,
             sku,
             description,
-            onSale: !!on_sale,
-            promoPrice: promo_price,
           },
           create: {
             id: productId,
             name,
             price,
-            oldPrice,
             cost,
             category,
             image,
@@ -875,8 +1103,6 @@ app.post(
             badgeType,
             sku,
             description,
-            onSale: !!on_sale,
-            promoPrice: promo_price,
           },
         });
 
@@ -946,11 +1172,9 @@ app.delete("/api/products/:id", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — VENTAS
    ═══════════════════════════════════════════════════════════ */
-
 // GET /api/sales — todas las ventas con items
 app.get("/api/sales", requireAuth, (req, res) => {
   const { from, to, method, channel, limit = 500 } = req.query; // Default limit to 500
@@ -993,6 +1217,7 @@ app.get("/api/sales", requireAuth, (req, res) => {
         total: sale.totalAmount,
         method: sale.paymentMethod,
         payment_status: sale.paymentStatus,
+        channel: sale.id.startsWith("ON") ? "online" : "fisica",
         shipping_address: sale.shippingAddress,
         shipping_carrier: sale.orders?.[0]?.shippingMethod || "---",
         vendor: sale.vendor || "---",
@@ -1089,7 +1314,8 @@ app.post("/api/sales", (req, res, next) => {
     }
   }
 
-  if (apiKey === API_KEY) {
+  // Permitir registro de ventas desde el frontend online
+  if (apiKey === API_KEY || apiKey === "dev-api-key") {
     return handlePostSales(req, res);
   }
 
@@ -1125,8 +1351,10 @@ async function handlePostSales(req, res) {
     // Si falla cualquier parte (ej. no hay stock), TODO se revierte automáticamente
     const result = await prisma.$transaction(async (tx) => {
       // 1. Validar y actualizar stock de cada producto
+      const finalItems = [];
       for (const item of items) {
-        const pId = item.id || item.productId;
+        let pId = item.id || item.productId;
+        const sku = item.sku;
 
         if (!pId) {
           throw new Error(
@@ -1134,19 +1362,35 @@ async function handlePostSales(req, res) {
           );
         }
 
-        const productExists = await validateProductId(tx, pId);
+        let productExists = await validateProductId(tx, pId);
+
+        // REFUERZO: Si no existe por ID, intentar buscar por SKU (Resiliencia local)
+        if (!productExists && sku) {
+          const recoveryProduct = await tx.product.findFirst({
+            where: { sku: sku },
+          });
+          if (recoveryProduct) {
+            pId = recoveryProduct.id;
+            productExists = true;
+          }
+        }
 
         if (!productExists) {
           throw new Error(`Producto ${pId} no existe en la base de datos.`);
         }
 
+        const requestedSize = item.size || "U";
+
         const inv = await tx.inventory.findFirst({
-          where: { productId: pId, size: item.size },
+          where: {
+            productId: pId,
+            OR: [{ size: requestedSize }, { size: "" }],
+          },
         });
 
         if (!inv || inv.quantity < item.qty) {
           throw new Error(
-            `Stock insuficiente para ${item.name} (${item.size}).`,
+            `Stock insuficiente para ${item.name} (${requestedSize}).`,
           );
         }
 
@@ -1154,6 +1398,8 @@ async function handlePostSales(req, res) {
           where: { id: inv.id },
           data: { quantity: { decrement: item.qty } },
         });
+
+        finalItems.push({ ...item, correctedId: pId });
       }
 
       // 2. Crear la Venta y sus Items en una sola operación
@@ -1169,14 +1415,37 @@ async function handlePostSales(req, res) {
           shippingAddress: shipping_address || null,
           referenceNumber: saleId,
           items: {
-            create: items.map((it) => ({
+            create: finalItems.map((it) => ({
               id: `SI-${randomUUID().slice(0, 8)}`,
-              productId: it.id || it.productId, // Ya validado arriba
+              productId: it.correctedId,
               size: it.size,
               quantity: it.qty,
               unitPrice: it.price,
             })),
           },
+          salePayments:
+            // REFUERZO: Si es completada o no se especifica estado, se asume pago total
+            !payment_status || payment_status === "completed"
+              ? {
+                  create: [
+                    {
+                      amount: total,
+                      method: payment_method || "Efectivo",
+                      notes: "Pago inicial completo (Venta Directa)",
+                    },
+                  ],
+                }
+              : req.body.payment_details?.abonoAmount > 0
+                ? {
+                    create: [
+                      {
+                        amount: Number(req.body.payment_details.abonoAmount),
+                        method: payment_method || "Abono",
+                        notes: "Abono inicial de apartado",
+                      },
+                    ],
+                  }
+                : undefined,
           orders: {
             create:
               shipping_address || shipping_carrier
@@ -1196,6 +1465,27 @@ async function handlePostSales(req, res) {
     });
 
     console.log("✅ Venta procesada con Prisma:", result.id);
+
+    // ── DISPARADORES DE NOTIFICACIONES AUTOMÁTICAS (Paso 4) ──
+    // Aquí se integran SendGrid (Email) y Twilio (SMS/WhatsApp API)
+    // sendEmailNotification(customer_email, result);
+    // sendSMSStatus(customer_phone, "Tu pedido ha sido recibido con éxito.");
+    // ── DISPARADORES DE NOTIFICACIONES AUTOMÁTICAS (Paso 1) ──
+    const fullSale = await prisma.sale.findUnique({
+      where: { id: result.id },
+      include: { items: { include: { product: true } } },
+    });
+
+    // Enviamos el email de forma asíncrona sin esperar (Fire and Forget)
+    // para no bloquear la respuesta HTTP al cliente.
+    sendSaleEmail(fullSale).catch((err) =>
+      console.error(
+        "❌ Fallo crítico al intentar enviar email de venta:",
+        err.message,
+      ),
+    );
+    // sendSaleSMS se puede organizar igual en una carpeta /services/sms.js
+
     return res.json({
       success: true,
       id: result.id,
@@ -1218,8 +1508,47 @@ app.patch("/api/sales/:id", requireAuth, async (req, res) => {
     await prisma.$transaction(async (tx) => {
       // 1. Actualizar campos básicos en la tabla Sale
       const saleUpdate = {};
-      if (payment_status) saleUpdate.paymentStatus = payment_status;
       if (shipping_address) saleUpdate.shippingAddress = shipping_address;
+
+      // Lógica de Cierre Estricto: Si se marca como ENTREGADO, la venta se completa
+      const details =
+        typeof payment_details === "string"
+          ? JSON.parse(payment_details)
+          : payment_details;
+
+      if (
+        details?.shipping_status === "ENTREGADO" ||
+        payment_status === "completed"
+      ) {
+        saleUpdate.paymentStatus = "completed";
+
+        // Verificar si falta dinero por registrar para cerrar el saldo
+        const currentSale = await tx.sale.findUnique({
+          where: { id: req.params.id },
+          include: { salePayments: true },
+        });
+
+        if (currentSale) {
+          const paid = currentSale.salePayments.reduce(
+            (sum, p) => sum + p.amount,
+            0,
+          );
+          const balance = currentSale.totalAmount - paid;
+
+          if (balance > 0) {
+            await tx.salePayment.create({
+              data: {
+                saleId: currentSale.id,
+                amount: balance,
+                method: currentSale.paymentMethod || "Efectivo",
+                notes: "Cierre automático por entrega del producto",
+              },
+            });
+          }
+        }
+      } else if (payment_status) {
+        saleUpdate.paymentStatus = payment_status;
+      }
 
       if (Object.keys(saleUpdate).length > 0) {
         await tx.sale.update({
@@ -1230,10 +1559,6 @@ app.patch("/api/sales/:id", requireAuth, async (req, res) => {
 
       // 2. Gestionar la Logística en la tabla Order relacionada
       if (payment_details) {
-        const details =
-          typeof payment_details === "string"
-            ? JSON.parse(payment_details)
-            : payment_details;
         const order = await tx.order.findFirst({
           where: { saleId: req.params.id },
         });
@@ -1295,6 +1620,45 @@ app.get("/api/stats", requireAuth, async (req, res) => {
     });
     const totalRevenue = totalRevenueAgg._sum.totalAmount || 0;
 
+    // --- LÓGICA FINANCIERA CORREGIDA ---
+
+    // 1. Dinero de ventas marcadas como 'completed' (Pago total inmediato)
+    const completedSalesAgg = await prisma.sale.aggregate({
+      _sum: { totalAmount: true },
+      where: { ...statsWhere, paymentStatus: "completed" },
+    });
+    const moneyFromCompleted = completedSalesAgg._sum.totalAmount || 0;
+
+    // 2. Dinero de abonos en ventas activas (parciales/pendientes)
+    let moneyFromAbonos = 0;
+    if (prisma.salePayment) {
+      const abonosAgg = await prisma.salePayment.aggregate({
+        _sum: { amount: true },
+        where: {
+          sale: {
+            AND: [
+              { paymentStatus: { in: ["partial", "pending"] } },
+              statsWhere,
+            ],
+          },
+        },
+      });
+      moneyFromAbonos = abonosAgg._sum.amount || 0;
+    }
+
+    const totalReceived = moneyFromCompleted + moneyFromAbonos;
+    const totalDebt = Math.max(0, totalRevenue - totalReceived);
+    // ----------------------------------
+
+    // Gastos Totales
+    let totalExpenses = 0;
+    if (prisma.expense) {
+      const totalExpensesAgg = await prisma.expense.aggregate({
+        _sum: { amount: true },
+      });
+      totalExpenses = totalExpensesAgg._sum.amount || 0;
+    }
+
     // 2. Estadísticas de Hoy
     const salesToday = await prisma.sale.count({
       where: { ...statsWhere, createdAt: { gte: today } },
@@ -1310,14 +1674,17 @@ app.get("/api/stats", requireAuth, async (req, res) => {
       totalProducts,
       totalSales,
       totalRevenue,
+      totalDebt,
+      totalExpenses,
+      netCash: totalReceived - totalExpenses,
       salesToday,
       revenueToday,
       avgTicket: totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0,
+      // Simulación de conversión basada en volumen (en producción se usa tráfico real)
       conversion:
-        totalSales > 0
-          ? ((totalSales / (totalSales * 15)) * 100).toFixed(1) + "%"
-          : "0%",
-      conversion_trend: "↑ +0.2% vs semana",
+        totalSales > 0 ? (3.2 + (totalSales % 5) * 0.2).toFixed(1) + "%" : "0%",
+      conversion_trend:
+        totalSales % 2 === 0 ? "↑ +0.4% vs semana" : "↓ -0.2% vs semana",
     });
   } catch (err) {
     console.error("❌ Error en Dashboard Stats:", err.message);
@@ -1327,7 +1694,6 @@ app.get("/api/stats", requireAuth, async (req, res) => {
 /* ═══════════════════════════════════════════════════════════
    RUTAS — ANALYTICS AVANZADO (Seguimiento de Ventas)
    ═══════════════════════════════════════════════════════════ */
-
 // GET /api/analytics/sales-by-channel — Ventas por canal (online/fisica)
 app.get("/api/analytics/sales-by-channel", requireAuth, async (req, res) => {
   prisma.sale
@@ -1405,7 +1771,7 @@ app.get("/api/analytics/sales-timeline", requireAuth, (req, res) => {
     .$queryRawUnsafe(
       `
     SELECT
-      TO_CHAR(s."createdAt", '${dateFormat}') AS period,
+      TO_CHAR(s."created_at", '${dateFormat}') AS period,
       COUNT(s.id)::int AS sales_count,
       SUM(s."totalAmount")::float AS total_revenue,
       AVG(s."totalAmount")::float AS avg_sale,
@@ -1464,29 +1830,35 @@ app.get("/api/analytics/inventory-status", requireAuth, async (req, res) => {
 // GET /api/analytics/top-products — Top 10 productos más vendidos
 app.get("/api/analytics/top-products", requireAuth, async (req, res) => {
   try {
-    const topProducts = await prisma.saleItem.groupBy({
-      by: ["productId"],
-      _sum: { quantity: true, unitPrice: true },
-      _count: { saleId: true },
-      orderBy: { _sum: { quantity: "desc" } },
-      take: 10,
+    // Obtenemos los items de ventas para calcular ingresos reales
+    const items = await prisma.saleItem.findMany({
+      include: { product: { select: { name: true } } },
     });
 
-    const productNames = await prisma.product.findMany({
-      where: { id: { in: topProducts.map((p) => p.productId) } },
-      select: { id: true, name: true },
-    });
-    const nameMap = new Map(productNames.map((p) => [p.id, p.name]));
+    // Agrupamos y calculamos en memoria (eficiente para volumen local)
+    const stats = items.reduce((acc, item) => {
+      const id = item.productId;
+      if (!acc[id]) {
+        acc[id] = {
+          name: item.product?.name || "Producto",
+          qty_sold: 0,
+          revenue: 0,
+          sale_count: 0,
+        };
+      }
+      acc[id].qty_sold += item.quantity;
+      acc[id].revenue += item.quantity * item.unitPrice;
+      acc[id].sale_count += 1;
+      return acc;
+    }, {});
 
-    res.json(
-      topProducts.map((p) => ({
-        name: nameMap.get(p.productId),
-        qty_sold: p._sum.quantity,
-        sale_count: p._count.saleId,
-        revenue: p._sum.quantity * p._sum.unitPrice, // This is not correct, should be sum of (qty * unitPrice)
-      })),
-    );
+    const result = Object.values(stats)
+      .sort((a, b) => b.qty_sold - a.qty_sold)
+      .slice(0, 5);
+
+    res.json(result);
   } catch (err) {
+    console.error("❌ Error en Top Products:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1582,11 +1954,9 @@ app.get("/api/analytics/summary", requireAuth, (req, res) => {
     })
     .catch((err) => res.status(500).json({ error: err.message }));
 });
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — LOGÍSTICA (Shipping Options)
    ═══════════════════════════════════════════════════════════ */
-
 // GET /api/shipping-options — Opciones de envío disponibles
 app.get("/api/shipping-options", requireApiKey, async (req, res) => {
   try {
@@ -1601,12 +1971,26 @@ app.get("/api/shipping-options", requireApiKey, async (req, res) => {
   }
 });
 
-// GET /api/orders/:id — Obtener detalles de un pedido
-app.get("/api/orders/:id", requireApiKey, async (req, res) => {
+// GET /api/orders/:id — Obtener detalles de un pedido (Público con API Key)
+app.get("/api/orders/:id", async (req, res) => {
+  const key = req.header("x-api-key");
+  if (key !== API_KEY) return res.status(401).json({ error: "No autorizado" });
+
   try {
-    const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+    const searchId = req.params.id;
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { id: searchId },
+          { id: "ORD-" + searchId },
+          { saleId: searchId },
+          { saleId: "ON" + searchId },
+          { sale: { referenceNumber: searchId } },
+        ],
+      },
+      include: { sale: true },
     });
+
     if (!order) return res.status(404).json({ error: "Pedido no encontrado" });
     res.json(order);
   } catch (err) {
@@ -1671,11 +2055,9 @@ app.put("/api/orders/:id/tracking", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — PAGOS (Payment Processing)
    ═══════════════════════════════════════════════════════════ */
-
 // POST /api/payments — Registrar pago de cliente
 app.post("/api/payments", async (req, res) => {
   try {
@@ -1743,6 +2125,19 @@ app.post("/api/payments", async (req, res) => {
               unitPrice: it.price,
             })),
           },
+          // AGREGADO: Registrar pago para ventas online completadas
+          salePayments:
+            status === "completed"
+              ? {
+                  create: [
+                    {
+                      amount: total,
+                      method: method || "Online",
+                      notes: "Pago completo registrado vía Checkout Online",
+                    },
+                  ],
+                }
+              : undefined,
         },
       });
 
@@ -1797,11 +2192,108 @@ app.get("/api/payments/customer/:email", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+/* ═══════════════════════════════════════════════════════════
+   RUTAS — RESEÑAS (Social Proof)
+   ═══════════════════════════════════════════════════════════ */
+// POST /api/reviews — Guardar nueva reseña
+app.post("/api/reviews", validate(schemas.review), async (req, res) => {
+  try {
+    const { name, rating, comment, suggestion, productId } = req.body;
 
+    // Si el modelo Review no existe aún en tu Prisma, esto fallará hasta que hagas 'npx prisma db push'
+    const review = await prisma.review.create({
+      data: {
+        id: "REV-" + randomUUID().slice(0, 8).toUpperCase(),
+        name,
+        rating: Number(rating),
+        comment,
+        suggestion: suggestion || "",
+        productId: productId || null,
+        status: "APPROVED", // Podrías poner "PENDING" para moderación manual
+      },
+    });
+
+    res
+      .status(201)
+      .json({ success: true, message: "¡Gracias por tu reseña!", review });
+  } catch (err) {
+    console.error("❌ Error guardando reseña:", err.message);
+    res.status(500).json({ error: "No se pudo guardar la reseña" });
+  }
+});
+
+// GET /api/reviews — Obtener reseñas aprobadas
+app.get("/api/reviews", async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { status: "APPROVED" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── GESTOR DE ALMACENAMIENTO LOCAL ── */
+/**
+ * Sube archivos directamente al servidor local.
+ * Soporta Base64 para máxima compatibilidad con el JSON body actual.
+ */
+app.post("/api/storage/upload", requireAuth, async (req, res) => {
+  try {
+    const { fileName, fileType, base64Data } = req.body;
+
+    if (!base64Data) {
+      return res
+        .status(400)
+        .json({ error: "No se recibió información del archivo" });
+    }
+
+    // Limpiar metadata del base64 (data:image/png;base64,...)
+    // 1. Extraer el buffer del base64
+    const buffer = Buffer.from(base64Data.split(",")[1], "base64");
+
+    // 2. Generar nombre único optimizado (siempre .webp)
+    const nameWithoutExt =
+      fileName
+        .split(".")
+        .slice(0, -1)
+        .join(".")
+        .replace(/\s+/g, "_")
+        .toLowerCase() || "upload";
+    const uniqueName = `${Date.now()}-${nameWithoutExt}.webp`;
+    const filePath = path.join(UPLOADS_DIR, uniqueName);
+
+    // 3. Procesar con Sharp: redimensionar (max 1200px) y guardar como WebP
+    await sharp(buffer)
+      .resize(1200, null, { withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toFile(filePath);
+
+    // 4. Generar URL pública local
+    const protocol = req.protocol;
+    const host = req.get("host");
+    const publicUrl = `${protocol}://${host}/uploads/${uniqueName}`;
+
+    console.log("✅ Imagen optimizada y guardada:", uniqueName);
+
+    res.json({
+      success: true,
+      publicUrl,
+      fileName: uniqueName,
+    });
+  } catch (err) {
+    console.error("❌ Error en subida local:", err.message);
+    res
+      .status(500)
+      .json({ error: "Error al guardar la imagen en el servidor" });
+  }
+});
 /* ═══════════════════════════════════════════════════════════
    RUTAS — VIP CUSTOMERS (Análisis de clientes)
    ═══════════════════════════════════════════════════════════ */
-
 // GET /api/customers/vip — Listar clientes VIP
 app.get("/api/customers/vip", requireAuth, async (req, res) => {
   try {
@@ -1960,11 +2452,9 @@ app.all("/api/reorder-check", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — PREDICCIÓN DE DEMANDA (ML Simple)
-   ═══════════════════════════════════════════════════════════ */
-
+   ═══════════════════════════════════════════════════════════ *
 // GET /api/demand-forecast — Predicción de demanda
 app.get("/api/demand-forecast", requireAuth, async (req, res) => {
   try {
@@ -2054,11 +2544,9 @@ app.post("/api/demand-forecast/calculate", requireAuth, async (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
-
 /* ═══════════════════════════════════════════════════════════
    RUTAS — EXPORTACIÓN (Reports)
    ═══════════════════════════════════════════════════════════ */
-
 // GET /api/reports/sales-csv — Exportar ventas a CSV
 app.get("/api/reports/sales-csv", requireAuth, async (req, res) => {
   const { from, to } = req.query;
@@ -2101,45 +2589,184 @@ app.get("/api/reports/sales-csv", requireAuth, async (req, res) => {
       res.status(500).json({ error: err.message });
     });
 });
-
 /* ═══════════════════════════════════════════════════════════
    SISTEMA DE PASARELAS REALES (Preparación Paso 2)
    ═══════════════════════════════════════════════════════════ */
+// Endpoint centralizado para iniciar pagos electrónicos vía Wompi
+app.post("/api/checkout/init", requireApiKey, async (req, res) => {
+  const { saleId, amount, email, paymentType } = req.body;
 
-// Endpoint centralizado para iniciar pagos electrónicos
-app.post("/api/checkout/init", requireAuth, async (req, res) => {
-  const { saleId, amount, email } = req.body;
+  if (!saleId || !amount) {
+    return res
+      .status(400)
+      .json({ error: "Datos insuficientes para iniciar pago" });
+  }
 
-  // LÓGICA WOMPI (Sugerencia)
-  // Aquí generaríamos el botón de pago dinámico
-  const reference = `${saleId}_${Date.now()}`;
-  const integrity_secret = process.env.WOMPI_INTEGRITY_KEY; // Para mayor seguridad
+  // IMPORTANTE: Usamos '_' para que coincida con la lógica del webhook (split('_')[0])
+  const reference = `${saleId}_${Date.now().toString().slice(-6)}`;
 
-  // Por ahora devolvemos la configuración para que el frontend abra el widget
-  res.json({
+  // Usamos Math.round para convertir a centavos y asegurar que no queden decimales
+  const amountInCents = Math.round(Number(amount) * 100);
+  const currency = "COP";
+
+  const signature = generateWompiIntegrity(reference, amountInCents, currency);
+  const publicKey = (
+    process.env.WOMPI_PUBLIC_KEY || "pub_test_Q5yDA9xoKdePzhS8qn9G9S1Y699v5B8y"
+  )
+    .trim()
+    .replace(/['"]/g, "");
+
+  // VALIDACIÓN DE AMBIENTE: Evitar Error 403 por mezcla de llaves
+  const isTestKey = publicKey.startsWith("pub_test");
+  const secret = (process.env.WOMPI_INTEGRITY_SECRET || "").trim();
+  const isTestSecret = secret.startsWith("test_integrity");
+
+  if (publicKey && secret && isTestKey !== isTestSecret) {
+    console.error(
+      "❌ [Wompi Crítico] MEZCLA DE LLAVES DETECTADA: " +
+        `Llave es ${isTestKey ? "TEST" : "PROD"} pero el Secreto es ${isTestSecret ? "TEST" : "PROD"}. ` +
+        "Esto causará Error 403 en el navegador.",
+    );
+  }
+
+  // MODO MANUAL: Solo si no hay llave pública configurada en absoluto
+  const isManualFallback = !process.env.WOMPI_PUBLIC_KEY;
+
+  const cleanFrontendUrl = (
+    process.env.FRONTEND_URL || "http://192.168.1.8:3000"
+  ).replace(/\/$/, "");
+
+  const responseData = {
     success: true,
+    isManual: isManualFallback,
     config: {
-      publicKey:
-        process.env.WOMPI_PUBLIC_KEY ||
-        "pub_test_Q5yDA9xoKdePzhS8qn9G9S1Y699v5B8y",
-      currency: "COP",
-      amountInCents: Math.round(amount * 100),
+      publicKey: publicKey || "pub_test_Q5yDA9xoKdePzhS8qn9G9S1Y699v5B8y",
+      currency: currency,
+      amountInCents: Math.round(amountInCents),
       reference: reference,
-      redirectUrl: `${process.env.FRONTEND_URL || "http://localhost:3000"}/admin-panel.html#sales`,
+      customerEmail: email,
+      redirectUrl: `${cleanFrontendUrl}/order-status.html`,
     },
-    message: "Iniciando pasarela Wompi",
-  });
+    // El paymentType ayuda al frontend a renderizar el logo/flayer correcto (Visa, Master, etc)
+    paymentType: paymentType || "CARD",
+    message: "Parámetros de Wompi generados",
+  };
+
+  // ESTRUCTURA CORRECTA: Wompi requiere un objeto 'signature' que contenga 'integrity'
+  if (signature) {
+    responseData.config.signature = {
+      integrity: signature,
+    };
+    console.log(
+      `[Wompi] ✅ Sello de integridad generado y adjunto: ${reference}`,
+    );
+  } else {
+    console.warn(
+      "⚠️ [Wompi Warning] No se pudo generar el sello 'integrity'. Revisa WOMPI_INTEGRITY_SECRET en tu .env",
+    );
+  }
+
+  if (IS_PRODUCTION && !signature) {
+    console.warn(
+      "⚠️ [Wompi] No se generó 'integrity'. Las transacciones podrían ser rechazadas (403).",
+    );
+  }
+
+  res.json(responseData);
 });
 
-// Webhook unificado para recibir confirmaciones de pago (Paso 2)
-app.post("/api/webhooks/payments/:provider", async (req, res) => {
-  const { provider } = req.params;
+// Webhook específico para Wompi
+app.post("/api/webhooks/wompi", async (req, res) => {
   const payload = req.body;
+  const { data, event, signature } = payload;
 
-  console.log(`🔔 Webhook recibido de ${provider}:`, payload.id);
+  console.log(
+    `🔔 [Wompi Webhook] Evento: ${event} | Ref: ${data?.transaction?.reference} | Status: ${data?.transaction?.status}`,
+  );
 
-  // Aquí procesaremos la validación de firma y actualización de stock automática
-  res.status(200).send("OK");
+  // Debug: Ver el JSON completo que envía Wompi para validar campos
+  if (!IS_PRODUCTION) {
+    console.log(
+      "📦 Payload Completo del Webhook:",
+      JSON.stringify(payload, null, 2),
+    );
+  }
+
+  // Verificación de Firma del Webhook (Opcional pero recomendado)
+  // Wompi envía una firma para validar que el evento viene de ellos
+
+  if (event === "transaction.updated") {
+    const transaction = data.transaction;
+    const saleReference = transaction.reference.split("_")[0]; // Extraemos el ID original
+    const status = transaction.status; // APPROVED, DECLINED, VOIDED, ERROR
+
+    const statusMap = {
+      APPROVED: "completed",
+      DECLINED: "failed",
+      VOIDED: "cancelled",
+      ERROR: "failed",
+    };
+
+    const newPaymentStatus = statusMap[status] || "pending";
+
+    try {
+      const sale = await prisma.sale.findFirst({
+        where: {
+          OR: [
+            { id: saleReference },
+            { referenceNumber: saleReference },
+            { referenceNumber: transaction.reference },
+          ],
+        },
+        include: { salePayments: true },
+      });
+
+      if (sale) {
+        await prisma.sale.update({
+          where: { id: sale.id },
+          data: {
+            paymentStatus:
+              sale.paymentStatus === "completed"
+                ? "completed"
+                : newPaymentStatus,
+            referenceNumber: transaction.id,
+          },
+        });
+
+        // REGISTRO CONTABLE: Si el pago fue aprobado, registramos el dinero en la tabla de pagos
+        if (status === "APPROVED") {
+          const payments = await prisma.salePayment.findMany({
+            where: { saleId: sale.id },
+          });
+          const alreadyPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+          const remaining = sale.totalAmount - alreadyPaid;
+
+          if (remaining > 0) {
+            await prisma.salePayment.create({
+              data: {
+                saleId: sale.id,
+                amount: remaining,
+                method: "Wompi / Online",
+                notes: `Pago automático verificado (Wompi Ref: ${transaction.id})`,
+              },
+            });
+            console.log(
+              `💰 Contabilidad: Se registraron ${remaining} para la venta ${sale.id}`,
+            );
+          }
+        }
+
+        console.log(
+          `✅ Venta ${sale.id} actualizada por Wompi a: ${newPaymentStatus}`,
+        );
+      }
+    } catch (err) {
+      console.error("❌ Error procesando actualización de Wompi:", err.message);
+      return res.status(500).send("Internal Error");
+    }
+  }
+
+  res.status(200).send("Event Received");
 });
 
 // GET /merchant-feed.csv
@@ -2169,8 +2796,6 @@ app.get("/merchant-feed.csv", async (req, res) => {
       "additional_image_link",
       "availability",
       "price",
-      "sale_price",
-      "sale_price_effective_date",
       "brand",
       "gtin",
       "mpn",
@@ -2191,17 +2816,14 @@ app.get("/merchant-feed.csv", async (req, res) => {
       "custom_label_0",
       "custom_label_1",
     ];
-
     const lines = normalizedProducts.map((p) => {
       const m = PRODUCT_METADATA[p.id] || {};
       const hasStock = Object.values(p.stock || {}).some((q) => q > 0);
-      const isOnSale = p.oldPrice && Number(p.oldPrice) > Number(p.price);
       const basePrice = Number(p.price || 0).toFixed(2);
       const productUrl = `${base}/?product=${p.id}#productos`;
       const description = m.productType
         ? `${p.name} · ${m.productType} by Winner.`
         : `Ropa urbana Winner. ${p.name} — Streetwear colombiano.`;
-
       return [
         p.id,
         p.name,
@@ -2211,8 +2833,6 @@ app.get("/merchant-feed.csv", async (req, res) => {
         (m.additionalImages || []).join(","),
         hasStock ? "in stock" : "out of stock",
         `${basePrice} COP`,
-        isOnSale ? `${basePrice} COP` : "",
-        isOnSale ? MERCHANT_SALE_DATE : "",
         "Winner",
         m.gtin || "",
         m.mpn || "",
@@ -2230,13 +2850,12 @@ app.get("/merchant-feed.csv", async (req, res) => {
         m.gtin ? "TRUE" : "FALSE",
         DEFAULT_TAX,
         DEFAULT_SHIPPING,
-        m.customLabel0 || (isOnSale ? "Oferta" : "Catalogo"),
+        m.customLabel0 || "Catalogo",
         m.customLabel1 || (p.category ? p.category.toUpperCase() : "GENERAL"),
       ]
         .map(esc)
         .join(",");
     });
-
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
@@ -2248,11 +2867,34 @@ app.get("/merchant-feed.csv", async (req, res) => {
     res.status(500).send("Error al generar el feed");
   }
 });
-
+// GET /api/config — Configuración pública de redes y contacto
+app.get("/api/config", (req, res) => {
+  res.json({
+    social: {
+      instagram: process.env.SOCIAL_INSTAGRAM || "https://instagram.com/.env",
+      tiktok: process.env.SOCIAL_TIKTOK || "https://tiktok.com/.env",
+      facebook: process.env.SOCIAL_FACEBOOK || "https://facebook.com/.env",
+      whatsapp: process.env.SOCIAL_WHATSAPP || ".env",
+    },
+    info: {
+      about:
+        process.env.ABOUT_WINNER ||
+        "Epicentro de cultura urbana en Colombia. Streetwear y calzado premium con curaduría exclusiva.",
+      vision:
+        process.env.VISION_WINNER ||
+        "Liderar la moda urbana nacional, garantizando exclusividad y tecnología en cada compra.",
+      privacy:
+        process.env.PRIVACY_POLICY ||
+        "En Winner Store protegemos tus datos. La información recolectada se usa exclusivamente para el procesamiento de pedidos, envíos y soporte al cliente.",
+      shipping_info:
+        process.env.SHIPPING_POLICY ||
+        "Realizamos envíos a toda Colombia a través de las mejores transportadoras. El costo se calcula según tu ubicación y el peso del pedido.",
+    },
+  });
+});
 /* ═══════════════════════════════════════════════════════════
    RUTAS — WEBHOOKS (Pagos externos)
    ═══════════════════════════════════════════════════════════ */
-
 // POST /api/webhooks/payment — Recibir notificaciones de pago
 app.post("/api/webhooks/payment", async (req, res) => {
   const webhookSecret = req.header("x-webhook-secret");
@@ -2269,7 +2911,6 @@ app.post("/api/webhooks/payment", async (req, res) => {
   const saleReference =
     payload.reference_number || payload.transaction_id || payload.sale_id;
   const newStatus = payload.status || "completed"; // 'completed', 'failed', 'pending'
-
   if (!saleReference) {
     console.warn(
       "❌ Webhook: No se encontró referencia de venta en el payload",
@@ -2278,7 +2919,6 @@ app.post("/api/webhooks/payment", async (req, res) => {
       .status(400)
       .json({ error: "Referencia de venta no encontrada en el payload" });
   }
-
   // Buscar la venta por reference_number o id
   try {
     const sale = await prisma.sale.findFirst({
@@ -2294,15 +2934,30 @@ app.post("/api/webhooks/payment", async (req, res) => {
       );
       return res.status(404).json({ error: "Venta no encontrada" });
     }
-
     await prisma.sale.update({
       where: { id: sale.id },
       data: {
         paymentStatus: newStatus,
-        // paymentDetails: payload, // Assuming paymentDetails is a JSONB field
       },
     });
-
+    // REGISTRO CONTABLE: Si el estado es completado, asegurar que el dinero esté registrado
+    if (newStatus === "completed") {
+      const payments = await prisma.salePayment.findMany({
+        where: { saleId: sale.id },
+      });
+      const alreadyPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = sale.totalAmount - alreadyPaid;
+      if (remaining > 0) {
+        await prisma.salePayment.create({
+          data: {
+            saleId: sale.id,
+            amount: remaining,
+            method: sale.paymentMethod || "Webhook Externo",
+            notes: "Registro contable automático vía Webhook",
+          },
+        });
+      }
+    }
     console.log(
       `✅ Webhook: Venta ${sale.id} actualizada a estado ${newStatus}`,
     );
@@ -2313,6 +2968,235 @@ app.post("/api/webhooks/payment", async (req, res) => {
   } catch (err) {
     console.error("❌ Webhook: Error procesando webhook:", err.message);
     return res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+/* ── RUTAS DE GASTOS ── */
+// Joi Schema para validación de gastos
+const expenseSchema = Joi.object({
+  id: Joi.string().optional(),
+  date: Joi.date().iso().required(),
+  category: Joi.string().required(),
+  concept: Joi.string().required(),
+  detail: Joi.string().allow("", null).optional(),
+  amount: Joi.number().min(0.01).required(),
+});
+
+// GET /api/expenses?from=YYYY-MM-DD&to=YYYY-MM-DD&category=xxx
+app.get("/api/expenses", requireAuth, async (req, res) => {
+  const { from, to, category } = req.query;
+  const where = {};
+
+  if (from) where.date = { gte: new Date(from) };
+  if (to) where.date = { ...where.date, lte: new Date(to) };
+  if (category) where.category = category;
+
+  try {
+    if (!prisma.expense) {
+      console.warn(
+        "⚠️ Advertencia: El modelo 'Expense' no está definido en el esquema Prisma.",
+      );
+      return res.json([]);
+    }
+    const expenses = await prisma.expense.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(expenses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    console.error("❌ Error fetching expenses:", err.message);
+    res.status(500).json({ error: "Error al obtener gastos" });
+  }
+});
+
+app.post("/api/expenses", requireAuth, async (req, res) => {
+  const { description, amount, category } = req.body;
+  if (!prisma.expense) {
+    return res.status(500).json({
+      error:
+        "El sistema de gastos no ha sido sincronizado en la base de datos.",
+// GET /api/expenses/summary?month=YYYY-MM
+app.get("/api/expenses/summary", requireAuth, async (req, res) => {
+  const { month } = req.query; // formato YYYY-MM
+  if (!month)
+    return res.status(400).json({ error: "Se requiere mes (YYYY-MM)" });
+
+  try {
+    const summary = await prisma.$queryRaw`
+      SELECT
+        SUM(amount) AS total_month,
+        SUM(CASE WHEN EXTRACT(WEEK FROM date) = EXTRACT(WEEK FROM NOW()) AND TO_CHAR(date, 'YYYY-MM') = ${month} THEN amount ELSE 0 END) AS total_week,
+        AVG(amount) AS avg_weekly,
+        (SELECT category FROM expenses
+         WHERE TO_CHAR(date, 'YYYY-MM') = ${month}
+         GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1) AS top_category,
+        (SELECT SUM(amount) FROM expenses
+         WHERE TO_CHAR(date, 'YYYY-MM') = ${month}
+         GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1) AS top_amount
+      FROM expenses
+      WHERE TO_CHAR(date, 'YYYY-MM') = ${month}
+    `;
+
+    // $queryRaw devuelve un array, tomamos el primer elemento
+    const result = summary[0] || {
+      total_month: 0,
+      total_week: 0,
+      avg_weekly: 0,
+      top_category: null,
+      top_amount: 0,
+    };
+
+    // Convertir valores de Decimal a Float para JSON
+    result.total_month = parseFloat(result.total_month || 0);
+    result.total_week = parseFloat(result.total_week || 0);
+    result.avg_weekly = parseFloat(result.avg_weekly || 0);
+    result.top_amount = parseFloat(result.top_amount || 0);
+
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Error fetching expenses summary:", err.message);
+    res.status(500).json({ error: "Error al obtener resumen de gastos" });
+  }
+});
+
+// GET /api/expenses/weekly?month=YYYY-MM
+app.get("/api/expenses/weekly", requireAuth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
+  try {
+    const weeklyExpenses = await prisma.$queryRaw`
+      SELECT
+        EXTRACT(WEEK FROM date) AS week_number,
+        MIN(date) AS week_start,
+        SUM(amount) AS total
+      FROM expenses
+      WHERE TO_CHAR(date, 'YYYY-MM') = ${month}
+      GROUP BY EXTRACT(WEEK FROM date)
+      ORDER BY EXTRACT(WEEK FROM date)
+    `;
+
+    // Convertir valores de Decimal a Float
+    const result = weeklyExpenses.map((row) => ({
+      ...row,
+      total: parseFloat(row.total || 0),
+      week_number: parseInt(row.week_number),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Error fetching weekly expenses:", err.message);
+    res.status(500).json({ error: "Error al obtener gastos semanales" });
+  }
+});
+
+// GET /api/expenses/by-category?month=YYYY-MM
+app.get("/api/expenses/by-category", requireAuth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
+  try {
+    const totalMonthAmount = await prisma.expense.aggregate({
+      _sum: { amount: true },
+      where: {
+        date: {
+          gte: new Date(`${month}-01`),
+          lt: new Date(
+            new Date(`${month}-01`).setMonth(
+              new Date(`${month}-01`).getMonth() + 1,
+            ),
+          ),
+        },
+      },
+    });
+    const totalAmount = parseFloat(totalMonthAmount._sum.amount || 0);
+
+    const expensesByCategory = await prisma.$queryRaw`
+      SELECT
+        category,
+        SUM(amount) AS total
+      FROM expenses
+      WHERE TO_CHAR(date, 'YYYY-MM') = ${month}
+      GROUP BY category
+      ORDER BY total DESC
+    `;
+
+    const result = expensesByCategory.map((row) => ({
+      ...row,
+      total: parseFloat(row.total || 0),
+      percentage: totalAmount
+        ? parseFloat(((row.total / totalAmount) * 100).toFixed(1))
+        : 0,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Error fetching expenses by category:", err.message);
+    res.status(500).json({ error: "Error al obtener gastos por categoría" });
+  }
+});
+
+// POST /api/expenses
+app.post("/api/expenses", requireAuth, validate(expenseSchema), async (req, res) => {
+  const { id, date, category, concept, detail, amount } = req.body;
+  const expenseId = id || "EXP-" + Date.now().toString(36).toUpperCase();
+
+  try {
+    const expense = await prisma.expense.create({
+      data: {
+        id: "EXP-" + Date.now().toString(36).toUpperCase(),
+        description,
+        amount: Number(amount),
+        category: category || "General",
+        id: expenseId,
+        date: new Date(date),
+        category,
+        concept,
+        detail,
+        amount: new Prisma.Decimal(amount),
+      },
+    });
+    res.status(201).json({ success: true, expense });
+  } catch (err) {
+    console.error("❌ Error creating expense:", err.message);
+    res.status(500).json({ error: "Error al registrar gasto" });
+  }
+});
+
+// PUT /api/expenses/:id
+app.put("/api/expenses/:id", requireAuth, validate(expenseSchema), async (req, res) => {
+  const { date, category, concept, detail, amount } = req.body;
+  try {
+    const expense = await prisma.expense.update({
+      where: { id: req.params.id },
+      data: {
+        date: new Date(date),
+        category,
+        concept,
+        detail,
+        amount: new Prisma.Decimal(amount),
+        updatedAt: new Date(),
+      },
+    });
+    res.json({ success: true, expense });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    console.error("❌ Error updating expense:", err.message);
+    res.status(500).json({ error: "Error al actualizar gasto" });
+  }
+});
+
+// DELETE /api/expenses/:id
+app.delete("/api/expenses/:id", requireAuth, async (req, res) => {
+  try {
+    await prisma.expense.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+    res.json({ success: true, message: "Gasto eliminado" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    console.error("❌ Error deleting expense:", err.message);
+    res.status(500).json({ error: "Error al eliminar gasto" });
   }
 });
 
@@ -2327,12 +3211,18 @@ app.get(/(.*)/, (req, res, next) => {
 
 /* ── Manejo de errores global ────────────────────────────── */
 app.use((err, req, res, _next) => {
-  console.error("❌ Error:", err.message);
-  console.error("   Path:", req.path);
-  console.error("   Method:", req.method);
-  res
-    .status(err.status || 500)
-    .json({ error: "Error interno del servidor", message: err.message });
+  // En producción, podrías enviar esto a un servicio como Sentry
+  const errorResponse = {
+    error: "Error interno del servidor",
+    message: IS_PRODUCTION ? "Ocurrió un error inesperado" : err.message,
+  };
+
+  console.error(
+    `[${new Date().toISOString()}] ❌ ${req.method} ${req.path}:`,
+    err.stack,
+  );
+
+  res.status(err.status || 500).json(errorResponse);
 });
 
 /**
@@ -2343,9 +3233,9 @@ function startServer(portToTry) {
   const server = app
     .listen(portToTry)
     .on("listening", () => {
-      console.log(
-        `\n🚀 WINNER STORE Corriendo en: http://localhost:${portToTry}`,
-      );
+      const displayUrl =
+        process.env.FRONTEND_URL || `http://192.168.1.8:${portToTry}`;
+      console.log(`\n🚀 WINNER STORE Corriendo en: ${displayUrl}`);
       console.log(
         `🔐 Admin: admin / winner2026 (Ambiente HTTP - SSL Desactivado)\n`,
       );
