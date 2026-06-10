@@ -307,10 +307,17 @@ app.use((req, res, next) => {
 app.use(express.static(CLIENT_ROOT));
 
 // Configuración de almacenamiento local para imágenes
-const UPLOADS_DIR = path.join(CLIENT_ROOT, "uploads");
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+const getStructuredUploadPath = () => {
+  const now = new Date();
+  const year = now.getFullYear().toString();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const targetDir = path.join(CLIENT_ROOT, "uploads", year, month);
+
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+  return targetDir;
+};
 
 /* ── Endpoint de actualización masiva (CSV) ───────────────── */
 app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {

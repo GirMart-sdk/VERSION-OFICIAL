@@ -3,6 +3,7 @@ node_modules/
 *.db
 *.log
 dist/
+uploads/
 .DS_Store
 package-lock.json
 backend/winner_store.db

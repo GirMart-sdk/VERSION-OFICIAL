@@ -370,7 +370,6 @@ nodemon backend/server.js
 ```bash
 # Terminal 1: Iniciar servidor
 npm start
-
 # Terminal 2: Verificar API
 curl http://localhost:3000/api/products
 

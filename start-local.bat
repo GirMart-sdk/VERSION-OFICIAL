@@ -19,9 +19,9 @@ title WINNER STORE - Servidor Local
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║                                                                ║
-echo ║         🏆  WINNER STORE - SERVIDOR LOCAL                    ║
+echo ║         🏆  WINNER STORE - SERVIDOR LOCAL                      ║
 echo ║                                                                ║
-echo ║         🌐  http://localhost:3000                              ║
+echo ║         🌐  Acceso Local                                       ║
 echo ║         👤  Credenciales gestionadas via .env                ║
 echo ║                                                                ║
 echo ║         ⏱️   Iniciando en 2 segundos...                       ║

@@ -383,6 +383,9 @@ window.confirmCrop = async () => {
                 $("pImgPreview").style.display = "block";
               }
               toast("✅ Imagen recortada y subida");
+              toast(
+                "✅ Imagen subida localmente (Se recomienda usar URLs externas para mayor velocidad)",
+              );
               closeCropperModal();
             } else {
               throw new Error(data.error);
