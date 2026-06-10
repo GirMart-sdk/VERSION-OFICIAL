@@ -69,11 +69,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GirMart-sdk/WINNER_v3.5.git"
+    "url": "https://github.com/GirMart-sdk/winn_Vdf.git"
   },
   "bugs": {
-    "url": "https://github.com/GirMart-sdk/WINNER_v3.5/issues"
+    "url": "https://github.com/GirMart-sdk/winn_Vdf/issues"
   },
-  "homepage": "https://github.com/GirMart-sdk/WINNER_v3.5#readme",
+  "homepage": "https://github.com/GirMart-sdk/winn_Vdf#readme",
   "prettier": {}
 }

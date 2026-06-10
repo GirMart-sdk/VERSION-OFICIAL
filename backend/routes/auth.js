@@ -12,7 +12,7 @@ const scryptAsync = promisify(scrypt);
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const API_KEY = process.env.API_KEY || "prod-api-key-winner-2026";
+const API_KEY = process.env.API_KEY;
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_SALT = process.env.ADMIN_SALT;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";

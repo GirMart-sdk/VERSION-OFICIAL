@@ -65,12 +65,12 @@
 Para iniciar el proyecto, asegúrate de tener las siguientes variables en tu archivo `.env`:
 
 ```env
-DATABASE_URL="postgresql://user:pass@localhost:5432/dezpy_v01"
-JWT_SECRET="tu_secreto_para_tokens"
-API_KEY="prod-api-key-winner"
-WOMPI_PUBLIC_KEY="pub_prod_..."
-WOMPI_INTEGRITY_SECRET="prod_integrity_..."
-FRONTEND_URL="http://192.168.1.8:3000"
+DATABASE_URL="postgresql://USUARIO:PASSWORD@localhost:5432/dezpy_v01"
+JWT_SECRET="tu_secreto_super_seguro"
+API_KEY="tu-api-key-de-produccion"
+WOMPI_PUBLIC_KEY="pub_prod_XXX"
+WOMPI_INTEGRITY_SECRET="prod_integrity_XXX"
+FRONTEND_URL="http://localhost:3000"
 ```
 
 ---

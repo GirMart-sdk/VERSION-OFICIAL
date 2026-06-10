@@ -1073,7 +1073,7 @@ npm start
 # Seleccionar "Clear browsing data"
 
 # Reintentar login:
-admin / winner2026
+admin / TU_PASSWORD_EN_ENV
 
 # Revisar consola del navegador (F12)
 # Buscar errores en Network tab

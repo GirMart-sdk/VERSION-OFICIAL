@@ -260,11 +260,11 @@ DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/dezpy_v01?sslmode
 
 # ADMIN CREDENTIALS
 ADMIN_USER=
-ADMIN_PASSWORD=
+ADMIN_PASSWORD=tu_clave_segura
 
 # SECURITY
 API_KEY=winner-store-api-key-2026
-JWT_SECRET=your-jwt-secret-key-here
+JWT_SECRET=tu_secreto_jwt
 
 # EMAIL (Nodemailer)
 EMAIL_HOST=smtp.gmail.com
@@ -359,7 +359,7 @@ nodemon backend/server.js
 🔐 PANEL ADMINISTRATIVO:
    URL: http://localhost:3000/admin.html
    Usuario: admin
-   Contraseña: winner2026
+   Contraseña: [Ver archivo .env]
 
 📊 DASHBOARD:
    URL: http://localhost:3000/admin.html#dashboard
