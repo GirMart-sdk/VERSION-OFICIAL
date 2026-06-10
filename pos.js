@@ -100,6 +100,10 @@ function printReceipt(sale) {
     return;
   }
   const method = (sale.method || "Efectivo").toUpperCase();
+  const isLayaway = sale.payment_details?.isLayaway;
+  const abono = sale.payment_details?.abonoAmount || 0;
+  const saldo = Math.max(0, sale.total - abono);
+
   win.document.write(`<html><head><meta charset="UTF-8">
     <style>body{font-family:monospace;padding:20px;font-size:13px;max-width:320px;margin:0 auto}
     h2{text-align:center;letter-spacing:4px;font-size:20px}
@@ -108,6 +112,7 @@ function printReceipt(sale) {
     .total{font-size:18px;font-weight:900}</style>
   </head><body>
     <h2 style="margin-bottom:0">W●NNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
+    ${isLayaway ? '<h3 style="text-align:center; border:1px solid #000; padding:5px; margin-top:10px; font-size:14px;">TICKET DE SEPARADO</h3>' : ""}
     <div class="line"></div>
     <p>Fecha: ${fmtDate(sale.timestamp)}</p>
     <p>Ticket: ${sale.id.slice(-8).toUpperCase()}</p>
@@ -116,6 +121,15 @@ function printReceipt(sale) {
     ${sale.items.map((i) => `<div class="row"><span>${i.name} ×${i.qty}</span><span>${fmt(i.price * i.qty)}</span></div>`).join("")}
     <div class="line"></div>
     <div class="row total"><span>TOTAL</span><span>${fmt(sale.total)}</span></div>
+    ${
+      isLayaway
+        ? `
+      <div class="row"><span>Abono Inicial:</span><span>${fmt(abono)}</span></div>
+      <div class="row" style="font-weight:700; font-size:15px; margin-top:5px;"><span>SALDO PENDIENTE:</span><span>${fmt(saldo)}</span></div>
+      <div class="line"></div>
+    `
+        : ""
+    }
     <div class="line" style="border-style: solid"></div>
     <p>MÉTODO: <strong>${method}</strong></p>
     <div class="line"></div>
@@ -326,7 +340,7 @@ function updatePOSTotals() {
   if ($("posTotal")) $("posTotal").textContent = fmt(Math.round(total));
 }
 
-function openPOSPaymentModal() {
+function openPOSPaymentModal(isLayawayInitially = false) {
   if (!window.WinnerApp.pos.cart || !window.WinnerApp.pos.cart.length)
     return toast("⚠️ Carrito vacío");
   const grid = $("posPayMethodsGrid");
@@ -354,6 +368,12 @@ function openPOSPaymentModal() {
   $("posPayOverlay").classList.add("open");
   $("posPayModal").classList.add("open");
   $("posPayStep1").style.display = "block";
+
+  // Pre-configurar si es separado
+  if ($("posPayIsLayaway")) {
+    $("posPayIsLayaway").checked = isLayawayInitially;
+    toggleLayawayFields();
+  }
 
   // Resetear campos de envío
   if ($("posPayNeedsShipping")) $("posPayNeedsShipping").checked = false;
@@ -436,7 +456,9 @@ async function confirmPOSPaymentWithDetails() {
   let customerPhone = "";
   let shippingCarrier = "";
   let customerEmail = $("posPayEmail").value.trim(); // Capturar el email del campo
-  let shippingStatus = "";
+
+  // El shippingStatus ahora se usa como "Estado del Separado"
+  let shippingStatus = isLayaway ? "ABONO" : "PENDIENTE";
 
   if (needsShipping) {
     shippingAddress = $("posShippingAddress").value.trim();
@@ -445,7 +467,6 @@ async function confirmPOSPaymentWithDetails() {
     if (!shippingAddress || !customerPhone || !shippingCarrier) {
       return toast("⚠️ Completa los detalles de envío");
     }
-    shippingStatus = "PENDIENTE"; // Estado inicial para envíos desde POS
   }
 
   if (confirmBtn) confirmBtn.disabled = true;
@@ -461,18 +482,15 @@ async function confirmPOSPaymentWithDetails() {
       vendor: $("posVendor")?.value || "Admin",
       client: $("posClient")?.value || "Mostrador",
       customer_email: customerEmail, // Añadir el email del cliente a los datos de la venta
+      customer_phone:
+        customerPhone || $("posCustomerPhone")?.value.trim() || "",
       payment_status: isLayaway ? "partial" : "completed",
-      // Añadir detalles de envío al objeto de venta si aplica
-      ...(needsShipping && {
-        shipping_address: shippingAddress,
-        customer_phone: customerPhone,
-        shipping_carrier: shippingCarrier,
-      }),
+      shipping_address:
+        shippingAddress || (isLayaway ? "Apartado en Tienda" : "Venta Directa"),
+      shipping_carrier: shippingCarrier || "Físico",
       // Detalles de pago y envío (fusionados)
       payment_details: {
-        ...(needsShipping && {
-          shipping_status: shippingStatus,
-        }),
+        shipping_status: shippingStatus,
         isLayaway,
         abonoAmount: abono,
         received: parseFloat($("posPayCashReceived").value) || 0,
@@ -489,16 +507,6 @@ async function confirmPOSPaymentWithDetails() {
       if (typeof toast.clear === "function") toast.clear(); // Ocultar "Procesando"
       toast("✅ Venta registrada");
       printReceipt(sale);
-      if (isLayaway && abono > 0) {
-        await apiFetch(`${window.API_URL}/sales/${sale.id}/payments`, {
-          method: "POST",
-          body: JSON.stringify({
-            amount: abono,
-            method: sale.method,
-            notes: "Abono inicial",
-          }),
-        });
-      }
       window.WinnerApp.pos.cart = []; // Limpiar carrito global
       renderPOSCart();
       closePOSPaymentModal();

@@ -190,8 +190,7 @@ function getSizesForCategory(cat) {
     c.includes("accesorio") ||
     c.includes("reloj") ||
     c.includes("joya") ||
-    c.includes("loción") ||
-    c.includes("gorra")
+    c.includes("loción")
   )
     return ["U"];
 
@@ -357,8 +356,9 @@ window.navigateTo = function (page) {
   }
   if (page === "vip" && typeof loadVIPCustomersData === "function")
     loadVIPCustomersData();
-  if (page === "layaway" && typeof renderLayawaySales === "function")
-    renderLayawaySales();
+  if (page === "layaway") {
+    if (typeof fetchSalesLog === "function") fetchSalesLog();
+  }
   if (page === "messaging" && typeof renderMessagingCenter === "function")
     renderMessagingCenter();
   if (page === "sales") {

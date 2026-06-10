@@ -30,7 +30,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:check": "prisma db pull && echo '✅ Conexión con PostgreSQL establecida'",
-    "clean": "del /s /q backend\\*.db 2>nul || rm -f backend/*.db",
+    "clean": "del /s /q backend\\*.db 2>nul & rmdir /s /q node_modules\\.prisma 2>nul & rmdir /s /q node_modules\\@prisma\\client 2>nul",
     "reinstall": "rmdir /s /q node_modules && del package-lock.json && npm install",
     "reset": "npm run clean && npm run seed && echo '✅ Proyecto reseteado'",
     "logs": "type .env | findstr DB || echo 'Revisa backend/server.js para logs'",
@@ -69,11 +69,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GirMart-sdk/winner_dezpy"
+    "url": "https://github.com/GirMart-sdk/WINNER_v3.5.git"
   },
   "bugs": {
-    "url": "https://github.com/GirMart-sdk/winner_dezpy/issues"
+    "url": "https://github.com/GirMart-sdk/WINNER_v3.5/issues"
   },
-  "homepage": "https://github.com/GirMart-sdk/winner_dezpy#readme",
+  "homepage": "https://github.com/GirMart-sdk/WINNER_v3.5#readme",
   "prettier": {}
 }

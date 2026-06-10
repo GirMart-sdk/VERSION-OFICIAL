@@ -1,19 +1,34 @@
 const path = require("path");
 const fs = require("fs");
-// 1. Carga inteligente de configuración (prioriza .env.production)
-const prodEnv = path.resolve(__dirname, "..", ".env");
-const envPath = fs.existsSync(prodEnv)
-  ? prodEnv
-  : path.resolve(__dirname, "..", ".env");
+
+// 1. CARGA ROBUSTA DE CONFIGURACIÓN (Igual que server.js)
+const isProdMode = process.env.NODE_ENV === "production";
+let envPath = path.resolve(
+  __dirname,
+  "..",
+  isProdMode ? ".env.production" : ".env",
+);
+
+if (!fs.existsSync(envPath)) {
+  envPath = path.resolve(__dirname, "..", ".env");
+}
+
 require("dotenv").config({ path: envPath });
+console.log(`[Seed] Cargando variables desde: ${path.basename(envPath)}`);
 
-const { PrismaClient } = require("@prisma/client");
-const { PrismaPg } = require("@prisma/adapter-pg");
-const { Pool } = require("pg");
+// 2. Verificamos que DATABASE_URL esté presente antes de requerir database.js.
+if (!process.env.DATABASE_URL) {
+  console.error(
+    "❌ [Seed] ERROR: DATABASE_URL no está definida en el entorno.",
+  );
+  console.error(
+    "   Asegúrate de que el archivo .env existe en la raíz y tiene el formato correcto.",
+  );
+  process.exit(1);
+}
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+// Importamos la instancia de Prisma unificada que ya tiene el adaptador de PostgreSQL configurado
+const prisma = require("./database");
 
 async function main() {
   console.log("🌱 Iniciando siembra de datos (Seed) en PostgreSQL...");
@@ -113,17 +128,27 @@ async function main() {
   ];
 
   for (const pData of initialProducts) {
-    // Usamos upsert: Si el ID existe, actualiza los datos básicos. Si no, lo crea.
+    // 1. Limpieza de datos: Extraemos solo lo que el modelo Product de Prisma/Postgres reconoce.
+    // Eliminamos 'stockStatus' y cualquier otro campo extra.
+    const { stockStatus, ...cleanData } = pData;
+
     const product = await prisma.product.upsert({
-      where: { id: pData.id },
+      where: { id: cleanData.id },
       update: {
-        sku: pData.sku,
-        name: pData.name,
-        price: pData.price,
-        category: pData.category,
-        image: pData.image,
+        sku: cleanData.sku,
+        name: cleanData.name,
+        price: cleanData.price,
+        cost: cleanData.cost || 0,
+        image: cleanData.image,
+        badge: cleanData.badge || null,
+        description: cleanData.description || null,
       },
-      create: pData,
+      create: {
+        ...cleanData,
+        cost: cleanData.cost || 0,
+        badge: cleanData.badge || null,
+        description: cleanData.description || null,
+      },
     });
 
     // 3. Generación automática de inventario según categoría
@@ -197,7 +222,8 @@ async function main() {
         items: {
           create: [
             {
-              productId: "P004", // Set Legging + Top W
+              productId: "P004",
+              product_name: "Set Legging + Top W",
               size: "M",
               quantity: 1,
               unitPrice: 130000,
@@ -209,19 +235,17 @@ async function main() {
             {
               amount: 130000,
               method: "Efectivo",
-              notes: "Pago inicial completo (Seed Data)",
+              notes: "Pago inicial completo (Seed)",
             },
           ],
         },
         orders: {
           create: [
             {
+              id: "ORD-SEED-001",
               status: "ENTREGADO",
-              shippingMethod: "Recogida en tienda",
-              shippingCost: 0,
-              customerEmail: "prueba@winner.com",
-              customerPhone: "573000000000",
-              shippingAddress: "Sede Principal Bogotá",
+              shippingMethod: "Recogida local",
+              shippingAddress: "Tienda Principal",
             },
           ],
         },

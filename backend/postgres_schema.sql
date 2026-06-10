@@ -58,10 +58,66 @@ CREATE TABLE IF NOT EXISTS sales (
 CREATE TABLE IF NOT EXISTS sale_items (
     id SERIAL PRIMARY KEY,
     sale_id VARCHAR(50) NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    product_id VARCHAR(50) REFERENCES products(id) ON DELETE SET NULL,
     product_name VARCHAR(255) NOT NULL,
     qty INTEGER NOT NULL,
     price DECIMAL(12,2) NOT NULL,
     size VARCHAR(10)
+);
+
+-- 5. Registro de Pagos y Abonos
+CREATE TABLE IF NOT EXISTS sale_payments (
+    id SERIAL PRIMARY KEY,
+    sale_id VARCHAR(50) NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    amount DECIMAL(12,2) NOT NULL,
+    method VARCHAR(50),
+    notes TEXT
+);
+
+-- 6. Logística y Pedidos
+CREATE TABLE IF NOT EXISTS orders (
+    id VARCHAR(50) PRIMARY KEY,
+    sale_id VARCHAR(50) NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'PENDIENTE',
+    shipping_method VARCHAR(100),
+    shipping_address TEXT,
+    shipping_cost DECIMAL(12,2) DEFAULT 0,
+    tracking_number VARCHAR(100),
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Control de Gastos
+CREATE TABLE IF NOT EXISTS expenses (
+    id VARCHAR(50) PRIMARY KEY,
+    category VARCHAR(100),
+    concept VARCHAR(255),
+    detail TEXT,
+    method VARCHAR(50) DEFAULT 'Efectivo',
+    amount DECIMAL(12,2) NOT NULL,
+    description TEXT,
+    date DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Sesiones de Caja (Arqueos)
+CREATE TABLE IF NOT EXISTS cash_sessions (
+    id VARCHAR(50) PRIMARY KEY,
+    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP,
+    opened_by VARCHAR(100),
+    closed_by VARCHAR(100),
+    initial_balance DECIMAL(12,2) DEFAULT 0,
+    theoretical_sales DECIMAL(12,2) DEFAULT 0,
+    theoretical_expenses DECIMAL(12,2) DEFAULT 0,
+    real_balance DECIMAL(12,2),
+    difference DECIMAL(12,2),
+    status VARCHAR(20) DEFAULT 'OPEN',
+    notes TEXT
 );
 
 -- 5. Perfiles de Clientes (VIP)

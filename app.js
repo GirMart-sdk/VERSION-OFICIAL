@@ -4,7 +4,14 @@
 
 // ── CONFIGURACIÓN DINÁMICA DE API ────────────────────────
 // Detecta automáticamente si estamos en localhost o en la IP 192.168.1.8
-window.API_URL = window.location.origin + "/api";
+window.API_URL = (() => {
+  const origin = window.location.origin;
+  // Si se abre el archivo localmente (doble click al .html)
+  if (origin.startsWith("file:")) return "http://localhost:3000/api";
+  // Si estamos en desarrollo por IP o localhost, normalizamos la URL
+  const base = origin.replace(/\/$/, "");
+  return `${base}/api`;
+})();
 window.API_KEY = "dev-api-key"; // Key por defecto para desarrollo
 
 // Fallback para apiFetch si core.js no carga
@@ -127,6 +134,45 @@ const PAYMENT_GATEWAYS = {
     instructions: "Paga en efectivo al recibir tu pedido",
   },
 };
+
+/**
+ * Carga la configuración dinámica de marca (Hero, Redes, Info)
+ */
+async function loadDynamicConfig() {
+  try {
+    const res = await apiFetch(`${window.API_URL}/config`);
+    const config = await res.json();
+
+    // 1. Hero Dinámico (Slider Simple)
+    const heroImg = document.querySelector(".hero-img");
+    if (heroImg && config.branding?.heroImages?.length > 0) {
+      const images = config.branding.heroImages;
+      heroImg.src = images[0];
+
+      // Si hay varias, rotamos cada 6 segundos
+      if (images.length > 1) {
+        let idx = 0;
+        setInterval(() => {
+          idx = (idx + 1) % images.length;
+          heroImg.style.opacity = "0";
+          setTimeout(() => {
+            heroImg.src = images[idx];
+            heroImg.style.opacity = "1";
+          }, 500);
+        }, 6000);
+      }
+    }
+
+    // 2. Actualizar links de redes sociales en el footer
+    if ($("link-instagram")) $("link-instagram").href = config.social.instagram;
+    if ($("link-tiktok")) $("link-tiktok").href = config.social.tiktok;
+    if ($("link-facebook")) $("link-facebook").href = config.social.facebook;
+    if ($("link-whatsapp"))
+      $("link-whatsapp").href = `https://wa.me/${config.social.whatsapp}`;
+  } catch (e) {
+    console.warn("⚠️ Usando configuración estática de respaldo");
+  }
+}
 
 async function fetchProducts() {
   try {

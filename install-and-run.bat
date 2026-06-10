@@ -15,7 +15,7 @@ chcp 65001 >nul
 echo.
 echo ================================================
 echo  WINNER STORE - install-and-run
-echo  http://192.168.1.8:3000
+echo  http://localhost:3000
 echo ================================================
 
 echo.
@@ -55,7 +55,7 @@ echo     node backend/seed.js
 
 echo.
 echo [+] Arrancando servidor...
-echo [!] Acceso: http://192.168.1.8:3000
+echo [!] Acceso: http://localhost:3000
 echo.
-start http://192.168.1.8:3000/admin-panel.html
+start http://localhost:3000/admin-panel.html
 node backend/server.js

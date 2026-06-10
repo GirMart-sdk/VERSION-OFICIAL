@@ -7,7 +7,9 @@ window.renderMessagingCenter = function () {
   const container = $("messagingList");
   if (!container) return;
 
-  const sales = window.salesLog || [];
+  // Usar salesLog o allSalesData de forma segura
+  const sales = window.salesLog || window.allSalesData || [];
+
   if (sales.length === 0) {
     container.innerHTML =
       '<div class="ls-empty">No hay ventas recientes para notificar</div>';
@@ -16,7 +18,17 @@ window.renderMessagingCenter = function () {
 
   // Filtrar ventas que tengan teléfono (para que el botón funcione)
   const filter = $("msgFilterType")?.value || "all";
-  let filtered = sales.filter((s) => s.customer_phone || s.phone);
+  let filtered = sales.filter(
+    (s) =>
+      (s.customer_phone && s.customer_phone.length > 5) ||
+      (s.phone && s.phone.length > 5),
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML =
+      '<div class="ls-empty">⚠️ No hay ventas con números de teléfono válidos en esta categoría</div>';
+    return;
+  }
 
   if (filter === "pending_ship") {
     filtered = filtered.filter((s) => {

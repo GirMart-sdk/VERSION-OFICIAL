@@ -18,9 +18,13 @@ async function fetchSalesLog() {
       channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
     }));
 
+    // Sincronizar con la variable global que usan otros módulos (WhatsApp Center)
+    window.salesLog = [...window.allSalesData];
+
     renderSalesKPIs();
     renderSalesCharts();
     renderSalesTable();
+    if (typeof renderLayawaySales === "function") renderLayawaySales();
   } catch (e) {
     console.error("Error fetching sales:", e);
   }
@@ -320,7 +324,7 @@ window.viewSaleDetails = (id) => {
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>Gestión de Logística — Venta #${sale.id.slice(-6)}</h3>
+      <h3>GESTIÓN DE SEPARADOS — Venta #${sale.id.slice(-6)}</h3>
       <button class="modal-close" onclick="window.closeSaleDetails()">✕</button>
     </div>
     <div class="modal-body">
@@ -331,12 +335,11 @@ window.viewSaleDetails = (id) => {
       </div>
 
       <div class="form-group" style="margin-bottom:15px">
-        <label>Estado del Envío</label>
+        <label>Estado del Separado</label>
         <select id="editShipStatus" class="tb-select" style="width:100%; background:var(--dark);">
-          <option value="PENDIENTE" ${shipStatus === "PENDIENTE" ? "selected" : ""}>PENDIENTE</option>
-          <option value="DESPACHADO" ${shipStatus === "DESPACHADO" ? "selected" : ""}>DESPACHADO (Enviado)</option>
-          <option value="EN CAMINO" ${shipStatus === "EN CAMINO" ? "selected" : ""}>EN CAMINO</option>
-          <option value="ENTREGADO" ${shipStatus === "ENTREGADO" ? "selected" : ""}>ENTREGADO (Recibido)</option>
+          <option value="ABONO" ${shipStatus === "ABONO" ? "selected" : ""}>ABONO (Pendiente)</option>
+          <option value="PAGADO" ${shipStatus === "PAGADO" ? "selected" : ""}>PAGADO</option>
+          <option value="ENTREGADO" ${shipStatus === "ENTREGADO" ? "selected" : ""}>ENTREGADO (Finalizado)</option>
           <option value="CANCELADO" ${shipStatus === "CANCELADO" ? "selected" : ""}>CANCELADO</option>
         </select>
       </div>
@@ -397,6 +400,134 @@ window.applyLogisticsChanges = async (saleId, btn) => {
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
+  }
+};
+
+// ── PRODUCTOS SEPARADOS (LAYAWAY) ──
+window.layawayFilter = "pending";
+
+window.setLayawayFilter = (f) => {
+  window.layawayFilter = f;
+  document
+    .querySelectorAll("#page-layaway .ph-tab")
+    .forEach((btn) => btn.classList.remove("active"));
+  if (f === "pending") $("layawayTabPending")?.classList.add("active");
+  if (f === "completed") $("layawayTabCompleted")?.classList.add("active");
+  if (f === "all") $("layawayTabAll")?.classList.add("active");
+  renderLayawaySales();
+};
+
+window.renderLayawaySales = () => {
+  const container = $("layawayTableBody");
+  if (!container) return;
+
+  const sort = $("layawaySortSelect")?.value || "newest";
+
+  let filtered = window.allSalesData.filter((s) => {
+    // Consideramos como separado cualquier venta física que no esté pagada totalmente (partial/pending)
+    const isPending =
+      s.channel === "fisica" &&
+      (s.payment_status === "partial" || s.payment_status === "pending");
+    const isCompleted =
+      s.channel === "fisica" &&
+      s.payment_status === "completed" &&
+      s.total_paid >= s.total;
+
+    if (window.layawayFilter === "pending") return isPending;
+    if (window.layawayFilter === "completed") return isCompleted;
+    return isPending || isCompleted;
+  });
+
+  // Ordenamiento
+  if (sort === "newest")
+    filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  if (sort === "oldest")
+    filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  if (sort === "balance")
+    filtered.sort(
+      (a, b) => b.total - (b.total_paid || 0) - (a.total - (a.total_paid || 0)),
+    );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<tr class="empty-row"><td colspan="7">No hay productos separados ${window.layawayFilter === "pending" ? "pendientes" : ""}</td></tr>`;
+    updateLayawayKPIs([]);
+    return;
+  }
+
+  container.innerHTML = filtered
+    .map((s) => {
+      const paid = s.total_paid || 0;
+      const balance = Math.max(0, s.total - paid);
+      const date = new Date(s.timestamp);
+      const days = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+      const isDone = balance <= 0;
+
+      return `
+      <tr style="${isDone ? "background: rgba(46, 204, 113, 0.05);" : ""}">
+        <td style="font-size:11px;">${date.toLocaleDateString()}</td>
+        <td>
+          <div style="font-weight:700">${esc(s.client)} ${isDone ? '<span title="Pago Completo">✅</span>' : ""}</div>
+          <div style="font-size:10px; color:var(--gray-text)">${s.id}</div>
+        </td>
+        <td>
+          <span class="status-badge ${isDone ? "s-ok" : days > 30 ? "s-out" : "s-ok"}" style="font-size:10px;">
+            ${isDone ? "PAGADO" : days + " días"}
+          </span>
+        </td>
+        <td style="font-weight:600;">${fmt(s.total)}</td>
+        <td style="color:var(--green); font-weight:600;">${fmt(paid)}</td>
+        <td style="color:${isDone ? "var(--gray-text)" : "var(--orange)"}; font-weight:700;">${fmt(balance)}</td>
+        <td style="display:flex; gap:5px;">
+          ${
+            !isDone
+              ? `
+            <button class="action-btn" onclick="openLayawayPayment('${s.id}')" title="Registrar Abono">💰</button>
+          `
+              : ""
+          }
+          <button class="action-btn" onclick="viewSaleDetails('${s.id}')" title="Gestión de Separados">🔗</button>
+        </td>
+      </tr>`;
+    })
+    .join("");
+
+  updateLayawayKPIs(filtered);
+};
+
+function updateLayawayKPIs(data) {
+  const totalSales = data.length;
+  const totalCollected = data.reduce((sum, s) => sum + (s.total_paid || 0), 0);
+  const totalPending = data.reduce(
+    (sum, s) => sum + (s.total - (s.total_paid || 0)),
+    0,
+  );
+
+  if ($("sepTotalSales")) $("sepTotalSales").innerText = totalSales;
+  if ($("sepTotalCollected"))
+    $("sepTotalCollected").innerText = fmt(totalCollected);
+  if ($("sepTotalPending")) $("sepTotalPending").innerText = fmt(totalPending);
+}
+
+window.openLayawayPayment = async (saleId) => {
+  const amount = prompt("Ingrese el monto del abono (COP):");
+  if (!amount || isNaN(amount) || amount <= 0) return;
+  try {
+    const res = await apiFetch(`${API_URL}/sales/${saleId}/payments`, {
+      method: "POST",
+      body: JSON.stringify({
+        amount: Number(amount),
+        method: "Efectivo",
+        notes: "Abono desde panel",
+      }),
+    });
+    if (res.ok) {
+      toast("✅ Abono registrado");
+      fetchSalesLog(); // Refresca toda la data
+    } else {
+      toast("❌ Error al registrar abono");
+    }
+  } catch (e) {
+    toast("❌ Error de red");
   }
 };
 

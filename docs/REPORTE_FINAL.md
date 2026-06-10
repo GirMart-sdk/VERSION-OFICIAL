@@ -259,8 +259,8 @@ PORT=3000
 DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/dezpy_v01?sslmode=disable"
 
 # ADMIN CREDENTIALS
-ADMIN_USER=admin
-ADMIN_PASSWORD=winner2026
+ADMIN_USER=
+ADMIN_PASSWORD=
 
 # SECURITY
 API_KEY=winner-store-api-key-2026

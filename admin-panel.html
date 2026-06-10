@@ -96,6 +96,26 @@
               </button>
             </div>
           </div>
+          <div
+            style="
+              display: flex;
+              justify-content: flex-end;
+              margin-bottom: 20px;
+            "
+          >
+            <a
+              href="#"
+              id="linkForgot"
+              style="
+                font-size: 11px;
+                color: var(--gray-text);
+                text-decoration: none;
+                letter-spacing: 1px;
+              "
+              >¿OLVIDASTE TU CONTRASEÑA?</a
+            >
+          </div>
+
           <button type="submit" class="login-btn">
             INGRESAR AL PANEL
             <svg
@@ -110,6 +130,33 @@
             </svg>
           </button>
         </form>
+
+        <!-- Vista de Recuperación (Oculta) -->
+        <div id="recoveryView" style="display: none; margin-top: 10px">
+          <h2 class="login-title">Recuperar Acceso</h2>
+          <p class="login-sub">Ingresa tu correo para recibir instrucciones.</p>
+          <div class="login-field">
+            <label>Correo Electrónico</label>
+            <div class="field-wrap">
+              <input
+                type="email"
+                id="recoveryEmail"
+                placeholder="admin@winner.com"
+              />
+            </div>
+          </div>
+          <button type="button" class="login-btn" id="btnSendRecovery">
+            ENVIAR ENLACE
+          </button>
+          <button
+            type="button"
+            class="btn-ghost"
+            id="btnCancelRecovery"
+            style="width: 100%; margin-top: 15px; border: none; font-size: 10px"
+          >
+            VOLVER AL LOGIN
+          </button>
+        </div>
       </div>
     </div>
 
@@ -123,7 +170,9 @@
           <span class="sl-w">W</span><span class="sl-dot"></span>NNER
         </div>
         <div class="sidebar-user" id="sidebarUser">
-          <div class="su-avatar">A</div>
+          <div class="su-avatar" id="adminAvatar" style="overflow: hidden">
+            A
+          </div>
           <div class="su-info">
             <div class="su-name">Administrador</div>
             <div class="su-role">Panel Winner</div>
@@ -390,6 +439,9 @@
             </div>
           </div>
 
+          <!-- Contenedor para Control de Caja (Arqueo) -->
+          <div id="arqueoWidgetContainer" style="margin-bottom: 25px"></div>
+
           <!-- PAGOS Y SUGERENCIAS -->
           <div
             style="
@@ -531,7 +583,9 @@
               >
                 GASTOS POR SEMANA
               </h3>
-              <canvas id="expensesWeeklyChart" height="200"></canvas>
+              <div style="height: 280px; width: 100%; position: relative">
+                <canvas id="expensesWeeklyChart"></canvas>
+              </div>
             </div>
             <div
               class="dash-card"
@@ -553,7 +607,9 @@
               >
                 GASTOS POR CATEGORÍA
               </h3>
-              <canvas id="expensesCategoryChart" height="200"></canvas>
+              <div style="height: 280px; width: 100%; position: relative">
+                <canvas id="expensesCategoryChart"></canvas>
+              </div>
             </div>
           </div>
 
@@ -570,8 +626,20 @@
               >
               <input type="month" id="expenseMonth" class="tb-select" />
             </div>
-            <button class="btn-accent" id="refreshExpenses">Actualizar</button>
-            <button class="btn-accent" id="addExpenseBtn">+ Nuevo Gasto</button>
+            <button
+              class="btn-accent"
+              id="refreshExpenses"
+              onclick="initExpensesTab()"
+            >
+              Actualizar
+            </button>
+            <button
+              class="btn-accent"
+              id="addExpenseBtn"
+              onclick="openExpenseModal()"
+            >
+              + Nuevo Gasto
+            </button>
           </div>
 
           <!-- Tablas desglosadas por semana -->
@@ -587,79 +655,6 @@
             <p>
               Productos, stock por talla y códigos de barras EAN-13 / Code 128
             </p>
-          </div>
-
-          <!-- MODAL GASTO -->
-          <div
-            class="modal-overlay"
-            id="expenseModalOverlay"
-            onclick="closeExpenseModal()"
-          ></div>
-          <div class="modal" id="expenseModal" style="max-width: 500px">
-            <div class="modal-header">
-              <h3 id="expenseModalTitle">Nuevo Gasto</h3>
-              <button class="modal-close" onclick="closeExpenseModal()">
-                ✕
-              </button>
-            </div>
-            <div class="modal-body">
-              <input type="hidden" id="expenseId" />
-              <div class="form-group">
-                <label>Fecha *</label>
-                <input type="date" id="expenseDate" required />
-              </div>
-              <div class="form-group">
-                <label>Categoría *</label>
-                <select id="expenseCategory" required>
-                  <option value="">Seleccionar...</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Pagos sueldos">Pagos sueldos</option>
-                  <option value="Arriendo / Servicios">
-                    Arriendo / Servicios
-                  </option>
-                  <option value="Comida / Insumos">Comida / Insumos</option>
-                  <option value="Transporte">Transporte</option>
-                  <option value="Impuestos">Impuestos</option>
-                  <option value="Mantenimiento">Mantenimiento</option>
-                  <option value="Otros">Otros</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Concepto *</label>
-                <input
-                  type="text"
-                  id="expenseConcept"
-                  placeholder="Ej: Publicidad Facebook"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <label>Detalle (opcional)</label>
-                <textarea
-                  id="expenseDetail"
-                  rows="2"
-                  placeholder="Descripción adicional"
-                ></textarea>
-              </div>
-              <div class="form-group">
-                <label>Valor *</label>
-                <input
-                  type="number"
-                  id="expenseAmount"
-                  step="1000"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn-ghost" onclick="closeExpenseModal()">
-                Cancelar
-              </button>
-              <button class="btn-accent" id="saveExpenseBtn">
-                Guardar Gasto
-              </button>
-            </div>
           </div>
           <div class="inv-stats-row">
             <div class="inv-stat">
@@ -687,7 +682,7 @@
             />
             <div
               class="phc-quick-filters"
-              style="margin-bottom: 10; flex: 1; display: flex; gap: 2px"
+              style="margin-bottom: 10px; flex: 1; display: flex; gap: 2px"
             >
               <button
                 class="ph-tab inv-tab"
@@ -769,7 +764,6 @@
                   gap: 5px;
                   width: 100%;
                   display: flex;
-                  flex-wrap: wrap;
                 "
               >
                 <button
@@ -947,13 +941,27 @@
                     >$0</span
                   >
                 </div>
-                <button
-                  class="pos-confirm-btn"
-                  onclick="openPOSPaymentModal()"
-                  style="margin: 15px 0 0 0; width: 100%"
-                >
-                  ✓ CONFIRMAR VENTA
-                </button>
+                <div style="display: flex; gap: 10px; margin-top: 15px">
+                  <button
+                    class="pos-confirm-btn"
+                    onclick="openPOSPaymentModal(false)"
+                    style="flex: 2"
+                  >
+                    ✓ VENTA DIRECTA
+                  </button>
+                  <button
+                    class="pos-confirm-btn"
+                    onclick="openPOSPaymentModal(true)"
+                    style="
+                      flex: 1;
+                      background: var(--orange);
+                      border-color: var(--orange);
+                      font-size: 11px;
+                    "
+                  >
+                    💎 SEPARADO
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1465,7 +1473,7 @@
                 </thead>
                 <tbody id="layawayTableBody">
                   <tr class="empty-row">
-                    <td colspan="6">No hay productos separados pendientes</td>
+                    <td colspan="7">No hay productos separados pendientes</td>
                   </tr>
                 </tbody>
               </table>
@@ -2499,49 +2507,70 @@
       </div>
     </div>
 
-    <!-- MODAL: REGISTRO DE GASTOS -->
+    <!-- ══ MODAL GASTO (UBICACIÓN GLOBAL) ══ -->
     <div
       class="modal-overlay"
       id="expenseModalOverlay"
       onclick="closeExpenseModal()"
     ></div>
-    <div class="modal modal-sm" id="expenseModal">
+    <div class="modal" id="expenseModal" style="max-width: 500px">
       <div class="modal-header">
-        <h3>Registrar Nuevo Gasto</h3>
+        <h3 id="expenseModalTitle">Nuevo Gasto</h3>
         <button class="modal-close" onclick="closeExpenseModal()">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="expenseId" />
         <div class="form-group">
-          <label>Descripción del Gasto</label>
-          <input
-            type="text"
-            id="expDesc"
-            placeholder="Ej: Pago Arriendo local"
-          />
+          <label>Fecha *</label>
+          <input type="date" id="expenseDate" required />
         </div>
-        <div class="form-group" style="margin-top: 10px">
-          <label>Monto (COP)</label>
-          <input type="number" id="expAmount" placeholder="0" />
-        </div>
-        <div class="form-group" style="margin-top: 10px">
-          <label>Categoría</label>
-          <select id="expCat">
-            <option value="Servicios">Servicios Públicos</option>
-            <option value="Arriendo">Arriendo</option>
-            <option value="Nómina">Nómina / Sueldos</option>
-            <option value="Insumos">Insumos (Aseo/Papelería)</option>
-            <option value="Publicidad">Publicidad / Marketing</option>
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="expenseCategory" required>
+            <option value="">Seleccionar...</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Pagos sueldos">Pagos sueldos</option>
+            <option value="Arriendo / Servicios">Arriendo / Servicios</option>
+            <option value="Comida / Insumos">Comida / Insumos</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Impuestos">Impuestos</option>
+            <option value="Mantenimiento">Mantenimiento</option>
             <option value="Otros">Otros</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Concepto *</label>
+          <input
+            type="text"
+            id="expenseConcept"
+            placeholder="Ej: Publicidad Facebook"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label>Detalle (opcional)</label>
+          <textarea
+            id="expenseDetail"
+            rows="2"
+            placeholder="Descripción adicional"
+          ></textarea>
+        </div>
+        <div class="form-group">
+          <label>Valor *</label>
+          <input
+            type="number"
+            id="expenseAmount"
+            step="1000"
+            min="0"
+            required
+          />
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn-ghost" onclick="closeExpenseModal()">
           Cancelar
         </button>
-        <button class="btn-accent" onclick="saveExpense()">
-          GUARDAR GASTO
-        </button>
+        <button class="btn-accent" id="saveExpenseBtn">Guardar Gasto</button>
       </div>
     </div>
 

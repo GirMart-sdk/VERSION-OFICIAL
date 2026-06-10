@@ -1,210 +1,249 @@
 /* ═══════════════════════════════════════════════════════
-   WINNER — goper/expenses-logic.js (Gestión de Gastos Operativos)
+   WINNER — expenses-logic.js (Gestión de Gastos Operativos)
    ═══════════════════════════════════════════════════════ */
 "use strict";
 
-let currentExpenseMonth = "";
-let expensesData = [];
-let weeklyChart, categoryChart;
-let editingExpenseId = null;
+let expCharts = { weekly: null, category: null };
 
-async function initExpensesTab() {
-  // Establecer el mes actual por defecto
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = (today.getMonth() + 1).toString().padStart(2, "0");
-  currentExpenseMonth = `${year}-${month}`;
-  if ($("expenseMonth")) $("expenseMonth").value = currentExpenseMonth;
+window.openExpenseModal = function (id = null) {
+  const modal = document.getElementById("expenseModal");
+  const overlay = document.getElementById("expenseModalOverlay");
 
-  await loadExpenses();
+  // Limpiar campos para nuevo gasto
+  document.getElementById("expenseId").value = id || "";
+  document.getElementById("expenseDate").value = getTodayStr();
+  document.getElementById("expenseConcept").value = "";
+  document.getElementById("expenseDetail").value = "";
+  document.getElementById("expenseAmount").value = "";
 
-  // Event Listeners
-  $("expenseMonth")?.addEventListener("change", loadExpenses);
-  $("refreshExpenses")?.addEventListener("click", loadExpenses);
-  $("addExpenseBtn")?.addEventListener("click", () => openExpenseModal());
-  $("saveExpenseBtn")?.addEventListener("click", saveExpense);
-}
+  if (modal && overlay) {
+    modal.classList.add("open");
+    overlay.classList.add("open");
+  }
+};
 
-async function loadExpenses() {
-  const month = $("expenseMonth")?.value || currentExpenseMonth;
-  currentExpenseMonth = month;
+window.closeExpenseModal = function () {
+  const modal = document.getElementById("expenseModal");
+  const overlay = document.getElementById("expenseModalOverlay");
+  if (modal && overlay) {
+    modal.classList.remove("open");
+    overlay.classList.remove("open");
+  }
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Inicializar selector de mes con el mes actual
+  const monthInput = document.getElementById("expenseMonth");
+  if (monthInput && !monthInput.value) {
+    monthInput.value = new Date().toISOString().slice(0, 7);
+    monthInput.addEventListener("change", () => window.initExpensesTab());
+  }
+
+  const saveBtn = document.getElementById("saveExpenseBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", async () => {
+      const data = {
+        date: document.getElementById("expenseDate").value,
+        category: document.getElementById("expenseCategory").value,
+        concept: document.getElementById("expenseConcept").value,
+        detail: document.getElementById("expenseDetail").value,
+        amount: parseFloat(document.getElementById("expenseAmount").value),
+      };
+
+      if (!data.category || !data.concept || isNaN(data.amount)) {
+        return toast("⚠️ Por favor completa los campos obligatorios");
+      }
+
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Guardando...";
+
+        const res = await apiFetch(`${API_URL}/expenses`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+
+        if (res.ok) {
+          toast("✅ Gasto registrado correctamente");
+          closeExpenseModal();
+          if (typeof initExpensesTab === "function") initExpensesTab();
+        } else {
+          const err = await res.json();
+          throw new Error(err.error || "Error al guardar");
+        }
+      } catch (err) {
+        toast("❌ " + err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Guardar Gasto";
+      }
+    });
+  }
+});
+
+window.initExpensesTab = async function () {
+  console.log("Cargando datos de gastos...");
+  const month = document.getElementById("expenseMonth")?.value;
+  if (!month) return;
 
   try {
-    // Cargar lista de gastos
-    const res = await apiFetch(`${API_URL}/expenses?month=${month}`);
-    expensesData = await res.json();
+    // Peticiones paralelas para optimizar velocidad
+    const [summary, weekly, category, list] = await Promise.all([
+      apiFetch(`${API_URL}/expenses/summary?month=${month}`).then((r) =>
+        r.json(),
+      ),
+      apiFetch(`${API_URL}/expenses/weekly?month=${month}`).then((r) =>
+        r.json(),
+      ),
+      apiFetch(`${API_URL}/expenses/by-category?month=${month}`).then((r) =>
+        r.json(),
+      ),
+      apiFetch(`${API_URL}/expenses?month=${month}`).then((r) => r.json()),
+    ]);
 
-    // Cargar resumen
-    const summaryRes = await apiFetch(
-      `${API_URL}/expenses/summary?month=${month}`,
-    );
-    const summary = await summaryRes.json();
+    renderExpensesKPIs(summary, month);
+    renderExpensesCharts(weekly, category);
+    renderExpensesTables(list);
+  } catch (e) {
+    console.error("Error loading expenses:", e);
+    toast("❌ Error al conectar con el módulo de gastos");
+  }
+};
 
-    // Actualizar KPIs
-    if ($("expTotalMonth"))
-      $("expTotalMonth").innerText = fmt(summary.total_month || 0);
-    if ($("expMonthLabel"))
-      $("expMonthLabel").innerText = new Date(month + "-01").toLocaleDateString(
-        "es-CO",
-        { year: "numeric", month: "long" },
-      );
-    if ($("expTotalWeek"))
-      $("expTotalWeek").innerText = fmt(summary.total_week || 0);
-    if ($("expWeekLabel"))
-      $("expWeekLabel").innerText = `Semana actual (${getCurrentWeekRange()})`;
-    if ($("expTopCategory"))
-      $("expTopCategory").innerText = summary.top_category || "-";
-    const topPercent =
-      summary.top_amount && summary.total_month
-        ? ((summary.top_amount / summary.total_month) * 100).toFixed(1)
-        : 0;
-    if ($("expTopPercent")) $("expTopPercent").innerText = `${topPercent}%`;
-    if ($("expAvgWeekly"))
-      $("expAvgWeekly").innerText = fmt(summary.avg_weekly || 0);
+function renderExpensesKPIs(data, monthStr) {
+  if ($("expTotalMonth"))
+    $("expTotalMonth").innerText = fmt(data.total_month || 0);
+  if ($("expTotalWeek"))
+    $("expTotalWeek").innerText = fmt(data.total_week || 0);
+  if ($("expAvgWeekly"))
+    $("expAvgWeekly").innerText = fmt(data.avg_weekly || 0);
+  if ($("expTopCategory"))
+    $("expTopCategory").innerText = data.top_category || "---";
 
-    // Cargar datos para gráficos
-    await loadWeeklyChart(month);
-    await loadCategoryChart(month);
+  const [year, month] = monthStr.split("-");
+  const dateObj = new Date(year, month - 1);
+  const monthName = dateObj
+    .toLocaleString("es-CO", { month: "long" })
+    .toUpperCase();
 
-    // Renderizar tablas semanales
-    renderWeeklyTables(expensesData, month);
-  } catch (err) {
-    console.error("Error loading expenses:", err);
-    toast("❌ Error al cargar gastos");
+  if ($("expMonthLabel")) $("expMonthLabel").innerText = `TOTAL ${monthName}`;
+  if ($("expTopPercent")) {
+    const pct = data.total_month
+      ? ((data.top_amount / data.total_month) * 100).toFixed(0)
+      : 0;
+    $("expTopPercent").innerText = `${pct}% del total mensual`;
   }
 }
 
-function getCurrentWeekRange() {
-  const now = new Date();
-  const start = new Date(now.setDate(now.getDate() - now.getDay())); // Domingo
-  const end = new Date(now.setDate(now.getDate() - now.getDay() + 6)); // Sábado
-  return `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`;
-}
-
-async function loadWeeklyChart(month) {
-  const res = await apiFetch(`${API_URL}/expenses/weekly?month=${month}`);
-  const data = await res.json();
-  const labels = data.map((w) => `Semana ${w.week_number}`);
-  const totals = data.map((w) => w.total);
-
-  const ctx = $("expensesWeeklyChart")?.getContext("2d");
-  if (!ctx) return;
-
-  if (weeklyChart) weeklyChart.destroy();
-  weeklyChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Gastos ($)",
-          data: totals,
-          backgroundColor: "#e8ff47",
-          borderRadius: 6,
+function renderExpensesCharts(weekly, category) {
+  // 1. Gráfica Semanal (Barras)
+  const ctxW = $("expensesWeeklyChart")?.getContext("2d");
+  if (ctxW) {
+    if (expCharts.weekly) expCharts.weekly.destroy();
+    expCharts.weekly = new Chart(ctxW, {
+      type: "bar",
+      data: {
+        labels: weekly.map((d) => `Semana ${d.week_number}`),
+        datasets: [
+          {
+            label: "Gastos $",
+            data: weekly.map((d) => d.total),
+            backgroundColor: "#d1cfcb",
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.05)" } },
         },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { callback: (v) => fmt(v) } } },
-    },
-  });
-}
+      },
+    });
+  }
 
-async function loadCategoryChart(month) {
-  const res = await apiFetch(`${API_URL}/expenses/by-category?month=${month}`);
-  const data = await res.json();
-  const labels = data.map((c) => c.category);
-  const values = data.map((c) => c.total);
-  const percentages = data.map((c) => c.percentage);
-
-  const ctx = $("expensesCategoryChart")?.getContext("2d");
-  if (!ctx) return;
-
-  if (categoryChart) categoryChart.destroy();
-  categoryChart = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels,
-      datasets: [
-        {
-          data: values,
-          backgroundColor: [
-            "#e8ff47",
-            "#3498db",
-            "#e74c3c",
-            "#2ecc71",
-            "#f39c12",
-            "#9b59b6",
-            "#1abc9c",
-            "#e67e22",
-          ],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: (ctx) =>
-              `${ctx.label}: ${fmt(ctx.raw)} (${percentages[ctx.dataIndex]}%)`,
+  // 2. Gráfica de Categorías (Doughnut)
+  const ctxC = $("expensesCategoryChart")?.getContext("2d");
+  if (ctxC) {
+    if (expCharts.category) expCharts.category.destroy();
+    expCharts.category = new Chart(ctxC, {
+      type: "doughnut",
+      data: {
+        labels: category.map((d) => d.category),
+        datasets: [
+          {
+            data: category.map((d) => d.total),
+            backgroundColor: [
+              "#d1cfcb",
+              "#3498db",
+              "#2ecc71",
+              "#f1c40f",
+              "#e67e22",
+              "#e74c3c",
+              "#9b59b6",
+            ],
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "right",
+            labels: { color: "#fff", font: { size: 10 } },
           },
         },
-        legend: { position: "bottom", labels: { color: "#ccc" } },
       },
-    },
-  });
+    });
+  }
 }
 
-function renderWeeklyTables(expenses, month) {
-  const weeks = {};
-  expenses.forEach((exp) => {
-    const weekNum = getWeekNumber(new Date(exp.date));
-    if (!weeks[weekNum]) weeks[weekNum] = [];
-    weeks[weekNum].push(exp);
-  });
-
+function renderExpensesTables(list) {
   const container = $("expensesWeeklyTables");
   if (!container) return;
 
-  const sortedWeeks = Object.keys(weeks).sort((a, b) => a - b);
-  if (sortedWeeks.length === 0) {
+  if (!list.length) {
     container.innerHTML =
       '<div class="ls-empty">No hay gastos registrados en este mes</div>';
     return;
   }
 
-  container.innerHTML = sortedWeeks
-    .map((weekNum) => {
-      const weekExpenses = weeks[weekNum];
-      const totalWeek = weekExpenses.reduce((sum, e) => sum + e.amount, 0);
-      const weekStart = getStartOfWeek(weekNum, month);
-      const weekEnd = getEndOfWeek(weekNum, month);
-      return `
-      <div class="week-table">
-        <div class="week-header">
-          <span class="week-title">Semana ${weekNum} (${weekStart} - ${weekEnd})</span>
-          <span class="week-total">Total: ${fmt(totalWeek)}</span>
-        </div>
-        <table class="expense-table">
+  // Agrupar por semanas para la vista de tabla
+  const expensesByDate = list.sort(
+    (a, b) => new Date(b.date) - new Date(a.date),
+  );
+
+  container.innerHTML = `
+    <div class="transactions-group">
+      <div class="table-wrap" style="border:none">
+        <table class="data-table">
           <thead>
-            <tr><th>Fecha</th><th>Categoría</th><th>Concepto</th><th>Detalle</th><th>Valor</th><th></th></tr>
+            <tr>
+              <th>FECHA</th>
+              <th>CATEGORÍA</th>
+              <th>CONCEPTO</th>
+              <th>VALOR</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            ${weekExpenses
+            ${expensesByDate
               .map(
-                (exp) => `
-              <tr>
-                <td>${exp.date.split("T")[0]}</td>
-                <td>${exp.category}</td>
-                <td>${esc(exp.concept)}</td>
-                <td>${esc(exp.detail || "")}</td>
-                <td class="expense-amount">- ${fmt(exp.amount)}</td>
-                <td class="expense-actions">
-                  <button onclick="editExpense('${exp.id}')" title="Editar">✎</button>
-                  <button class="delete" onclick="deleteExpense('${exp.id}')" title="Eliminar">✕</button>
+                (e) => `
+              <tr class="activity-item">
+                <td style="font-size:11px; color:var(--gray-text)">${new Date(e.date).toLocaleDateString()}</td>
+                <td><span class="status-badge s-fisica" style="font-size:9px;">${e.category.toUpperCase()}</span></td>
+                <td>
+                  <div style="font-weight:600; color:white;">${esc(e.concept)}</div>
+                  <div style="font-size:10px; color:var(--gray-text)">${esc(e.detail || "")}</div>
+                </td>
+                <td style="color:var(--accent); font-weight:700;">${fmt(e.amount)}</td>
+                <td style="text-align:right;">
+                  <button class="action-btn del" onclick="deleteExpense('${e.id}')">✕</button>
                 </td>
               </tr>
             `,
@@ -213,133 +252,20 @@ function renderWeeklyTables(expenses, month) {
           </tbody>
         </table>
       </div>
-    `;
-    })
-    .join("");
+    </div>`;
 }
 
-// Helper: número de semana (ISO)
-function getWeekNumber(date) {
-  const d = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-  );
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-}
-
-function getStartOfWeek(weekNum, monthYear) {
-  const year = parseInt(monthYear.split("-")[0]);
-  const d = new Date(year, 0, 1 + (weekNum - 1) * 7);
-  d.setDate(d.getDate() - (d.getDay() || 7) + 1); // Lunes de la semana
-  return `${d.getDate()}/${d.getMonth() + 1}`;
-}
-
-function getEndOfWeek(weekNum, monthYear) {
-  const year = parseInt(monthYear.split("-")[0]);
-  const d = new Date(year, 0, 1 + (weekNum - 1) * 7);
-  d.setDate(d.getDate() - (d.getDay() || 7) + 7); // Domingo de la semana
-  return `${d.getDate()}/${d.getMonth() + 1}`;
-}
-
-function openExpenseModal(expense = null) {
-  if (expense) {
-    editingExpenseId = expense.id;
-    if ($("expenseModalTitle"))
-      $("expenseModalTitle").innerText = "Editar Gasto";
-    if ($("expenseDate")) $("expenseDate").value = expense.date.split("T")[0];
-    if ($("expenseCategory")) $("expenseCategory").value = expense.category;
-    if ($("expenseConcept")) $("expenseConcept").value = expense.concept;
-    if ($("expenseDetail")) $("expenseDetail").value = expense.detail || "";
-    if ($("expenseAmount")) $("expenseAmount").value = expense.amount;
-  } else {
-    editingExpenseId = null;
-    if ($("expenseModalTitle"))
-      $("expenseModalTitle").innerText = "Nuevo Gasto";
-    if ($("expenseDate"))
-      $("expenseDate").value = new Date().toISOString().split("T")[0];
-    if ($("expenseCategory")) $("expenseCategory").value = "";
-    if ($("expenseConcept")) $("expenseConcept").value = "";
-    if ($("expenseDetail")) $("expenseDetail").value = "";
-    if ($("expenseAmount")) $("expenseAmount").value = "";
-  }
-  $("expenseModalOverlay")?.classList.add("open");
-  $("expenseModal")?.classList.add("open");
-}
-
-function closeExpenseModal() {
-  $("expenseModalOverlay")?.classList.remove("open");
-  $("expenseModal")?.classList.remove("open");
-  editingExpenseId = null;
-}
-
-async function saveExpense() {
-  const date = $("expenseDate")?.value;
-  const category = $("expenseCategory")?.value;
-  const concept = $("expenseConcept")?.value.trim();
-  const detail = $("expenseDetail")?.value.trim();
-  const amount = parseFloat($("expenseAmount")?.value);
-
-  if (!date || !category || !concept || !amount || amount <= 0) {
-    toast("⚠️ Completa todos los campos obligatorios");
-    return;
-  }
-
-  const expenseData = { date, category, concept, detail, amount };
-
-  const method = editingExpenseId ? "PUT" : "POST";
-  const url = editingExpenseId
-    ? `${API_URL}/expenses/${editingExpenseId}`
-    : `${API_URL}/expenses`;
-
-  try {
-    const res = await apiFetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(expenseData),
-    });
-    if (res.ok) {
-      closeExpenseModal();
-      loadExpenses();
-      toast(editingExpenseId ? "✅ Gasto actualizado" : "✅ Gasto registrado");
-    } else {
-      const err = await res.json();
-      toast("❌ Error: " + (err.error || "No se pudo guardar el gasto"));
-    }
-  } catch (err) {
-    console.error(err);
-    toast("❌ Error de conexión al guardar gasto");
-  }
-}
-
-async function editExpense(id) {
-  const expense = expensesData.find((e) => e.id === id);
-  if (expense) openExpenseModal(expense);
-}
-
-async function deleteExpense(id) {
-  if (!confirm("¿Eliminar este gasto permanentemente?")) return;
+window.deleteExpense = async function (id) {
+  if (!confirm("¿Eliminar este registro de gasto?")) return;
   try {
     const res = await apiFetch(`${API_URL}/expenses/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
-      loadExpenses();
       toast("✅ Gasto eliminado");
-    } else {
-      const err = await res.json();
-      toast("❌ Error: " + (err.error || "No se pudo eliminar el gasto"));
+      window.initExpensesTab();
     }
-  } catch (err) {
-    console.error(err);
-    toast("❌ Error de conexión al eliminar gasto");
+  } catch (e) {
+    toast("❌ Error al eliminar");
   }
-}
-
-window.initExpensesTab = initExpensesTab;
-window.loadExpenses = loadExpenses;
-window.openExpenseModal = openExpenseModal;
-window.closeExpenseModal = closeExpenseModal;
-window.saveExpense = saveExpense;
-window.editExpense = editExpense;
-window.deleteExpense = deleteExpense;
+};

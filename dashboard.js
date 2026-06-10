@@ -13,6 +13,10 @@ async function renderDashboard() {
     const statsRes = await apiFetch(`${API_URL}/stats`);
     const stats = await statsRes.json();
 
+    // 1.1 Obtener estado del Arqueo de Caja (Sesión Activa)
+    const arqueoRes = await apiFetch(`${API_URL}/arqueo/status`);
+    const arqueo = await arqueoRes.json();
+
     if (stats) {
       // Sincronización con IDs reales de index.html y admin-panel.html
       const revEl = $("kpiTotalRevenue") || $("kpiRevenueToday");
@@ -28,8 +32,23 @@ async function renderDashboard() {
       if ($("kpiTotalDebt"))
         $("kpiTotalDebt").textContent = fmt(stats.totalDebt || 0);
 
-      if ($("kpiNetCash"))
-        $("kpiNetCash").textContent = fmt(stats.netCash || 0);
+      // Priorizar el saldo del Arqueo de Caja si hay una sesión abierta
+      if ($("kpiNetCash")) {
+        const isActive = arqueo && arqueo.active;
+        const cashDisplay = isActive
+          ? arqueo.calculations.theoreticalBalance
+          : stats.netCash;
+
+        $("kpiNetCash").textContent = fmt(cashDisplay || 0);
+
+        // Indicador visual de que la caja está abierta
+        const label =
+          $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
+        if (label && isActive) {
+          label.innerHTML =
+            "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>● ACTIVA</span>";
+        }
+      }
 
       if ($("kpiConversion")) {
         $("kpiConversion").textContent = stats.conversion || "0%";
@@ -49,6 +68,9 @@ async function renderDashboard() {
       if ($("stTransTotal"))
         $("stTransTotal").textContent = stats.totalSales || 0;
     }
+
+    // 1.2 Renderizar el Widget de Control de Caja
+    renderArqueoWidget(arqueo);
 
     // 2. Asegurar que las ventas recientes estén cargadas para la actividad en vivo
     if (!window.salesLog || window.salesLog.length === 0) {
@@ -73,6 +95,114 @@ async function renderDashboard() {
     .then((data) => renderTopProductsApex(data))
     .catch(() => renderTopProductsApex([]));
 }
+
+/**
+ * Renderiza el widget de Apertura/Cierre de caja en el Dashboard
+ */
+function renderArqueoWidget(arqueo) {
+  const container = $("arqueoWidgetContainer"); // Asegúrate de tener este ID en tu HTML
+  if (!container) return;
+
+  if (arqueo && arqueo.active) {
+    // ESTADO: CAJA ABIERTA
+    const calc = arqueo.calculations;
+    container.innerHTML = `
+      <div class="dash-neon-box" style="padding: 20px; border-color: var(--green); border-width: 2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+          <div>
+            <span class="dash-label-impact">SESIÓN ACTIVA: <strong style="color:white">${arqueo.session.id}</strong></span>
+            <div style="font-size: 24px; font-weight: 800; color: var(--white); margin: 5px 0;">${fmt(calc.theoreticalBalance)}</div>
+            <span style="font-size: 11px; color: var(--gray-text)">Apertura: ${new Date(arqueo.session.openedAt).toLocaleTimeString()}</span>
+          </div>
+          <button class="adm-btn" onclick="handleCloseArqueo()" style="background:var(--red); border-color:var(--red); width:auto; padding: 0 20px;">
+            CERRAR CAJA
+          </button>
+        </div>
+      </div>
+    `;
+  } else {
+    // ESTADO: CAJA CERRADA
+    container.innerHTML = `
+      <div class="dash-neon-box" style="padding: 20px; border-style: dashed; opacity: 0.8;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+          <div>
+            <span class="dash-label-impact">CONTROL DE CAJA</span>
+            <div style="font-size: 16px; color: var(--gray-text); margin-top: 5px;">La caja está cerrada actualmente.</div>
+          </div>
+          <button class="adm-btn" onclick="handleOpenArqueo()" style="width:auto; padding: 0 20px;">
+            ABRIR CAJA
+          </button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+window.handleOpenArqueo = async () => {
+  const base = prompt(
+    "Ingrese el dinero base (Sencillo) para iniciar:",
+    "100000",
+  );
+  if (base === null) return;
+
+  try {
+    const res = await apiFetch(`${API_URL}/arqueo/open`, {
+      method: "POST",
+      body: JSON.stringify({
+        initialBalance: parseFloat(base) || 0,
+        notes: "Apertura desde Dashboard",
+      }),
+    });
+
+    if (res.ok) {
+      toast("✅ Caja abierta correctamente");
+      renderDashboard(); // Refrescar vista
+    } else {
+      const err = await res.json();
+      toast("❌ Error: " + err.error);
+    }
+  } catch (e) {
+    toast("❌ Error de conexión");
+  }
+};
+
+window.handleCloseArqueo = async () => {
+  const statusRes = await apiFetch(`${API_URL}/arqueo/status`);
+  const arqueo = await statusRes.json();
+
+  if (!arqueo.active) return;
+
+  const tBalance = arqueo.calculations.theoreticalBalance;
+  const real = prompt(
+    `CIERRE DE CAJA\nSaldo esperado: ${fmt(tBalance)}\n\n¿Cuánto dinero físico hay en caja?:`,
+    tBalance,
+  );
+
+  if (real === null) return;
+
+  try {
+    const res = await apiFetch(`${API_URL}/arqueo/close`, {
+      method: "POST",
+      body: JSON.stringify({
+        realBalance: parseFloat(real) || 0,
+        notes: "Cierre rápido desde Dashboard",
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const diff = data.session.difference;
+      alert(
+        `✅ Caja cerrada.\nDiferencia: ${fmt(diff)} ${diff < 0 ? "(Faltante)" : diff > 0 ? "(Sobrante)" : "(Exacto)"}`,
+      );
+      renderDashboard();
+    } else {
+      toast("❌ No se pudo cerrar la caja");
+    }
+  } catch (e) {
+    toast("❌ Error de red");
+  }
+};
 
 function renderSparklines() {
   const commonOptions = {

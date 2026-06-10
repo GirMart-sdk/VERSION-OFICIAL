@@ -59,9 +59,9 @@ pm2 save
 echo.
 echo 🎉 ¡DESPLIEGUE COMPLETADO!
 echo.
-echo 🔗 Accede: http://192.168.1.8:3000
-echo 👨‍💼 Admin: http://192.168.1.8:3000/admin-panel.html
-echo           Usuario: admin / Password: winner2026
+echo 🔗 Accede: http://localhost:3000
+echo 👨‍💼 Admin: http://localhost:3000/admin-panel.html
+echo           Credenciales gestionadas via .env
 echo.
 echo 📊 PM2 Status:
 pm2 status

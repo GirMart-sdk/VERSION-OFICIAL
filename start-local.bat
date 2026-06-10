@@ -21,8 +21,8 @@ echo ╔════════════════════════
 echo ║                                                                ║
 echo ║         🏆  WINNER STORE - SERVIDOR LOCAL                    ║
 echo ║                                                                ║
-echo ║         🌐  http://192.168.1.8:3000                          ║
-echo ║         👤  Admin: admin / winner2026                        ║
+echo ║         🌐  http://localhost:3000                              ║
+echo ║         👤  Credenciales gestionadas via .env                ║
 echo ║                                                                ║
 echo ║         ⏱️   Iniciando en 2 segundos...                       ║
 echo ║                                                                ║
@@ -30,6 +30,11 @@ echo ╚════════════════════════
 echo.
 
 echo [*] Calentando motores...
+
+REM 1. CERRAR PROCESOS PREVIOS (Evita errores de archivo bloqueado EPERM y conflictos de puerto)
+echo [Limpiando entorno de ejecucion...]
+taskkill /f /im node.exe >nul 2>&1
+
 timeout /t 2 /nobreak > nul
 
 REM Verificar que npm está instalado
@@ -75,8 +80,10 @@ if not exist ".env" (
 REM Verificar BD
 echo [Conectando Base de Datos PostgreSQL...]
 echo [*] Verificando estructura de tablas...
-call npx prisma generate >nul
+echo [1/2] Generando cliente de datos...
+call npx prisma generate
 
+echo [2/2] Sincronizando esquema con PostgreSQL...
 REM Eliminado --accept-data-loss para preservar tus productos y ventas locales
 call npx prisma db push
 
@@ -90,7 +97,7 @@ echo ✅ Conexión de base de datos PostgreSQL preparada
 echo.
 echo ════════════════════════════════════════════════════════════════
 echo 🚀 SERVIDOR ACTIVO - SISTEMA WINNER STORE
-echo 🔗 Acceso: http://192.168.1.8:3000/admin-panel.html
+echo 🔗 Acceso: http://localhost:3000/admin-panel.html
 echo.
 echo 💡 CONSEJO: Si realizaste cambios en la DB, presiona F5 en la tienda
 echo           para sincronizar los IDs de productos en el navegador.
@@ -99,7 +106,7 @@ echo ═════════════════════════
 echo.
 
 REM Abrir navegador automáticamente
-start http://192.168.1.8:3000/admin-panel.html
+start http://localhost:3000/admin-panel.html
 
 REM Iniciar servidor
 node backend/server.js
