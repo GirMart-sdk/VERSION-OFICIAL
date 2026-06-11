@@ -4,7 +4,7 @@
 "use strict";
 
 const express = require("express");
-const prisma = require("../database");
+const { prisma } = require("../database");
 const { requireAuth } = require("../middlewares/auth");
 const { validate, schemas } = require("../middlewares/validation");
 

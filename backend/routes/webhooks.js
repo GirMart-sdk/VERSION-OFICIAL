@@ -4,7 +4,7 @@
 "use strict";
 
 const express = require("express");
-const prisma = require("../database");
+const { prisma } = require("../database");
 const { createHash } = require("crypto");
 
 const router = express.Router();

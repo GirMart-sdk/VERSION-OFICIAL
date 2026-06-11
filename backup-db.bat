@@ -21,8 +21,8 @@ REM Crear carpeta de backups si no existe
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 
 REM Generar nombre de archivo con fecha y hora: backup_YYYYMMDD_HHMM.sql
-set TIMESTAMP=%date:~-4,4%%date:~-7,2%%date:~-10,2%_%time:~0,2%%time:~3,2%
-set TIMESTAMP=%TIMESTAMP: =0%
+for /f "tokens=2 delims==" %%a in ('wmic os get localdatetime /value') do set "dt=%%a"
+set "TIMESTAMP=%dt:~0,8%_%dt:~8,4%"
 set FILE_NAME=%BACKUP_DIR%\backup_%DB_NAME%_%TIMESTAMP%.sql
 
 echo [*] Iniciando respaldo de la base de datos: %DB_NAME%...
@@ -34,4 +34,3 @@ if %errorlevel% equ 0 (
 ) else (
     echo ❌ ERROR: El respaldo falló. Verifica la ruta de PostgreSQL y tus credenciales.
 )
-timeout /t 5

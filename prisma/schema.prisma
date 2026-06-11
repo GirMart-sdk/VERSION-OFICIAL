@@ -7,6 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String?  @unique
+  password  String   // Hash de la contraseña
+  role      String   @default("admin")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
 model Product {
   id              String           @id @db.VarChar(50)
   name            String           @db.VarChar(255)

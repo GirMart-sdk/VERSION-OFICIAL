@@ -72,9 +72,8 @@ document.addEventListener("DOMContentLoaded", () => {
           loginBtn.innerHTML = 'VERIFICANDO... <span class="store-dot"></span>';
         }
 
-        const res = await fetch(`${window.API_URL}/login`, {
+        const res = await window.apiFetch(`${window.API_URL}/login`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user, pass }),
         });
 
@@ -136,11 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         btnSendRecovery.disabled = true;
-        const res = await fetch(`${window.API_URL}/auth/forgot-password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
+        const res = await window.apiFetch(
+          `${window.API_URL}/auth/forgot-password`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          },
+        );
         const data = await res.json();
         toast(
           data.success

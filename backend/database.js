@@ -38,7 +38,13 @@ if (!dbUrl) {
   console.log(`🔌 Intentando conectar a: ${debugUrl}`);
 }
 
-const pool = new Pool({ connectionString: dbUrl });
+const pool = new Pool({
+  connectionString: dbUrl,
+  max: 20, // Máximo de conexiones simultáneas en el pool
+  idleTimeoutMillis: 30000, // Tiempo antes de cerrar conexiones inactivas
+  connectionTimeoutMillis: 2000, // Tiempo de espera para conectar
+});
+
 pool.on("error", (err) => {
   console.error("❌ Error inesperado en el pool de PostgreSQL:", err.message);
 });
@@ -50,4 +56,22 @@ const prisma = new PrismaClient({ adapter });
 console.log(
   "🐘 Prisma Client (PostgreSQL) inicializado con capa de compatibilidad",
 );
-module.exports = prisma;
+
+// Exportamos la instancia completa de Prisma Client y también los modelos individuales
+// para facilitar la importación selectiva en otros módulos.
+// Esto es útil si se prefiere desestructurar los modelos directamente.
+module.exports = {
+  prisma, // La instancia completa de PrismaClient
+  user: prisma.user,
+  product: prisma.product,
+  inventory: prisma.inventory,
+  sale: prisma.sale,
+  saleItem: prisma.saleItem,
+  salePayment: prisma.salePayment,
+  order: prisma.order,
+  expense: prisma.expense,
+  cashSession: prisma.cashSession,
+  customerProfile: prisma.customerProfile,
+  reorderRule: prisma.reorderRule,
+  demandForecast: prisma.demandForecast,
+};

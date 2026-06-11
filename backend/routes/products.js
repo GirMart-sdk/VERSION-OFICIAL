@@ -1,7 +1,7 @@
 "use strict";
 
 const express = require("express");
-const prisma = require("../database");
+const { prisma } = require("../database");
 const { requireApiKey, requireAuth } = require("../middlewares/auth");
 const { validate, schemas } = require("../middlewares/validation");
 
@@ -176,6 +176,24 @@ router.delete("/products/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics/low-stock — Alertas de bajo inventario
+router.get("/analytics/low-stock", requireAuth, async (req, res) => {
+  const threshold = Number(req.query.threshold) || 5;
+  try {
+    const lowStock = await prisma.inventory.findMany({
+      where: {
+        quantity: { lte: threshold },
+      },
+      include: {
+        product: true,
+      },
+    });
+    res.json(lowStock);
+  } catch (err) {
+    res.status(500).json({ error: "Error al cargar alertas de stock" });
   }
 });
 

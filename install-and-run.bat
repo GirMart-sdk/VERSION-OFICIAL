@@ -48,10 +48,12 @@ echo [Configurando Prisma y BD...]
 echo Generando cliente Prisma...
 call npx prisma generate
 echo.
-echo [!] OMITIENDO DB PUSH Y SEED para proteger datos existentes.
-echo [!] Si es la primera vez que instalas, ejecuta: 
-echo     npx prisma db push 
-echo     node backend/seed.js
+echo [!] Verificando integridad de la base de datos...
+call npx prisma migrate deploy
+if %errorlevel% neq 0 (
+  echo [!] Error: La base de datos no esta sincronizada. 
+  echo [!] Intente ejecutar: npx prisma migrate dev --name sync
+)
 
 echo.
 echo [+] Arrancando servidor...

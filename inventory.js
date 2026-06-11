@@ -107,7 +107,9 @@ window.openProductModal = (id = null) => {
     const p = window.inventory.find((x) => String(x.id) === String(id));
     if (p) {
       $("pName").value = p.name;
-      $("pCat").value = p.cat || p.category;
+      const category = p.cat || p.category; // Aseguramos que la categoría se cargue
+      if ($("pCat")) $("pCat").value = category; // Actualizamos el input hidden
+      if ($("pCatDisplay")) $("pCatDisplay").textContent = category; // Actualizamos el texto del botón
       $("pPrice").value = p.price;
       $("pSku").value = p.sku || "";
       $("pImg").value = p.img || p.image || "";
@@ -117,6 +119,9 @@ window.openProductModal = (id = null) => {
     ["pName", "pPrice", "pSku", "pImg"].forEach((f) => {
       if ($(f)) $(f).value = "";
     });
+    if ($("pCat")) $("pCat").value = "";
+    if ($("pCatDisplay"))
+      $("pCatDisplay").textContent = "Seleccionar Categoría...";
     renderStockGrid("mujer", {});
   }
   updateStockTotal();
@@ -134,9 +139,43 @@ window.closeQRModal = () => {
   $("qrModalOverlay").classList.remove("open");
 };
 
+/**
+ * Abre el modal emergente para seleccionar la categoría de boutique
+ */
+window.openCategoryPicker = () => {
+  const overlay = $("categoryPickerOverlay");
+  const modal = $("categoryPickerModal");
+  if (overlay && modal) {
+    overlay.classList.add("open");
+    modal.classList.add("open");
+  }
+};
+
+window.closeCategoryPicker = () => {
+  $("categoryPickerOverlay")?.classList.remove("open");
+  $("categoryPickerModal")?.classList.remove("open");
+};
+
+/**
+ * Selecciona una categoría, actualiza la UI y dispara el cambio de tallas
+ */
+window.selectCategory = (val) => {
+  const input = $("pCat");
+  const display = $("pCatDisplay");
+  if (input) input.value = val;
+  if (display) display.textContent = val;
+
+  // Disparar la lógica inteligente de tallas
+  handleCategoryChange(); // Llamada directa a la función local
+  closeCategoryPicker();
+  toast(`📂 Categoría: ${val}`);
+};
+
 window.deleteProduct = async (id) => {
   if (!confirm("¿Eliminar este producto?")) return;
-  const res = await apiFetch(`${API_URL}/products/${id}`, { method: "DELETE" });
+  const res = await apiFetch(`${API_URL}/products/${id}`, {
+    method: "DELETE",
+  });
   if (res.ok) {
     fetchInventory();
     toast("Producto eliminado");
@@ -204,7 +243,7 @@ async function saveProduct() {
     id: id || genId(),
     name: name,
     price: price,
-    category: cat,
+    category: cat || "Otros",
     sku: $("pSku").value,
     stock: stock,
     image: $("pImg").value,

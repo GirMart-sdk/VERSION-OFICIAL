@@ -57,7 +57,11 @@ router.get("/status", requireAuth, async (req, res) => {
       _sum: { amount: true },
       where: {
         timestamp: { gte: session.openedAt },
-        method: { mode: "insensitive", equals: "Efectivo" },
+        OR: [
+          { method: { mode: "insensitive", equals: "Efectivo" } },
+          { method: { mode: "insensitive", equals: "Contra Entrega" } },
+          { method: { mode: "insensitive", equals: "COD" } },
+        ],
       },
     });
 
@@ -66,7 +70,10 @@ router.get("/status", requireAuth, async (req, res) => {
       _sum: { amount: true },
       where: {
         createdAt: { gte: session.openedAt },
-        method: { mode: "insensitive", equals: "Efectivo" },
+        OR: [
+          { method: { mode: "insensitive", equals: "Efectivo" } },
+          { method: { mode: "insensitive", equals: "Contra Entrega" } },
+        ],
       },
     });
 
@@ -134,14 +141,21 @@ router.handleStatusCalculation = async (session) => {
     _sum: { amount: true },
     where: {
       timestamp: { gte: session.openedAt },
-      method: { mode: "insensitive", equals: "Efectivo" },
+      OR: [
+        { method: { mode: "insensitive", equals: "Efectivo" } },
+        { method: { mode: "insensitive", equals: "Contra Entrega" } },
+        { method: { mode: "insensitive", equals: "COD" } },
+      ],
     },
   });
   const expenses = await prisma.expense.aggregate({
     _sum: { amount: true },
     where: {
       createdAt: { gte: session.openedAt },
-      method: { mode: "insensitive", equals: "Efectivo" },
+      OR: [
+        { method: { mode: "insensitive", equals: "Efectivo" } },
+        { method: { mode: "insensitive", equals: "Contra Entrega" } },
+      ],
     },
   });
 

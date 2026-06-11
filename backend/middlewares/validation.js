@@ -1,63 +1,103 @@
-/* ═══════════════════════════════════════════════════════════
-   WINNER — backend/middlewares/validation.js (Middlewares de Validación)
-   ═══════════════════════════════════════════════════════════ */
-"use strict";
-
-const Joi = require("joi");
+const { z } = require("zod");
 
 const schemas = {
-  product: Joi.object({
-    id: Joi.string().allow(null, ""),
-    name: Joi.string().required(),
-    price: Joi.number().min(0).required(),
-    cost: Joi.number().min(0).default(0),
-    category: Joi.string().allow(null, ""),
-    image: Joi.string().allow(null, ""),
-    badge: Joi.string().allow(null, ""),
-    badgeType: Joi.string().allow(null, ""),
-    sku: Joi.string().allow(null, ""),
-    description: Joi.string().allow(null, ""),
-    stock: Joi.object()
-      .pattern(Joi.string(), Joi.number().integer().min(0))
-      .allow(null),
+  login: z.object({
+    user: z.string().min(1, "El usuario es obligatorio"),
+    pass: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   }),
-  sale: Joi.object({
-    id: Joi.string().allow(null, ""),
-    total: Joi.number().min(0).required(),
-    items: Joi.array().items(Joi.object()).required(),
-    customer_email: Joi.string().email().allow(null, ""),
-    customer_phone: Joi.string().allow(null, ""),
-    shipping_address: Joi.string().allow(null, ""),
-    shipping_carrier: Joi.string().allow(null, ""),
-    payment_method: Joi.string().allow(null, ""),
-    payment_status: Joi.string()
-      .valid("completed", "partial", "pending")
-      .default("completed"),
-  }).unknown(),
-  review: Joi.object({
-    name: Joi.string().min(2).max(50).required(),
-    rating: Joi.number().integer().min(1).max(5).required(),
-    comment: Joi.string().min(5).max(500).required(),
-    suggestion: Joi.string().allow("", null).max(500),
-    productId: Joi.string().allow(null, ""),
+  forgotPassword: z.object({
+    email: z.string().email("Email inválido"),
   }),
-  expense: Joi.object({
-    id: Joi.string().optional(),
-    date: Joi.date().iso().required(),
-    category: Joi.string().required(),
-    concept: Joi.string().required(),
-    detail: Joi.string().allow("", null).optional(),
-    amount: Joi.number().min(0.01).required(),
+  sale: z.object({
+    id: z.string().optional(),
+    total: z.coerce.number().positive("El total debe ser positivo"),
+    items: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          productId: z.string().optional(),
+          name: z.string(),
+          qty: z.coerce.number().int().positive(),
+          price: z.coerce.number().nonnegative(),
+          size: z.string().optional(),
+          sku: z.string().optional(),
+        }),
+      )
+      .min(1, "Debe haber al menos un item"),
+    client: z.string().optional().nullable(),
+    customer_email: z
+      .union([z.string().email("Email inválido"), z.literal(""), z.null()])
+      .optional(),
+    customer_phone: z.string().optional().nullable(),
+    method: z.string().optional().nullable(),
+    payment_method: z.string().optional().nullable(),
+    payment_status: z.string().optional().nullable(),
+    shipping_address: z.string().optional().nullable(),
+    shipping_carrier: z.string().optional().nullable(),
+    payment_details: z
+      .object({
+        abonoAmount: z.coerce.number().optional().nullable(),
+        shipping_status: z.string().optional().nullable(),
+        isLayaway: z.boolean().optional().nullable(),
+        received: z.coerce.number().optional().nullable(),
+        tracking_number: z.string().optional().nullable(),
+      })
+      .optional()
+      .nullable(),
+    // Campos de metadatos enviados por el frontend
+    channel: z.string().optional(),
+    vendor: z.string().optional(),
+    timestamp: z.string().optional(),
+    subtotal: z.coerce.number().optional(),
+    discount: z.coerce.number().optional(),
+    reference_number: z.string().optional(),
+  }),
+  product: z.object({
+    id: z.string().optional(),
+    name: z.string().min(1, "El nombre es obligatorio"),
+    price: z.coerce.number().nonnegative(),
+    cost: z.coerce.number().optional(),
+    category: z.string().optional(),
+    image: z.string().optional(),
+    sku: z.string().optional(),
+    description: z.string().optional(),
+    stock: z.record(z.coerce.number().int().nonnegative()).optional(),
+  }),
+  expense: z.object({
+    id: z.string().optional(),
+    amount: z.coerce.number().nonnegative(),
+    category: z.string().optional(),
+    concept: z.string().optional(),
+    date: z.string().optional(),
+    description: z.string().optional(),
+  }),
+  checkoutInit: z.object({
+    saleId: z.string().min(1),
+    amount: z.coerce.number().positive(),
+    email: z.string().email().optional().nullable().or(z.literal("")),
+    paymentType: z.string().optional(),
   }),
 };
 
 const validate = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body);
-  if (error)
-    return res
-      .status(400)
-      .json({ error: error.details[0].message, success: false });
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    console.warn("⚠️ Fallo de validación en:", req.path, result.error.format());
+
+    // Extraer las issues de forma segura para evitar el TypeError
+    const issues = result.error.issues || [];
+
+    return res.status(400).json({
+      error: "Datos inválidos o incompletos",
+      details: issues.map((e) => ({
+        field: e.path.join("."),
+        message: e.message,
+      })),
+    });
+  }
+  // Reemplazar el body con los datos parseados (limpia campos extra no deseados)
+  req.body = result.data;
   next();
 };
 
-module.exports = { schemas, validate };
+module.exports = { validate, schemas };

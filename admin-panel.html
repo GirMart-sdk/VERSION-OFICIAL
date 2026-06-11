@@ -1670,17 +1670,22 @@
           <div class="form-row">
             <div class="form-group">
               <label>Categoría</label>
-              <select
-                id="pCat"
-                onchange="handleCategoryChange()"
-                title="Seleccionar categoria"
-              >
-                <option value="mujer">Mujer</option>
-                <option value="hombre">Hombre</option>
-                <option value="calzado">Calzado</option>
-                <option value="accesorios">Accesorios</option>
-                <option value="otros">Otros</option>
-              </select>
+              <div class="category-selector-wrap">
+                <button
+                  type="button"
+                  class="adm-btn-ghost"
+                  style="
+                    width: 100%;
+                    text-align: left;
+                    justify-content: space-between;
+                  "
+                  onclick="openCategoryPicker()"
+                  id="pCatDisplay"
+                >
+                  Seleccionar Categoría...
+                </button>
+                <input type="hidden" id="pCat" value="" />
+              </div>
             </div>
             <div class="form-group">
               <label>Precio (COP)</label>
@@ -2605,6 +2610,86 @@
         <button class="btn-accent" onclick="confirmCrop()">
           RECORTAR Y SUBIR
         </button>
+      </div>
+    </div>
+
+    <!-- NUEVO: Modal Emergente de Categorías (Boutique Edition) -->
+    <div
+      id="categoryPickerOverlay"
+      class="modal-overlay"
+      onclick="closeCategoryPicker()"
+    ></div>
+    <div id="categoryPickerModal" class="modal category-picker-modal">
+      <div class="modal-header">
+        <h3>SELECCIONAR CATEGORÍA</h3>
+        <button class="modal-close" onclick="closeCategoryPicker()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="cat-grid-container">
+          <div class="cat-section">
+            <h4>👕 SUPERIORES (LETRAS)</h4>
+            <div class="cat-options">
+              <button onclick="selectCategory('Camisetas Caballero')">
+                Camisetas Caballero
+              </button>
+              <button onclick="selectCategory('Camisetas Dama')">
+                Camisetas Dama
+              </button>
+              <button onclick="selectCategory('Camisas Oversize')">
+                Camisas Oversize
+              </button>
+              <button onclick="selectCategory('Busos y Hoodies')">
+                Busos y Hoodies
+              </button>
+              <button onclick="selectCategory('Chaquetas Premium')">
+                Chaquetas Premium
+              </button>
+              <button onclick="selectCategory('Tops y Blusas')">
+                Tops y Blusas Dama
+              </button>
+            </div>
+          </div>
+          <div class="cat-section">
+            <h4>👖 INFERIORES (NÚMEROS)</h4>
+            <div class="cat-options">
+              <button onclick="selectCategory('Jeans Dama')">
+                Jeans Dama (6-16)
+              </button>
+              <button onclick="selectCategory('Jeans Caballero')">
+                Jeans Caballero (28-38)
+              </button>
+              <button onclick="selectCategory('Joggers Caballero')">
+                Joggers Caballero
+              </button>
+              <button onclick="selectCategory('Pantalón Cargo')">
+                Pantalón Cargo
+              </button>
+              <button onclick="selectCategory('Bermudas')">Bermudas</button>
+            </div>
+          </div>
+          <div class="cat-section">
+            <h4>🏋️ DEPORTIVO Y ELÁSTICO (LETRAS)</h4>
+            <div class="cat-options">
+              <button onclick="selectCategory('Leggings Dama')">
+                Leggings Dama
+              </button>
+              <button onclick="selectCategory('Conjuntos Deportivos')">
+                Conjuntos / Sets
+              </button>
+              <button onclick="selectCategory('Sudaderas')">Sudaderas</button>
+            </div>
+          </div>
+          <div class="cat-section">
+            <h4>👟 OTROS</h4>
+            <div class="cat-options">
+              <button onclick="selectCategory('Calzado')">Calzado</button>
+              <button onclick="selectCategory('Accesorios')">
+                Accesorios (Goras, Relojes)
+              </button>
+              <button onclick="selectCategory('Otros')">Otros</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

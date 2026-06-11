@@ -3,7 +3,7 @@ REM ═════════════════════════�
 REM WINNER STORE v3.5 (Prisma Edition) - Iniciador Local Automático
 REM Script para iniciar la tienda automáticamente en Windows
 REM ════════════════════════════════════════════════════════════════
-set NODE_ENV=development
+set NODE_ENV=production
 
 setlocal enabledelayedexpansion
 
@@ -45,7 +45,7 @@ if %errorlevel% neq 0 (
     echo ❌ ERROR: No se encontró el motor Node.js.
     echo.
     echo 🛠️  SOLUCIÓN:
-    echo 1. Descarga Node.js (LTS) de: https://nodejs.org
+    echo 1. Descarga Node.js ^(LTS^) de: https://nodejs.org
     echo 2. Instálalo y REINICIA tu PC.
     echo 3. El sistema NO FUNCIONARÁ hasta que Node.js esté instalado.
     echo.
@@ -57,7 +57,7 @@ echo ✅ Motor detectado correctamente.
 REM Verificar dependencias
 echo [Verificando dependencias...]
 if not exist "node_modules" (
-    echo ⏳ Instalando librerías necesarias (Esto tomará 2 minutos, espera)...
+    echo ⏳ Instalando librerías necesarias ^(Esto tomará 2 minutos, espera^)...
     call npm install
     if %errorlevel% neq 0 (
         echo ❌ Error al instalar librerías. Revisa tu conexión a internet.
@@ -83,12 +83,11 @@ echo [*] Verificando estructura de tablas...
 echo [1/2] Generando cliente de datos...
 call npx prisma generate
 
-echo [2/2] Sincronizando esquema con PostgreSQL...
-REM Eliminado --accept-data-loss para preservar tus productos y ventas locales
-call npx prisma db push
+echo [2/2] Aplicando migraciones pendientes...
+call npx prisma migrate deploy
 
 if %errorlevel% neq 0 (
-    echo ❌ ERROR: Fallo en la sincronización. Verifica tu DATABASE_URL o si el servidor PostgreSQL está activo.
+    echo ❌ ERROR: Fallo al aplicar migraciones. Si es un equipo nuevo, recuerda hacer el Baseline.
     pause
     exit /b 1
 )

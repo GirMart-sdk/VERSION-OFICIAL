@@ -3028,3 +3028,69 @@ input:focus {
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 8px !important;
 }
+
+/* ── CATEGORY PICKER MODAL ── */
+.category-picker-modal {
+  max-width: 800px !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--accent2);
+}
+
+/* Asegurar que el modal se vea encima de todo */
+.category-picker-modal.open {
+  z-index: 9999 !important;
+}
+
+.cat-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+.cat-section {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 15px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.cat-section h4 {
+  font-family: "Bebas Neue";
+  letter-spacing: 1px;
+  color: var(--accent);
+  margin-bottom: 12px;
+  font-size: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+}
+
+.cat-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-options button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--gray-text);
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: var(--trans);
+  cursor: pointer;
+}
+
+.cat-options button:hover {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent);
+  padding-left: 18px;
+}
+
+.category-selector-wrap .adm-btn-ghost:after {
+  content: "▾";
+  opacity: 0.5;
+}

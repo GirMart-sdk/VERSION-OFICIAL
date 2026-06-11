@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { scryptSync } = require("crypto");
 
 // 1. CARGA ROBUSTA DE CONFIGURACIÓN (Igual que server.js)
 const isProdMode = process.env.NODE_ENV === "production";
@@ -27,13 +28,46 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-// Importamos la instancia de Prisma unificada que ya tiene el adaptador de PostgreSQL configurado
-const prisma = require("./database");
+// Importamos la instancia. Si el adaptador manual no expone 'user',
+// intentamos usar la instancia interna del cliente.
+let prisma = require("./database");
+
+// Verificación de seguridad: si prisma.user no existe, el adaptador manual está incompleto.
+const prismaInstance = prisma.user ? prisma : prisma.prisma || prisma;
+const db = prisma.user ? prisma : prismaInstance;
+
+const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
 
 async function main() {
   console.log("🌱 Iniciando siembra de datos (Seed) en PostgreSQL...");
 
-  // 1. Ya no borramos los datos existentes para proteger los productos que subas manualmente.
+  // 1. Crear o actualizar usuario administrador inicial
+  const adminUser = process.env.ADMIN_USER || "admin";
+  const adminPass = process.env.ADMIN_PASSWORD || "winner2026";
+  const adminEmail = process.env.EMAIL_USER; // Usamos el mismo correo del sistema para el admin
+
+  // Generar hash de la contraseña
+  const passwordHash = scryptSync(adminPass, HASH_SALT, 64).toString("hex");
+
+  // Usamos upsert para asegurar que el admin tenga el email correcto incluso si ya existía
+  await db.user.upsert({
+    where: { username: adminUser },
+    update: {
+      email: adminEmail,
+      password: passwordHash,
+      active: true,
+    },
+    create: {
+      username: adminUser,
+      email: adminEmail,
+      password: passwordHash,
+      role: "admin",
+      active: true,
+    },
+  });
+  console.log(
+    `👤 Usuario administrador sincronizado: ${adminUser} (${adminEmail || "sin email"})`,
+  );
 
   // 2. Definición de productos iniciales (Muestra representativa de los 26)
   const initialProducts = [
@@ -43,8 +77,8 @@ async function main() {
       name: "Camiseta Streetwear Oversize",
       price: 85000,
       cost: 35000,
-      category: "Ropa",
-      image: "camiseta-oversize.jpg",
+      category: "Camisetas Caballero",
+      image: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500",
       badge: "Nuevo",
       description: "Camiseta 100% algodón, estilo urbano premium.",
       stockStatus: "In Stock",
@@ -55,7 +89,7 @@ async function main() {
       name: "Hoodie Crop Urbano",
       price: 95000,
       cost: 40000,
-      category: "Ropa",
+      category: "Hoodies Dama",
       image:
         "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
       badge: "Top Ventas",
@@ -68,7 +102,7 @@ async function main() {
       name: "Jogger Cargo Premium",
       price: 115000,
       cost: 55000,
-      category: "Ropa",
+      category: "Joggers Caballero",
       image:
         "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500",
       badge: "Oferta",
@@ -81,7 +115,7 @@ async function main() {
       name: "Set Legging + Top W",
       price: 130000,
       cost: 65000,
-      category: "Ropa",
+      category: "Conjuntos Dama",
       image:
         "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500",
       badge: "Nuevo",
@@ -132,7 +166,7 @@ async function main() {
     // Eliminamos 'stockStatus' y cualquier otro campo extra.
     const { stockStatus, ...cleanData } = pData;
 
-    const product = await prisma.product.upsert({
+    const product = await db.product.upsert({
       where: { id: cleanData.id },
       update: {
         sku: cleanData.sku,
@@ -146,17 +180,64 @@ async function main() {
       create: {
         ...cleanData,
         cost: cleanData.cost || 0,
+        category: cleanData.category,
         badge: cleanData.badge || null,
         description: cleanData.description || null,
       },
     });
 
-    // 3. Generación automática de inventario según categoría
-    if (pData.category === "Ropa") {
-      const tallasRopa = ["S", "M", "L", "XL"];
-      for (const size of tallasRopa) {
+    // 3. GENERACIÓN INTELIGENTE DE INVENTARIO Y LIMPIEZA DE DUPLICADOS
+    const c = pData.category.toLowerCase();
+    const isNumericBottom =
+      (c.includes("pantal") ||
+        c.includes("jean") ||
+        c.includes("jogger") ||
+        c.includes("cargo") ||
+        c.includes("bermuda")) &&
+      !c.includes("legging") &&
+      !c.includes("conjunto");
+
+    const isLetterSize =
+      c.includes("ropa") ||
+      c.includes("camiseta") ||
+      c.includes("hoodie") ||
+      c.includes("legging") ||
+      c.includes("conjunto") ||
+      c.includes("set") ||
+      c.includes("top") ||
+      c.includes("buso") ||
+      c.includes("sudadera") ||
+      c.includes("chaqueta") ||
+      c.includes("camisa") ||
+      c.includes("oversize");
+
+    let validSizes = [];
+
+    if (isNumericBottom) {
+      validSizes =
+        c.includes("dama") || c.includes("mujer")
+          ? ["6", "8", "10", "12", "14"]
+          : ["30", "32", "34", "36"];
+
+      for (const size of validSizes) {
+        const barcode = `770${product.id.replace(/\D/g, "")}${size}`;
+        await db.inventory.upsert({
+          where: { productId_size: { productId: product.id, size } },
+          update: {},
+          create: {
+            productId: product.id,
+            size,
+            quantity: 12,
+            barcode,
+            minStock: 2,
+          },
+        });
+      }
+    } else if (isLetterSize) {
+      validSizes = ["S", "M", "L", "XL"];
+      for (const size of validSizes) {
         const barcode = `770${product.id.replace(/\D/g, "")}${size.charCodeAt(0)}`;
-        await prisma.inventory.upsert({
+        await db.inventory.upsert({
           where: { productId_size: { productId: product.id, size } },
           update: {}, // No sobreescribimos la cantidad si ya existe para no perder cambios manuales
           create: {
@@ -169,10 +250,10 @@ async function main() {
         });
       }
     } else if (pData.category === "calzado") {
-      const tallasCalzado = ["38", "39", "40", "41", "42"];
-      for (const size of tallasCalzado) {
+      validSizes = ["38", "39", "40", "41", "42"];
+      for (const size of validSizes) {
         const barcode = `880${product.id.replace(/\D/g, "")}${size}`;
-        await prisma.inventory.upsert({
+        await db.inventory.upsert({
           where: { productId_size: { productId: product.id, size } },
           update: {},
           create: {
@@ -185,9 +266,9 @@ async function main() {
         });
       }
     } else {
-      // Accesorios no suelen tener talla
+      validSizes = ["U"];
       const barcode = `990${product.id.replace(/\D/g, "")}`;
-      await prisma.inventory.upsert({
+      await db.inventory.upsert({
         where: { productId_size: { productId: product.id, size: "U" } },
         update: {},
         create: {
@@ -199,17 +280,26 @@ async function main() {
         },
       });
     }
+
+    // --- VALIDACIÓN DE DUPLICADOS: Limpiar tallas que ya no corresponden ---
+    // Si el producto tenía tallas viejas (ej. cambió de Ropa a Calzado), las borramos.
+    await db.inventory.deleteMany({
+      where: {
+        productId: product.id,
+        size: { notIn: validSizes },
+      },
+    });
   }
 
   // 4. Generar una venta de prueba para el historial
   const sampleSaleId = "SALE-SEED-001";
-  const existingSale = await prisma.sale.findUnique({
+  const existingSale = await db.sale.findUnique({
     where: { id: sampleSaleId },
   });
 
   if (!existingSale) {
     console.log("📝 Generando venta de prueba...");
-    await prisma.sale.create({
+    await db.sale.create({
       data: {
         id: sampleSaleId,
         customerName: "Cliente de Prueba",
@@ -263,5 +353,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await db.prisma.$disconnect(); // Usar la instancia real de PrismaClient
   });

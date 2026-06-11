@@ -17,8 +17,18 @@ window.API_KEY = "dev-api-key"; // Key por defecto para desarrollo
 // Fallback para apiFetch si core.js no carga
 if (typeof window.apiFetch !== "function") {
   window.apiFetch = async function (url, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
     options.headers = options.headers || {};
     options.headers["x-api-key"] = window.API_KEY;
+
+    if (
+      ["POST", "PUT", "DELETE", "PATCH"].includes(method) &&
+      window.csrfToken
+    ) {
+      options.headers["X-CSRF-Token"] = window.csrfToken;
+    }
+
+    options.credentials = "include";
     return fetch(url, options);
   };
 }

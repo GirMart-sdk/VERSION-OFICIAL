@@ -403,7 +403,7 @@ window.selectPOSPaymentMethod = function (id, name, type) {
   // Mostrar el formulario relevante según el ID del método seleccionado
   let formToShow = null;
 
-  if (id === "cod") {
+  if (id === "cod" || id === "cash") {
     formToShow = $("posPayFormCash");
   } else if (id === "wompi") {
     // Para Wompi en tienda física, usualmente registramos los detalles de la tarjeta o voucher
@@ -455,7 +455,13 @@ async function confirmPOSPaymentWithDetails() {
   let shippingAddress = "";
   let customerPhone = "";
   let shippingCarrier = "";
-  let customerEmail = $("posPayEmail").value.trim(); // Capturar el email del campo
+  // Acceso seguro al email con fallback
+  let customerEmail = $("posPayEmail")?.value?.trim() || "";
+
+  // Validar formato de email si no está vacío
+  if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    return toast("⚠️ El formato del correo electrónico es inválido");
+  }
 
   // El shippingStatus ahora se usa como "Estado del Separado"
   let shippingStatus = isLayaway ? "ABONO" : "PENDIENTE";
@@ -478,6 +484,7 @@ async function confirmPOSPaymentWithDetails() {
       items: window.WinnerApp.pos.cart,
       total: total,
       method: posCurrentPaymentMethod.name,
+      payment_method: posCurrentPaymentMethod.name,
       channel: "fisica",
       vendor: $("posVendor")?.value || "Admin",
       client: $("posClient")?.value || "Mostrador",
@@ -493,7 +500,7 @@ async function confirmPOSPaymentWithDetails() {
         shipping_status: shippingStatus,
         isLayaway,
         abonoAmount: abono,
-        received: parseFloat($("posPayCashReceived").value) || 0,
+        received: parseFloat($("posPayCashReceived")?.value) || 0,
       },
     };
 
@@ -517,7 +524,7 @@ async function confirmPOSPaymentWithDetails() {
       toast("❌ Error: " + (err.error || "No se pudo registrar"));
     }
   } catch (e) {
-    toast("❌ Error: No se pudo contactar con el servidor");
+    toast("❌ " + e.message);
   } finally {
     if (confirmBtn) confirmBtn.disabled = false;
   }

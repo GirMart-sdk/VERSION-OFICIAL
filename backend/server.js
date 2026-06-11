@@ -27,7 +27,9 @@ console.log(`[Startup] ARCHIVO: ${path.basename(envPath)}`);
 const express = require("express");
 const cors = require("cors");
 const sharp = require("sharp");
+const rateLimit = require("express-rate-limit");
 const https = require("https");
+const csrf = require("csurf");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
@@ -67,36 +69,67 @@ const { URL } = require("url");
 
 const app = express();
 
-const ADMIN_USER = process.env.ADMIN_USER || "admin";
-const ADMIN_SALT = process.env.ADMIN_SALT || "fallback_dev_salt";
+// Limitador estricto para Login y Recuperación de contraseña
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Solo 5 intentos por ventana
+  message: {
+    error: "Demasiados intentos. Por seguridad, bloqueado por 15 min.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limitador general para el resto de la API
+const generalApiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 60, // 60 peticiones por minuto por IP
+  message: { error: "Límite de peticiones excedido." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Protección CSRF (Cross-Site Request Forgery)
+const csrfProtection = csrf({
+  cookie: true, // Configuraremos las opciones dinámicamente en el middleware
+});
+
+// Middleware para ajustar seguridad de cookies según el origen
+app.use((req, res, next) => {
+  const isLocal = req.hostname === "localhost" || req.hostname === "127.0.0.1";
+  const isProxySecure =
+    req.get("x-forwarded-proto") === "https" || req.hostname.includes("ngrok");
+
+  // Edge/Chrome bloquean cookies Secure en http://localhost.
+  // Solo activamos Secure si realmente hay un túnel HTTPS activo.
+  const shouldBeSecure = isProdMode && isProxySecure;
+
+  // Si es local (HTTP), no forzamos Secure para evitar que el navegador bloquee la cookie
+  req.cookieOptions = {
+    httpOnly: true,
+    secure: shouldBeSecure,
+    sameSite: shouldBeSecure ? "None" : "Lax",
+  };
+  next();
+});
+
+const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
+
+async function hashPassword(password) {
+  const derivedKey = await scryptAsync(password, HASH_SALT, 64);
+  return derivedKey.toString("hex");
+}
 
 /**
- * Verifica la contraseña usando scrypt (necesaria para el endpoint /api/login)
+ * Verifica si una contraseña coincide con un hash guardado en la BD
  */
-async function passwordMatches(pass) {
-  if (!pass) return false;
-  const rawAdminPass = process.env.ADMIN_PASSWORD;
-
-  if (!rawAdminPass) {
-    console.error(
-      "❌ ERROR: ADMIN_PASSWORD no está definida en el archivo .env",
-    );
-    return false;
-  }
-
-  const ADMIN_HASH =
-    process.env.ADMIN_PASSWORD_HASH &&
-    process.env.ADMIN_PASSWORD_HASH !== "EL_HASH_GENERADO_DE_TU_CLAVE"
-      ? process.env.ADMIN_PASSWORD_HASH
-      : require("crypto")
-          .scryptSync(rawAdminPass, ADMIN_SALT, 64)
-          .toString("hex");
-
+async function verifyPassword(password, hash) {
+  if (!password || !hash) return false;
   try {
-    const derivedKey = await scryptAsync(pass, ADMIN_SALT, 64);
+    const derivedKey = await scryptAsync(password, HASH_SALT, 64);
     return require("crypto").timingSafeEqual(
       derivedKey,
-      Buffer.from(ADMIN_HASH, "hex"),
+      Buffer.from(hash, "hex"),
     );
   } catch {
     return false;
@@ -167,7 +200,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const IS_NGROK = (req) => req.get("host")?.includes("ngrok-free.dev");
 
 /* ── Adaptador de Base de Datos ─────────────────────────── */
-const prisma = require("./database");
+const { prisma } = require("./database"); // Ahora desestructuramos la instancia completa
 
 // Verificar conexión a la base de datos al arrancar para detectar errores de configuración
 prisma
@@ -229,26 +262,43 @@ app.use(
       if (allowedOrigins.includes(origin)) return cb(null, true);
 
       // Fallback para desarrollo: permitir cualquier variante de localhost
-      if (
-        !IS_PRODUCTION &&
-        (!origin ||
-          origin.includes("192.168.1.8") ||
-          origin.includes("::8") ||
-          origin.includes("ngrok-free"))
-      ) {
-        return cb(null, true);
-      }
+      const isAllowedTunnel =
+        origin &&
+        (origin.includes("localhost") ||
+          origin.includes("127.0.0.1") ||
+          origin.includes("ngrok-free.dev"));
+
+      if (isAllowedTunnel) return cb(null, true);
 
       return cb(null, true);
     },
     methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
     allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+    credentials: true,
   }),
 );
 
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
+// Ignorar peticiones de favicon.ico para evitar errores 404 en los logs
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
+// Endpoint para obtener el token CSRF inicial
+app.get("/api/get-csrf", csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+// Aplicar CSRF a todas las rutas de la API, excepto Webhooks
+app.use("/api", (req, res, next) => {
+  if (req.path.includes("/webhooks")) return next();
+  return csrfProtection(req, res, next);
+});
+
+// Aplicar limitadores
+app.use("/api/auth/", authLimiter);
+app.use("/api/", generalApiLimiter);
 
 // Logger de peticiones para depuración
 app.use((req, res, next) => {
@@ -319,6 +369,44 @@ const getStructuredUploadPath = () => {
   return targetDir;
 };
 
+/* ── Endpoint de subida de archivos (Imágenes) ──────────── */
+app.post("/api/storage/upload", requireAuth, async (req, res) => {
+  const { fileName, base64Data } = req.body;
+
+  if (!base64Data) {
+    return res.status(400).json({ error: "Datos de imagen no proporcionados" });
+  }
+
+  try {
+    // Procesar el base64 (quitar cabecera si existe)
+    const matches = base64Data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    let buffer;
+
+    if (matches && matches.length === 3) {
+      buffer = Buffer.from(matches[2], "base64");
+    } else {
+      buffer = Buffer.from(base64Data, "base64");
+    }
+
+    const uploadDir = getStructuredUploadPath();
+    // Generar nombre único para evitar duplicados
+    const ext = path.extname(fileName) || ".webp";
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}${ext}`;
+    const filePath = path.join(uploadDir, uniqueName);
+
+    fs.writeFileSync(filePath, buffer);
+
+    // Generar URL pública relativa
+    const publicPath = path.relative(CLIENT_ROOT, filePath).replace(/\\/g, "/");
+    const publicUrl = `/${publicPath}`;
+
+    res.json({ success: true, publicUrl });
+  } catch (err) {
+    console.error("❌ Error guardando archivo:", err);
+    res.status(500).json({ error: "Fallo al procesar la carga del archivo" });
+  }
+});
+
 /* ── Endpoint de actualización masiva (CSV) ───────────────── */
 app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {
   const { updates } = req.body; // Array de { sku/id, size, qty }
@@ -372,6 +460,11 @@ app.get("/api/config", (req, res) => {
       facebook: process.env.SOCIAL_FACEBOOK || "",
       whatsapp: process.env.SOCIAL_WHATSAPP || "",
     },
+    branding: {
+      heroImages: [
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1600",
+      ],
+    },
   });
 });
 /* ═══════════════════════════════════════════════════════════
@@ -417,9 +510,13 @@ function startServer(portToTry) {
   const server = app
     .listen(portToTry)
     .on("listening", () => {
-      const displayUrl =
-        process.env.FRONTEND_URL || `http://localhost:${portToTry}`;
-      console.log(`\n🚀 WINNER STORE Corriendo en: ${displayUrl}`);
+      const localUrl = `http://localhost:${portToTry}`;
+      const publicUrl = process.env.FRONTEND_URL;
+
+      console.log(`\n🚀 WINNER STORE Corriendo en: ${localUrl}`);
+      if (publicUrl && !publicUrl.includes("localhost")) {
+        console.log(`🌐 Acceso Externo (Túnel): ${publicUrl}`);
+      }
       console.log(`🔐 Servidor iniciado con seguridad JWT y API Key activa\n`);
     })
     .on("error", (err) => {

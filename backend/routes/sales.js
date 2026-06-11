@@ -1,10 +1,11 @@
 "use strict";
 
 const express = require("express");
-const prisma = require("../database");
+const { prisma } = require("../database");
 const { requireAuth, requireApiKey } = require("../middlewares/auth");
-const { randomUUID } = require("crypto");
+const { randomUUID, createHash } = require("crypto");
 const { sendSaleEmail } = require("../../emails/mailer");
+const { validate, schemas } = require("../middlewares/validation");
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ router.get("/sales", requireAuth, async (req, res) => {
 });
 
 // POST /api/sales — registrar venta (desde admin o tienda online)
-router.post("/sales", async (req, res) => {
+router.post("/sales", validate(schemas.sale), async (req, res) => {
   const {
     id,
     total,
@@ -343,5 +344,76 @@ router.get("/stats", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET /api/analytics/top-products — KPI de productos más vendidos para el Dashboard
+router.get("/analytics/top-products", requireAuth, async (req, res) => {
+  try {
+    // Agrupamos los items de venta por producto y sumamos sus cantidades
+    const topProducts = await prisma.saleItem.groupBy({
+      by: ["productId", "product_name"],
+      _sum: {
+        quantity: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: "desc",
+        },
+      },
+      take: 5,
+    });
+
+    const formatted = topProducts.map((item) => ({
+      name: item.product_name,
+      qty_sold: item._sum.quantity || 0,
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Error al obtener estadísticas de productos" });
+  }
+});
+
+// POST /api/checkout/init — Generar parámetros de seguridad para Wompi
+router.post(
+  "/checkout/init",
+  validate(schemas.checkoutInit),
+  async (req, res) => {
+    const { saleId, amount, email } = req.body;
+
+    const publicKey = process.env.WOMPI_PUBLIC_KEY;
+    const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
+
+    // Si no hay configuración de Wompi en el .env, indicamos al front que use pago manual
+    if (!publicKey || !integritySecret) {
+      console.warn(
+        "⚠️ Wompi no configurado correctamente. Derivando a pago manual.",
+      );
+      return res.json({ isManual: true });
+    }
+
+    const amountInCents = Math.round(amount * 100);
+    const currency = "COP";
+
+    // Generar firma de integridad (Integrity Check) requerida por Wompi
+    const chain = `${saleId}${amountInCents}${currency}${integritySecret}`;
+    const integrity = require("crypto")
+      .createHash("sha256")
+      .update(chain)
+      .digest("hex");
+
+    res.json({
+      config: {
+        publicKey,
+        currency,
+        amountInCents,
+        reference: saleId,
+        signature: { integrity },
+        customerEmail: email || "",
+      },
+    });
+  },
+);
 
 module.exports = router;

@@ -8,13 +8,25 @@ const PDFDocument = require("pdfkit");
  * Utiliza variables de entorno para máxima seguridad.
  */
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || "587"),
-  secure: process.env.EMAIL_PORT === "465", // true para 465, false para otros
+  host: process.env.EMAIL_HOST || "smtp.resend.com",
+  port: parseInt(process.env.EMAIL_PORT || "465"),
+  secure: process.env.EMAIL_PORT === "465",
   auth: {
-    user: process.env.EMAIL_USER,
+    // Resend requiere que el usuario sea siempre "resend" para SMTP
+    user: (process.env.EMAIL_HOST || "").includes("resend")
+      ? "resend"
+      : process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+});
+
+// Verificar la conexión con el servidor de correo al iniciar
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("❌ [Mailer] Error de configuración SMTP:", error.message);
+  } else {
+    console.log("📧 [Mailer] Servidor de correo listo para enviar mensajes");
+  }
 });
 
 /**
@@ -223,4 +235,49 @@ async function sendSaleEmail(sale) {
   }
 }
 
-module.exports = { sendSaleEmail };
+/**
+ * Envía un correo de recuperación de contraseña.
+ * @param {Object} user - Objeto del usuario (id, username, email).
+ */
+async function sendResetEmail(user) {
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER) return;
+
+  // Usar el email del usuario, o el username si es un correo
+  const emailTarget =
+    user.email || (user.username.includes("@") ? user.username : null);
+
+  if (!emailTarget) {
+    console.error(
+      `❌ [Mailer] No se pudo determinar el correo para el usuario: ${user.username}`,
+    );
+    return;
+  }
+
+  const mailOptions = {
+    from: `"Winner Store Soporte" <${process.env.EMAIL_USER}>`,
+    to: emailTarget,
+    subject: "🔐 Recuperación de Contraseña - Winner Store",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #333; text-align: center;">Hola, ${user.username}</h2>
+        <p style="color: #555; line-height: 1.6;">Has solicitado restablecer tu contraseña para acceder al panel de Winner Store.</p>
+        <div style="background: #ffffff; padding: 20px; border-left: 4px solid #e8ff47; margin: 20px 0; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <p style="margin: 0; font-weight: bold;">Tu solicitud ha sido recibida.</p>
+          <p style="margin: 10px 0 0 0;">Por favor, contacta al soporte técnico o utiliza el sistema de gestión para asignar una nueva clave.</p>
+        </div>
+        <p style="font-size: 11px; color: #999; text-align: center; margin-top: 30px;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(
+      `[Mailer] Email de recuperación enviado a ${emailTarget}: ${info.messageId}`,
+    );
+  } catch (error) {
+    console.error("[Mailer] Error enviando email de recuperación:", error);
+  }
+}
+
+module.exports = { sendSaleEmail, sendResetEmail };

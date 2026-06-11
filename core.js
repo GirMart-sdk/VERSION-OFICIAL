@@ -18,7 +18,10 @@ const API_URL = (() => {
   const origin = window.location.origin;
 
   // Mejoramos la lógica para producción pública
-  if (origin.startsWith("file:")) return "http://192.168.1.8:3000/api";
+  if (origin.startsWith("file:")) {
+    const savedIp = localStorage.getItem("w_server_ip") || "localhost";
+    return `http://${savedIp}:3000/api`;
+  }
 
   // Aseguramos que si estamos en producción, el API_URL coincida con el protocolo actual (http/https)
   const base = origin.replace(/\/$/, "");
@@ -111,17 +114,30 @@ window.toast = toast;
 
 const getApiKey = () => localStorage.getItem("w_api_key") || "dev-api-key";
 
-const apiFetch = (url, options = {}) => {
+const apiFetch = async (url, options = {}) => {
+  const method = (options.method || "GET").toUpperCase();
   const headers = {
     "Content-Type": "application/json",
     "x-api-key": getApiKey(),
     ...options.headers,
   };
+
+  // Inyectar token CSRF para métodos de escritura
+  if (["POST", "PUT", "DELETE", "PATCH"].includes(method) && window.csrfToken) {
+    headers["X-CSRF-Token"] = window.csrfToken;
+  }
+
   if (window.AUTH_TOKEN)
     headers["Authorization"] = `Bearer ${window.AUTH_TOKEN}`;
-  return fetch(url, { ...options, headers }).then((res) => {
+
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: "include", // Manejo global de cookies (Sesión y CSRF)
+  }).then(async (res) => {
     if (res.status === 401) {
       // Si falla la API Key, la borramos para que en el próximo intento use la de desarrollo
+      console.error("🔒 Sesión no autorizada o expirada");
       if (!headers["Authorization"]) {
         localStorage.removeItem("w_api_key");
       }
@@ -135,10 +151,35 @@ const apiFetch = (url, options = {}) => {
 
       return Promise.reject(new Error(errorMsg));
     }
+    if (!res.ok) {
+      // Intentar extraer el mensaje de error del JSON del servidor
+      const errorData = await res.json().catch(() => ({}));
+      const errorMsg =
+        errorData.error ||
+        errorData.message ||
+        `Error ${res.status}: ${res.statusText}`;
+
+      return Promise.reject(new Error(errorMsg));
+    }
     return res;
   });
 };
 window.apiFetch = apiFetch;
+
+/**
+ * Obtiene el token CSRF inicial del servidor
+ */
+async function refreshCsrfToken() {
+  try {
+    const res = await fetch(`${window.API_URL}/get-csrf`, {
+      credentials: "include",
+    });
+    const data = await res.json();
+    window.csrfToken = data.csrfToken;
+  } catch (e) {
+    console.error("❌ No se pudo obtener el token CSRF");
+  }
+}
 
 const totalStock = (p) =>
   p?.stock
@@ -159,8 +200,9 @@ window.stockStatus = stockStatus;
 
 function getSizesForCategory(cat) {
   const c = (cat || "").toLowerCase();
-  // Calzado
-  if (c.includes("calzado") || c.includes("tenis"))
+
+  // 1. CALZADO (Tenis, Zapatos)
+  if (c.includes("calzado") || c.includes("tenis") || c.includes("zapato")) {
     return [
       "34",
       "35",
@@ -176,21 +218,61 @@ function getSizesForCategory(cat) {
       "45",
       "46",
     ];
-  // Pantalones Dama
-  if (c.includes("pantalón dama") || c.includes("jeans dama"))
-    return ["6", "8", "10", "12", "14", "16"];
-  // Pantalones Caballero
-  if (c.includes("pantalón caballero") || c.includes("jeans caballero"))
+  }
+
+  // 2. ROPA ELÁSTICA O SUPERIOR (Letras: S, M, L, XL...)
+  // Los Leggings y Conjuntos suelen ser elásticos y se manejan por letras
+  const isLetterSize =
+    c.includes("camiseta") ||
+    c.includes("hoodie") ||
+    c.includes("legging") ||
+    c.includes("conjunto") ||
+    c.includes("set") ||
+    c.includes("top") ||
+    c.includes("blusa") ||
+    c.includes("chaqueta") ||
+    c.includes("saco") ||
+    c.includes("buso") ||
+    c.includes("oversize") ||
+    c.includes("camisa") ||
+    c.includes("polo") ||
+    c.includes("sudadera") || // Sudadera ahora es Letra por defecto
+    c.includes("boxer") ||
+    c.includes("ropa interior") ||
+    c.includes("lycra") ||
+    c.includes("deportivo");
+
+  if (isLetterSize) return ["XS", "S", "M", "L", "XL", "XXL"];
+
+  // 3. PRENDAS INFERIORES RÍGIDAS (Números: 6, 8, 10... o 28, 30, 32...)
+  // Joggers, Jeans, Cargo, Bermudas.
+  // Importante: No debe ser un legging o conjunto (ya capturados arriba)
+  const isNumericBottom =
+    (c.includes("pantal") ||
+      c.includes("jean") ||
+      c.includes("jogger") ||
+      c.includes("cargo") ||
+      c.includes("bermuda")) &&
+    !c.includes("legging") &&
+    !c.includes("conjunto");
+
+  if (isNumericBottom) {
+    // Tallas Dama (6, 8, 10, 12, 14, 16)
+    if (c.includes("dama") || c.includes("mujer") || c.includes("niña")) {
+      return ["6", "8", "10", "12", "14", "16"];
+    }
+    // Tallas Caballero (28, 30, 32, 34, 36, 38)
     return ["28", "30", "32", "34", "36", "38"];
-  // Ropa interior y Boxers
-  if (c.includes("boxer") || c.includes("ropa interior"))
-    return ["S", "M", "L", "XL"];
-  // Talla Única (Accesorios, Relojes, Joyas, Lociones, Gorras)
+  }
+
+  // 4. TALLA ÚNICA
   if (
     c.includes("accesorio") ||
     c.includes("reloj") ||
     c.includes("joya") ||
-    c.includes("loción")
+    c.includes("loción") ||
+    c.includes("gorra") ||
+    c.includes("gafa")
   )
     return ["U"];
 
@@ -266,6 +348,13 @@ window.payLog = LS.get("payLog", []); // Ahora LS está definido
 
 window.defaultPayMethods = () => ({
   national: [
+    {
+      id: "cash",
+      name: "Efectivo",
+      icon: "💵",
+      type: "Tienda Física",
+      enabled: true,
+    },
     {
       id: "wompi",
       name: "Wompi (Bancolombia)",
@@ -369,7 +458,7 @@ window.navigateTo = function (page) {
 
 window.toggleSidebar = () => $("sidebar").classList.toggle("mobile-open");
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const clockEl = $("topbarClock");
   if (clockEl) {
     const clockFormatter = new Intl.DateTimeFormat("es-CO", {
@@ -382,6 +471,9 @@ document.addEventListener("DOMContentLoaded", () => {
       clockEl.textContent = clockFormatter.format(new Date());
     }, 1000);
   }
+
+  // Obtener CSRF antes de cualquier otra cosa
+  await refreshCsrfToken();
 
   // Verificación de sesión centralizada y segura
   const s = SS.get("session");
