@@ -20,6 +20,7 @@
 - **Control por Tallas**: Lógica diferenciada para Ropa (XS-XXL), Calzado (34-46) y Accesorios (Talla Única).
 - **Barcoding**: Generación y escaneo de etiquetas Code 128 / EAN-13 integradas.
 - **Carga Masiva**: Importación inteligente de stock vía CSV compatible con software contable local.
+- **Seguridad de Datos**: Script `backup-db.bat` para respaldos automáticos de PostgreSQL.
 
 ### 🛒 Punto de Venta (POS) High-Performance
 
@@ -92,10 +93,21 @@ FRONTEND_URL="http://localhost:3000"
 
 3. **Iniciar Servidor**:
    Usa el script automatizado para Windows:
+
    ```bash
    .\start-local.bat
    ```
+
+4. **Producción (Windows Server)**:
+   Si deseas dejar el servidor corriendo permanentemente:
+
+   ```bash
+   cd scripts
+   .\deploy-windows.bat
+   ```
+
    O vía npm:
+
    ```bash
    npm start
    ```

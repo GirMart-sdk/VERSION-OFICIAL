@@ -29,7 +29,7 @@
 | Componente            | Estado | Detalles                                                                               |
 | --------------------- | ------ | -------------------------------------------------------------------------------------- |
 | Base de Datos         | ✅     | Prisma 7 (PostgreSQL: `dezpy_v01`) con **Barcodes** y **Stock Mínimo** por tallas.     |
-| Backend Node.js       | ✅     | 40+ endpoints, JWT, Nodemailer (Actor Directo) para emails.                            |
+| Backend Node.js       | ✅     | 40+ endpoints, JWT, Nodemailer para emails y Sharp para procesamiento de imágenes.     |
 | Frontend POS          | ✅     | **Rediseño premium**, animaciones, captura de email para factura.                      |
 | Sistema de Pagos      | ✅     | Captura de metadatos (Voucher, Teléfono, Cambio, Email).                               |
 | Gestión de Inventario | ✅     | Stock por talla + QR + Alertas + **Carga masiva inteligente CSV**.                     |
@@ -37,6 +37,7 @@
 | Sistema de Tallas     | ✅     | Categórico: Ropa (letras), Calzado (números), Accesorios (**talla U**).                |
 | Datos de Prueba       | ✅     | Seed optimizado para PostgreSQL y SQLite.                                              |
 | Documentación         | ✅     | APIs, setup, y guías operacionales.                                                    |
+| Automatización        | ✅     | Scripts `.bat` para **Backup**, **Deploy** con PM2 e **Instalación rápida**.           |
 | Dashboard             | ✅     | **Layout GRID dinámico, ApexCharts, KPIs con Sparklines, Actividad en vivo, Heatmap.** |
 
 ---
@@ -57,6 +58,7 @@ WINNER STORE v3.0
 │   ├── server.js             (Express 5.x - API Unificada)
 │   ├── prisma/schema.prisma  (Definición ORM)
 │   ├── seed.js               (Datos iniciales: 26 productos)
+│   ├── backup-db.bat         (Respaldo automático de PostgreSQL)
 │   └── package.json          (Dependencias optimizadas)
 │
 └── Base de Datos
@@ -369,9 +371,17 @@ nodemon backend/server.js
 
 ```bash
 # Terminal 1: Iniciar servidor
-npm start
+.\start-local.bat
 # Terminal 2: Verificar API
 curl http://localhost:3000/api/products
+```
+
+### Mantenimiento de Datos
+
+Para realizar un respaldo de seguridad de toda la base de datos PostgreSQL:
+
+```bash
+.\backup-db.bat
 
 # Resultado esperado (JSON con 26 productos)
 ```

@@ -1,6 +1,6 @@
 # API_AND_FEATURES.md
 
-# 🔌 API REST Y CARACTERÍSTICAS -WINNER STORE v3.5 (Prisma Edition)
+# 🔌 API REST Y CARACTERÍSTICAS - WINNER STORE v3.5 (Prisma Edition)
 
 **Documentación completa de APIs, características, métodos de pago y troubleshooting**
 
@@ -55,21 +55,23 @@
 - **Heatmap de horarios de venta:** Identifica las horas de mayor actividad para optimizar operaciones.
 - Ventas hoy/mes/año
 - Productos más vendidos
-- Clientes nuevos
-- Ingresos totales
-- Estado del inventario
 
-**Secciones Admin:**
+#### 🛠️ Secciones Admin Especializadas
 
 1. **Productos**
    - Listar todos
-   - Crear nuevo
-   - Editar producto
-   - Eliminar producto
+   - **Editor con Recorte de Imagen:** Integración con `Cropper.js` para fotos perfectas (1:1).
+   - **Generación de Códigos de Barras:** Sistema `JsBarcode` integrado para etiquetas (CODE128).
+   - **Impresión Térmica:** Formato optimizado para etiquetas de 50mm x 25mm.
    - Ver inventario por talla (con talla "U" para accesorios)
-   - Marcar como oferta/badge
 
-2. **Ventas**
+2. **Centro de Mensajería (WhatsApp Hub)**
+   - **Notificaciones 1-clic:** Envío de tickets, confirmaciones de envío y recordatorios de cobro.
+   - **Templates Dinámicos:** Mensajes pre-construidos que incluyen links de facturas y guías.
+
+3. **Ventas y Finanzas**
+   - **Gestión de Métodos de Pago:** Activa/Desactiva pasarelas (Wompi, Nequi, COD) desde el panel.
+   - **Arqueo de Caja:** Módulo integrado para cierre de ventas diario.
    - Registrar venta
    - Ver historial completo
    - **Gestión de logística y despacho (estados de envío, tracking)**
@@ -78,22 +80,23 @@
    - Detalles de cada venta
    - Método de pago usado
 
-3. **Inventario**
+4. **Inventario Pro**
    - Stock actual por talla
    - Alerts de bajo stock
-   - **Carga masiva inteligente de inventario (CSV compatible con Treinta)**
+   - **Carga masiva inteligente:** Importación de stock vía CSV compatible con software contable.
+   - **Sincronización masiva:** Actualización de miles de SKUs mediante archivos Excel.
    - Predicción de demanda
    - Movimientos de inventario
    - Exportar reporte
 
-4. **Clientes**
+5. **Clientes**
    - Listado de clientes
    - Datos de contacto
    - Historial de compras
    - Total gastado
    - Últimas órdenes
 
-5. **Estadísticas**
+6. **Estadísticas**
    - **Conversión dinámica**
    - **Gráficas de rendimiento con ApexCharts**
    - **Actividad en vivo**
@@ -104,7 +107,7 @@
    - Reportes personalizados
    - Exportar a CSV
 
-6. **Configuración**
+7. **Configuración**
    - Cambiar contraseña
    - Datos de tienda
    - Métodos de pago
@@ -137,6 +140,9 @@ En resumen:
 - ✅ CORS configurado
 - ✅ PostgreSQL (Prisma ORM)
 - ✅ Respaldos automáticos
+- ✅ **Procesamiento de Imágenes (Sharp):** Optimización automática a formato WebP.
+- ✅ **Automatización Windows:** Scripts `.bat` para instalación, arranque y respaldos de DB.
+- ✅ **PM2 Ready:** Configuración lista para mantenerse activo 24/7 en servidores.
 
 ---
 
@@ -911,6 +917,20 @@ JOIN products p ON i.product_id = p.id
 WHERE i.quantity < i.reorder_level
 GROUP BY i.product_id;
 ```
+
+---
+
+## 🚀 GUÍA DE DESPLIEGUE (WINDOWS SERVER)
+
+Para poner la tienda en producción en otro dispositivo:
+
+1. **Instalar Dependencias:** Ejecutar `install-and-run.bat` (instala Node, dependencias y sincroniza la DB).
+2. **Respaldos:** El script `backup-db.bat` crea volcados SQL de PostgreSQL automáticamente en la carpeta `/backups`.
+3. **Despliegue Profesional:** Usar `scripts/deploy-windows.bat`.
+   - Automatiza la instalación de PM2.
+   - Ejecuta las migraciones de Prisma.
+   - Realiza el Seed de datos iniciales.
+   - Configura el auto-inicio del servidor tras reinicios del PC.
 
 ---
 
