@@ -3,7 +3,7 @@ REM ═════════════════════════�
 REM WINNER STORE v3.5 (Prisma Edition) - Iniciador Local Automático
 REM Script para iniciar la tienda automáticamente en Windows
 REM ════════════════════════════════════════════════════════════════
-set NODE_ENV=production
+set NODE_ENV=development
 
 setlocal enabledelayedexpansion
 
@@ -80,33 +80,60 @@ if not exist ".env" (
 REM Verificar BD
 echo [Conectando Base de Datos PostgreSQL...]
 echo [*] Verificando estructura de tablas...
-echo [1/2] Generando cliente de datos...
+echo [1/3] Generando cliente de datos...
+
+REM Intentar eliminar la carpeta temporal del cliente si existe (ayuda con el error EPERM)
+if exist "node_modules\.prisma\client" (
+    rd /s /q "node_modules\.prisma\client" >nul 2>&1
+)
+
 call npx prisma generate
-
-echo [2/2] Aplicando migraciones pendientes...
-call npx prisma migrate deploy
-
 if %errorlevel% neq 0 (
-    echo ❌ ERROR: Fallo al aplicar migraciones. Si es un equipo nuevo, recuerda hacer el Baseline.
+    echo ❌ ERROR: No se pudo generar el cliente de Prisma. El archivo esta bloqueado por otro proceso.
+    echo [!] Intenta cerrar VS Code o cualquier otra terminal y ejecuta este script de nuevo.
     pause
     exit /b 1
 )
-echo ✅ Conexión de base de datos PostgreSQL preparada
+
+echo [2/3] Aplicando migraciones pendientes...
+call npx prisma migrate deploy
+
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: Fallo al aplicar migraciones ^(P3009/P3018^).
+    echo [!] Si ves un error de sintaxis '\u{feff}', guarda prisma/migrations/0_init_production/migration.sql como 'UTF-8 sin BOM'.
+    echo [!] Si las tablas ya existen en PostgreSQL, intenta: npx prisma migrate resolve --applied 0_init_production
+    pause
+    exit /b 1
+)
+
+echo [3/3] Sincronizando usuario administrador...
+node backend/seed.js
+
+echo ✅ Entorno preparado correctamente.
 
 echo.
 echo ════════════════════════════════════════════════════════════════
-echo 🚀 SERVIDOR ACTIVO - SISTEMA WINNER STORE
-echo 🔗 Acceso: http://localhost:3000/admin-panel.html
+echo � INICIANDO SISTEMA WINNER STORE
+echo � Acceso: http://localhost:3000/admin-panel.html
 echo.
-echo 💡 CONSEJO: Si realizaste cambios en la DB, presiona F5 en la tienda
-echo           para sincronizar los IDs de productos en el navegador.
-echo ⚠️  No cierres esta ventana mientras uses el sistema.
+echo [*] El servidor se iniciará en segundo plano.
+echo [*] El navegador se abrirá automáticamente en 5 segundos...
+echo.
+echo 💡 CONSEJO: Si ves 'Failed to fetch', espera un momento y pulsa F5.
+echo ⚠️  NO CIERRES ESTA VENTANA.
 echo ════════════════════════════════════════════════════════════════
 echo.
 
-REM Abrir navegador automáticamente
+REM Limpiar puertos antes de iniciar
+echo [!] Liberando puerto 3000...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %%a >nul 2>&1
+
+echo [🚀] Iniciando backend...
+start "WINNER STORE SERVER" cmd /k "title SERVIDOR ACTIVO && node backend/server.js"
+
+echo [*] Esperando a que el servidor este listo (10 segundos)...
+timeout /t 10 /nobreak > nul
 start http://localhost:3000/admin-panel.html
 
-REM Iniciar servidor
-node backend/server.js
-pause
+echo [OK] Sistema en ejecucion.
+exit

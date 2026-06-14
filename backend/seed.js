@@ -49,6 +49,8 @@ async function main() {
   // Generar hash de la contraseña
   const passwordHash = scryptSync(adminPass, HASH_SALT, 64).toString("hex");
 
+  console.log(`[*] Sincronizando hash para el usuario: ${adminUser} con salt: ${HASH_SALT.substring(0, 5)}...`);
+
   // Usamos upsert para asegurar que el admin tenga el email correcto incluso si ya existía
   await db.user.upsert({
     where: { username: adminUser },

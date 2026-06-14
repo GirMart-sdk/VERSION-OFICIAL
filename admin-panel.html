@@ -1565,15 +1565,15 @@
               <div class="scanner-actions">
                 <button
                   class="btn-accent"
-                  id="startScanBtn"
-                  onclick="startProductQRScanner()"
+                  id="startGeneralScanBtn"
+                  onclick="startGeneralQRScannerPage()"
                 >
                   ▶ Iniciar cámara
                 </button>
                 <button
                   class="btn-ghost"
-                  id="stopScanBtn"
-                  onclick="stopProductQRScanner()"
+                  id="stopGeneralScanBtn"
+                  onclick="stopGeneralQRScannerPage()"
                   style="display: none"
                 >
                   ⏹ Detener
@@ -1841,6 +1841,7 @@
               border-radius: 8px;
               margin-bottom: 16px;
               overflow: hidden;
+              position: relative;
             "
           >
             <div
@@ -1862,7 +1863,7 @@
             <button
               class="btn-ghost"
               id="productScanStopBtn"
-              onclick="stopProductQRScanner()"
+              onclick="stopProductModalScanner()"
               style="display: none"
             >
               ⏹ Detener

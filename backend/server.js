@@ -9,6 +9,17 @@ const path = require("path");
 const fs = require("fs");
 // 1. CARGAR CONFIGURACIÓN PRIMERO (Antes de cualquier otro import)
 const isProdMode = process.env.NODE_ENV === "production";
+
+// Manejadores de errores globales para evitar que el servidor muera por fallos de SMTP o DB
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️ [Advertencia] Promesa no manejada:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("❌ [Error Crítico] Excepción no capturada:", err.message);
+  // No salimos del proceso para permitir que el servidor intente seguir vivo
+});
+
 let envPath = path.resolve(
   __dirname,
   "..",
@@ -22,7 +33,18 @@ if (!fs.existsSync(envPath)) {
 
 require("dotenv").config({ path: envPath });
 console.log(`[Startup] MODO: ${process.env.NODE_ENV || "development"}`);
+console.log(`[Startup] RUTA COMPLETA ENV: ${envPath}`);
 console.log(`[Startup] ARCHIVO: ${path.basename(envPath)}`);
+
+// Depuración de Mailer (Asegúrate de que coincidan con tu .env)
+console.log(
+  `[Mailer] Config: Host=${process.env.SMTP_HOST} | User=${process.env.SMTP_USER}`,
+);
+console.log(`[Mailer] Puerto: ${process.env.SMTP_PORT}`);
+const passCheck = process.env.SMTP_PASS
+  ? "Detectado (Longitud: " + process.env.SMTP_PASS.length + ")"
+  : "NO DETECTADO";
+console.log(`[Mailer] Password: ${passCheck}`);
 
 const express = require("express");
 const cors = require("cors");
@@ -63,7 +85,18 @@ const API_KEY = process.env.API_KEY;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // 2. Ahora sí podemos importar el mailer, ya que process.env tendrá los datos
-const { sendSaleEmail, sendResetEmail } = require("../emails/mailer");
+let sendSaleEmail, sendResetEmail;
+try {
+  const mailer = require("../emails/mailer");
+  sendSaleEmail = mailer.sendSaleEmail;
+  sendResetEmail = mailer.sendResetEmail;
+  console.log("📧 [Mailer] Módulo cargado (Pendiente verificación SMTP)");
+} catch (e) {
+  console.error(
+    "⚠️ [Mailer] Error crítico cargando módulo de correos:",
+    e.message,
+  );
+}
 const { validate, schemas } = require("./middlewares/validation");
 const { URL } = require("url");
 
@@ -202,6 +235,18 @@ const IS_NGROK = (req) => req.get("host")?.includes("ngrok-free.dev");
 /* ── Adaptador de Base de Datos ─────────────────────────── */
 const { prisma } = require("./database"); // Ahora desestructuramos la instancia completa
 
+// Autonomía: Ejecutar migraciones de Prisma automáticamente en producción
+if (isProdMode) {
+  console.log("🔄 [Autonomía] Verificando esquema de base de datos...");
+  try {
+    const { execSync } = require("child_process");
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    console.log("✅ [Autonomía] Base de datos actualizada.");
+  } catch (err) {
+    console.error("⚠️ [Autonomía] Error en migraciones automáticas:", err.message);
+  }
+}
+
 // Verificar conexión a la base de datos al arrancar para detectar errores de configuración
 prisma
   .$connect()
@@ -277,6 +322,16 @@ app.use(
     credentials: true,
   }),
 );
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Private-Network", "true");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, x-api-key, x-csrf-token",
+  );
+  next();
+});
 
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));

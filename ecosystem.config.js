@@ -1,22 +1,31 @@
 module.exports = {
   apps: [
     {
-      name: "winner-store",
+      name: "winner-store-backend",
       script: "./backend/server.js",
+      interpreter: "node",
+      cwd: "c:/DEZPY_v01",
       instances: 1,
-      exec_mode: "fork",
       autorestart: true,
       watch: false,
       max_memory_restart: "1G",
-      out_file: "./logs/pm2-out.log",
-      error_file: "./logs/pm2-error.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss",
-      combine_logs: true,
-      merge_logs: true,
       env: {
-        NODE_ENV: "development",
+        NODE_ENV: "production",
       },
-      env_production: {
+      // Ejecuta las migraciones de Prisma antes de iniciar el servidor
+      // Esto sustituye la lógica del .bat
+      cron_restart: "0 0 * * *",
+      exp_backoff_restart_delay: 100,
+    },
+    {
+      name: "winner-store-backup-task",
+      script: "./backend/database-backup.js",
+      interpreter: "node",
+      cwd: "c:/DEZPY_v01",
+      cron_restart: "0 3 * * *", // Se ejecuta todos los días a las 3:00 AM
+      autorestart: false, // No reiniciar al terminar, esperar al siguiente cron
+      watch: false,
+      env: {
         NODE_ENV: "production",
       },
     },
