@@ -75,8 +75,10 @@
   },
   "devDependencies": {
     "@prisma/config": "^6.19.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-security": "^2.1.1",
     "prisma": "^6.19.3",
-    "watch": "^0.13.0"
+   "watch": "^0.13.0"
   },
   "repository": {
     "type": "git",
