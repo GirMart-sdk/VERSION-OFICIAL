@@ -100,7 +100,7 @@ router.post("/wompi", async (req, res) => {
         });
 
         if (status === "APPROVED") {
-          const paid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
+          const paid = sale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
           const balance = sale.totalAmount - paid;
 
           if (balance > 0) {

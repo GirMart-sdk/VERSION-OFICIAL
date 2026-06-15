@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json.schemastore.org/package",
+  "$schema": "https://json.schemastore.org/package.json",
   "name": "winner-store",
   "version": "2.0.0",
   "description": "🏆 WINNER STORE - Plataforma de e-commerce moderna para tiendas de ropa streetwear colombianas",
@@ -15,7 +15,8 @@
     "prestart": "prisma generate",
     "start": "node backend/server.js",
     "start:dev": "NODE_ENV=development node backend/server.js",
-    "start:local": "start-local.bat",
+    "start:local": "scripts/start-local.bat",
+    "sync:bridge": "scripts/sync-bridge.bat",
     "setup": "npx prisma generate && npx prisma db push && node backend/seed.js",
     "start:prod": "npm run setup && node backend/server.js",
     "develop": "watch 'npm start' .",

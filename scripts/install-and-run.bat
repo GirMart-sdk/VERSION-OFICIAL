@@ -7,7 +7,6 @@ REM Instala dependencias, crea BD si falta y
 REM arranca el servidor.
 REM ================================================
 
-cd /d "%~dp0"
 
 REM Configurar la consola para usar UTF-8
 chcp 65001 >nul

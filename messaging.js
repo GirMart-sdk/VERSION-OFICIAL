@@ -46,17 +46,26 @@ window.renderMessagingCenter = function () {
     .map((s) => {
       const phone = (s.customer_phone || s.phone || "").replace(/\D/g, "");
       const cleanPhone = phone.startsWith("57") ? phone : "57" + phone;
+      const displayPhone = (s.customer_phone || s.phone || "").trim();
+
       const d =
         typeof s.payment_details === "string"
           ? JSON.parse(s.payment_details || "{}")
           : s.payment_details || {};
 
+      const paid = Number(s.total_paid || 0);
+      const balance = Number(s.total || 0) - paid;
+
       return `
         <div class="dash-neon-box" style="padding:15px; margin-bottom:10px; flex-direction:row; justify-content:space-between; text-align:left; align-items:center;">
             <div style="z-index:1">
-                <div style="font-weight:700; font-size:14px; color:white">${esc(s.client)}</div>
-                <div style="font-size:11px; color:var(--gray-text)">Orden #${s.id.slice(-6).toUpperCase()} • ${fmtDate(s.timestamp)}</div>
-                <div style="margin-top:5px">
+                <div style="font-weight:700; font-size:14px; color:white">${esc(s.client || "Mostrador")}</div>
+                <div style="font-size:11px; color:var(--accent); font-weight:600; margin-top:2px;">📱 ${esc(displayPhone)}</div>
+                <div style="font-size:11px; color:var(--gray-text); margin-top:2px;">Orden #${s.id.slice(-6).toUpperCase()} • ${fmtDate(s.timestamp)}</div>
+                
+                ${balance > 0 ? `<div style="font-size:12px; color:var(--orange); font-weight:700; margin-top:5px;">SALDO: ${fmt(balance)}</div>` : ""}
+
+                <div style="margin-top:8px">
                     <span class="status-badge ${s.payment_status === "completed" ? "s-ok" : "s-low"}">${s.payment_status === "completed" ? "PAGADO" : "PENDIENTE"}</span>
                     ${s.shipping_address ? `<span class="status-badge s-fisica">${d.shipping_status || "PENDIENTE"}</span>` : ""}
                 </div>

@@ -15,6 +15,7 @@ async function fetchSalesLog() {
     window.allSalesData = data.map((s) => ({
       ...s,
       total: Number(s.total), // Asegurar que sea número
+      total_paid: Number(s.total_paid || 0), // Forzar conversión a número para evitar errores de visualización
       channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
     }));
 
@@ -303,6 +304,9 @@ window.viewSaleDetails = (id) => {
 
   const shipStatus = details.shipping_status || "PENDIENTE";
   const trackingNum = details.tracking_number || "";
+  const paid = Number(sale.total_paid || 0);
+  const balance = Math.max(0, sale.total - paid);
+  const isDone = balance <= 0;
 
   let overlay = $("saleDetailsOverlay");
   let modal = $("saleDetailsModal");
@@ -332,6 +336,23 @@ window.viewSaleDetails = (id) => {
         <strong>Cliente:</strong> <span style="color:white">${esc(sale.client)}</span><br>
         <strong>Canal:</strong> <span style="color:white">${sale.channel.toUpperCase()}</span><br>
         <strong>Dirección:</strong> <span style="color:white">${esc(sale.shipping_address || "Mostrador / Sin envío")}</span>
+      </div>
+
+      <!-- RESUMEN FINANCIERO DEL SEPARADO -->
+      <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border)">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
+          <span>Total de la Venta:</span> <span style="font-weight:700; color:white;">${fmt(sale.total)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px; color:var(--green)">
+          <span>Total Abonado:</span> <span style="font-weight:700">${fmt(paid)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); pt:8px; margin-top:8px; color:var(--orange)">
+          <span style="font-size:12px; align-self:center;">Saldo Pendiente:</span> 
+          <div style="text-align:right">
+            <span style="font-weight:800; font-size:18px;">${fmt(balance)}</span>
+            ${!isDone ? `<br><button class="btn-accent" style="font-size:9px; padding:2px 8px; margin-top:5px;" onclick="window.openLayawayPayment('${sale.id}'); window.closeSaleDetails();">➕ REGISTRAR ABONO</button>` : ""}
+          </div>
+        </div>
       </div>
 
       <div class="form-group" style="margin-bottom:15px">
@@ -509,8 +530,14 @@ function updateLayawayKPIs(data) {
 }
 
 window.openLayawayPayment = async (saleId) => {
-  const amount = prompt("Ingrese el monto del abono (COP):");
-  if (!amount || isNaN(amount) || amount <= 0) return;
+  const sale = window.allSalesData.find(x => x.id === saleId);
+  if (!sale) return;
+
+  const currentBalance = sale.total - (sale.total_paid || 0);
+  const amount = prompt(`💸 REGISTRAR ABONO - Orden #${saleId.slice(-6).toUpperCase()}\nSaldo Pendiente: ${fmt(currentBalance)}\n\nIngrese el monto del abono (COP):`, currentBalance);
+  
+  if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
+
   try {
     const res = await apiFetch(`${API_URL}/sales/${saleId}/payments`, {
       method: "POST",

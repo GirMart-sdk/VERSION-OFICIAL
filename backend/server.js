@@ -22,7 +22,11 @@ process.on("unhandledRejection", (reason, promise) => {
 
 process.on("uncaughtException", (err) => {
   console.error("❌ [Error Crítico] Excepción no capturada:", err.message);
-  // No salimos del proceso para permitir que el servidor intente seguir vivo
+  // En producción, es mejor cerrar y dejar que PM2 reinicie el proceso para limpiar memoria
+  if (isProdMode) {
+    console.error("Terminando proceso para reinicio limpio...");
+    process.exit(1);
+  }
 });
 
 let envPath = path.resolve(
@@ -317,7 +321,7 @@ app.use(
 
       if (isAllowedTunnel) return cb(null, true);
 
-      return cb(null, true);
+      return cb(new Error("No permitido por políticas CORS"));
     },
     methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
     allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
@@ -336,8 +340,8 @@ app.use((req, res, next) => {
 });
 
 app.use(cookieParser());
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+app.use(bodyParser.json({ limit: "2mb" })); // Reducido para evitar DoS por payloads gigantes
+app.use(bodyParser.urlencoded({ limit: "2mb", extended: true }));
 
 // 3. SEGURIDAD ACTIVA: Chequeo de IP Jail y Honeypot
 app.use(asyncHandler(securityMiddleware.checkIP));

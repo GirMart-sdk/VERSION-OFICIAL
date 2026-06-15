@@ -488,9 +488,8 @@ async function confirmPOSPaymentWithDetails() {
       channel: "fisica",
       vendor: $("posVendor")?.value || "Admin",
       client: $("posClient")?.value || "Mostrador",
-      customer_email: customerEmail, // Añadir el email del cliente a los datos de la venta
-      customer_phone:
-        customerPhone || $("posCustomerPhone")?.value.trim() || "",
+      customer_email: customerEmail,
+      customer_phone: customerPhone || $("posCustomerPhone")?.value.trim() || "", // Aseguramos que se tome de posCustomerPhone si no se llenó en el modal
       payment_status: isLayaway ? "partial" : "completed",
       shipping_address:
         shippingAddress || (isLayaway ? "Apartado en Tienda" : "Venta Directa"),

@@ -19,8 +19,7 @@ module.exports = {
     },
     {
       name: "winner-store-backup-task",
-      script: "./backend/database-backup.js",
-      interpreter: "node",
+      script: "./scripts/backup-db.bat",
       cwd: "c:/DEZPY_v01",
       cron_restart: "0 3 * * *", // Se ejecuta todos los días a las 3:00 AM
       autorestart: false, // No reiniciar al terminar, esperar al siguiente cron

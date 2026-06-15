@@ -34,8 +34,12 @@ if (!JWT_SECRET && IS_PRODUCTION) {
  * @param {number} length - Longitud de la contraseña.
  * @returns {string}
  */
-function generateRandomPassword(length = 10) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
+function generateRandomPassword(length = 12) {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const nums = '0123456789';
+  const syms = '!@#$';
+  const chars = upper + lower + nums + syms;
   let password = '';
   for (let i = 0; i < length; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));

@@ -40,17 +40,25 @@ router.get("/sales", requireAuth, asyncHandler(async (req, res) => {
       id: sale.id,
       timestamp: sale.createdAt.toISOString(),
       client: sale.customerName,
+      customer_phone: sale.customerPhone,
+      shipping_address: sale.shippingAddress,
+      shipping_carrier: sale.shippingCarrier,
       total: sale.totalAmount,
       method: sale.paymentMethod,
       payment_status: sale.paymentStatus,
       channel: sale.id.startsWith("ON") ? "online" : "fisica",
-      payment_details: sale.orders?.[0]
-        ? {
-            shipping_status: sale.orders[0].status,
-            tracking_number: sale.orders[0].trackingNumber,
-          }
-        : {},
-      total_paid: sale.salePayments.reduce((sum, p) => sum + p.amount, 0),
+      payment_details: {
+        ...(typeof sale.payment_details === "string"
+          ? JSON.parse(sale.payment_details || "{}")
+          : sale.payment_details || {}),
+        ...(sale.orders?.[0]
+          ? {
+              shipping_status: sale.orders[0].status,
+              tracking_number: sale.orders[0].trackingNumber,
+            }
+          : {}),
+      },
+      total_paid: sale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0),
     }));
     res.json(formatted);
 }));
@@ -84,10 +92,7 @@ router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
           include: { salePayments: true },
         });
         if (currentSale) {
-          const paid = currentSale.salePayments.reduce(
-            (sum, p) => sum + p.amount,
-            0,
-          );
+          const paid = currentSale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
           const balance = currentSale.totalAmount - paid;
           if (balance > 0) {
             await tx.salePayment.create({
@@ -167,42 +172,11 @@ router.get("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => 
 }));
 
 router.post("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => {
-  const { amount, method, notes } = req.body;
-  const saleId = req.params.id;
-  if (!amount || amount <= 0)
-    return res.status(400).json({ error: "Monto inválido" });
+  const { id } = req.params;
+  const paymentData = req.body; // { amount, method, notes }
 
-  const sale = await prisma.sale.findUnique({
-    where: { id: saleId },
-    include: { salePayments: { select: { amount: true } } },
-  });
-
-  if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
-
-  // SEGURIDAD FINANCIERA: No permitir abonos que excedan el saldo
-  const totalPaid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
-  const balance = Number(sale.totalAmount) - totalPaid;
-  
-  if (Number(amount) > balance + 1) { // +1 por margen de redondeo
-    return res.status(400).json({ error: `El abono (${fmt(amount)}) excede el saldo pendiente (${fmt(balance)})` });
-  }
-
-  await prisma.salePayment.create({
-    data: {
-      saleId,
-      amount: Number(amount),
-      method: method || "Abono",
-      notes: notes || "",
-    },
-  });
-
-  const totalPaidUpdated = totalPaid + Number(amount);
-  const newStatus = totalPaidUpdated >= sale.totalAmount ? "completed" : "partial";
-  await prisma.sale.update({
-    where: { id: saleId },
-    data: { paymentStatus: newStatus },
-  });
-  res.json({ success: true, message: "Abono registrado" });
+  const updatedSale = await SalesService.addPayment(id, paymentData);
+  res.json({ success: true, sale: updatedSale });
 }));
 
 // GET /api/stats — KPI Dashboard
