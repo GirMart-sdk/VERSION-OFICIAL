@@ -44,7 +44,7 @@ async function main() {
   // 1. Crear o actualizar usuario administrador inicial
   const adminUser = process.env.ADMIN_USER || "admin";
   const adminPass = process.env.ADMIN_PASSWORD || "winner2026";
-  const adminEmail = process.env.EMAIL_USER; // Usamos el mismo correo del sistema para el admin
+  const adminEmail = process.env.SMTP_USER || null; // Corregido: Usar SMTP_USER para consistencia con mailer.js
 
   // Generar hash de la contraseña
   const passwordHash = scryptSync(adminPass, HASH_SALT, 64).toString("hex");

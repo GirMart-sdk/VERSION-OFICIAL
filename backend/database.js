@@ -74,4 +74,7 @@ module.exports = {
   customerProfile: prisma.customerProfile,
   reorderRule: prisma.reorderRule,
   demandForecast: prisma.demandForecast,
+  auditLog: prisma.auditLog,
+  blacklistedToken: prisma.blacklistedToken,
+  bannedIp: prisma.bannedIp,
 };

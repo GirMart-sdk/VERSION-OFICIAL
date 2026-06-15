@@ -46,7 +46,7 @@ async function renderDashboard() {
           $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
         if (label && isActive) {
           label.innerHTML =
-            "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>● ACTIVA</span>";
+            "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>ACTIVA</span>";
         }
       }
 

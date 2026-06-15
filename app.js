@@ -421,6 +421,16 @@ function addToCart(productId, sizeId) {
     }
   }
 
+  // Punto Ciego: Validación estricta antes de procesar
+  const stockTotal = Object.values(product.stock || {}).reduce((a, b) => a + b, 0);
+  if (stockTotal <= 0) {
+    return showToast(`❌ ${product.name} no tiene existencias disponibles.`);
+  }
+  
+  if (selectedSize && product.stock[selectedSize] <= 0) {
+    return showToast(`❌ Talla ${selectedSize} agotada.`);
+  }
+
   // Buscar si ya existe EN ESA MISMA TALLA
   const existing = cart.find(
     (i) => i.id === productId && i.size === selectedSize,

@@ -6,17 +6,25 @@ const { requireAuth, requireApiKey } = require("../middlewares/auth");
 const { randomUUID, createHash } = require("crypto");
 const { sendSaleEmail } = require("../../emails/mailer");
 const { validate, schemas } = require("../middlewares/validation");
+const asyncHandler = require("../utils/asyncHandler");
+const StatsService = require("../services/statsService");
+const SalesService = require("../services/salesService");
 
 const router = express.Router();
 
+// Helper local para formateo de moneda en logs de error
+const fmt = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n || 0);
+
 // GET /api/sales — Historial completo
-router.get("/sales", requireAuth, async (req, res) => {
+router.get("/sales", requireAuth, asyncHandler(async (req, res) => {
   const { from, to, limit = 500 } = req.query;
-  const where = {};
+  // Solo mostrar ventas que NO han sido anuladas
+  const where = {
+    deletedAt: null
+  };
   if (from) where.createdAt = { gte: new Date(from) };
   if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
 
-  try {
     const sales = await prisma.sale.findMany({
       where,
       include: {
@@ -45,142 +53,19 @@ router.get("/sales", requireAuth, async (req, res) => {
       total_paid: sale.salePayments.reduce((sum, p) => sum + p.amount, 0),
     }));
     res.json(formatted);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+}));
 
 // POST /api/sales — registrar venta (desde admin o tienda online)
-router.post("/sales", validate(schemas.sale), async (req, res) => {
-  const {
-    id,
-    total,
-    items,
-    client,
-    customer_email,
-    customer_phone,
-    payment_method,
-    payment_status,
-    shipping_address,
-    shipping_carrier,
-    payment_details,
-  } = req.body;
-
-  if (!total || !items?.length)
-    return res
-      .status(400)
-      .json({ error: "Datos de venta incompletos", success: false });
-
-  const saleId = id || `S${Date.now().toString(36).toUpperCase()}`;
-
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const finalItems = [];
-      for (const item of items) {
-        let pId = item.id || item.productId;
-        const inv = await tx.inventory.findFirst({
-          where: { productId: pId, size: item.size || "U" },
-        });
-        if (!inv || inv.quantity < item.qty)
-          throw new Error(
-            `Stock insuficiente para ${item.name} (${item.size || "U"})`,
-          );
-        await tx.inventory.update({
-          where: {
-            productId_size: {
-              productId: inv.productId,
-              size: inv.size,
-            },
-          },
-          data: { quantity: { decrement: item.qty } },
-        });
-        finalItems.push({ ...item, correctedId: pId });
-      }
-
-      return await tx.sale.create({
-        data: {
-          id: saleId,
-          customerName: client || "Consumidor Final",
-          customerEmail: customer_email || null,
-          customerPhone: customer_phone || null,
-          totalAmount: total,
-          paymentMethod: payment_method || "Efectivo",
-          paymentStatus: payment_status || "completed",
-          shippingAddress: shipping_address || null,
-          referenceNumber: saleId,
-          items: {
-            create: finalItems.map((it) => ({
-              productId: it.correctedId,
-              product_name: it.name,
-              size: it.size,
-              quantity: it.qty,
-              unitPrice: it.price,
-            })),
-          },
-          salePayments:
-            !payment_status || payment_status === "completed"
-              ? {
-                  create: [
-                    {
-                      amount: total,
-                      method: payment_method || "Efectivo",
-                      notes: "Pago inicial completo",
-                    },
-                  ],
-                }
-              : payment_details?.abonoAmount > 0
-                ? {
-                    create: [
-                      {
-                        amount: Number(payment_details.abonoAmount),
-                        method: payment_method || "Abono",
-                        notes: "Abono inicial",
-                      },
-                    ],
-                  }
-                : undefined,
-          orders:
-            shipping_address || shipping_carrier || payment_status === "partial"
-              ? {
-                  create: [
-                    {
-                      id: "ORD-" + randomUUID().slice(0, 8),
-                      status:
-                        payment_details?.shipping_status ||
-                        (payment_status === "partial" ? "ABONO" : "PENDIENTE"),
-                      shippingMethod: shipping_carrier || "Estándar",
-                      shippingAddress:
-                        shipping_address ||
-                        (payment_status === "partial"
-                          ? "Tienda (Apartado)"
-                          : ""),
-                      trackingNumber: "",
-                    },
-                  ],
-                }
-              : [],
-        },
-      });
-    });
-
-    const fullSale = await prisma.sale.findUnique({
-      where: { id: result.id },
-      include: { items: { include: { product: true } } },
-    });
-    sendSaleEmail(fullSale).catch((err) =>
-      console.error("❌ Fallo crítico al enviar email:", err.message),
-    );
-
-    return res.json({ success: true, id: result.id });
-  } catch (error) {
-    return res.status(400).json({ error: error.message, success: false });
-  }
-});
+router.post("/sales", validate(schemas.sale), asyncHandler(async (req, res) => {
+    // Delegar toda la complejidad al SalesService para garantizar atomicidad
+    // y consistencia en el descuento de inventario.
+    const sale = await SalesService.createSale(req.body);
+    return res.json({ success: true, id: sale.id });
+}));
 
 // PATCH /api/sales/:id — Actualizar logística
-router.patch("/sales/:id", requireAuth, async (req, res) => {
+router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
   const { payment_details, payment_status, shipping_address } = req.body;
-  try {
     await prisma.$transaction(async (tx) => {
       const saleUpdate = {};
       if (shipping_address) saleUpdate.shippingAddress = shipping_address;
@@ -250,140 +135,106 @@ router.patch("/sales/:id", requireAuth, async (req, res) => {
       }
     });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+}));
 
 // DELETE /api/sales/:id
-router.delete("/sales/:id", requireAuth, async (req, res) => {
-  try {
-    await prisma.sale.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.delete("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
+  const saleId = req.params.id;
+
+  // En lugar de borrar, marcamos como eliminado (Soft Delete)
+  await prisma.sale.update({
+    where: { id: saleId },
+    data: { deletedAt: new Date() }
+  });
+
+  await AuditService.log(req, {
+    action: "ANNULMENT",
+    targetType: "SALE",
+    targetId: saleId,
+    details: { message: "Venta anulada por el administrador" }
+  });
+
+  res.json({ success: true, message: "Venta anulada correctamente" });
+}));
 
 // Gestión de Abonos
-router.get("/sales/:id/payments", requireAuth, async (req, res) => {
-  try {
-    const payments = await prisma.salePayment.findMany({
-      where: { saleId: req.params.id },
-      orderBy: { timestamp: "desc" },
-    });
-    res.json(payments);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => {
+  const payments = await prisma.salePayment.findMany({
+    where: { saleId: req.params.id },
+    orderBy: { timestamp: "desc" },
+  });
+  res.json(payments);
+}));
 
-router.post("/sales/:id/payments", requireAuth, async (req, res) => {
+router.post("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => {
   const { amount, method, notes } = req.body;
   const saleId = req.params.id;
   if (!amount || amount <= 0)
     return res.status(400).json({ error: "Monto inválido" });
-  try {
-    await prisma.salePayment.create({
-      data: {
-        saleId,
-        amount: Number(amount),
-        method: method || "Abono",
-        notes: notes || "",
-      },
-    });
-    const sale = await prisma.sale.findUnique({
-      where: { id: saleId },
-      include: { salePayments: { select: { amount: true } } },
-    });
-    const totalPaid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
-    const newStatus = totalPaid >= sale.totalAmount ? "completed" : "partial";
-    await prisma.sale.update({
-      where: { id: saleId },
-      data: { paymentStatus: newStatus },
-    });
-    res.json({ success: true, message: "Abono registrado" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+  const sale = await prisma.sale.findUnique({
+    where: { id: saleId },
+    include: { salePayments: { select: { amount: true } } },
+  });
+
+  if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+
+  // SEGURIDAD FINANCIERA: No permitir abonos que excedan el saldo
+  const totalPaid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
+  const balance = Number(sale.totalAmount) - totalPaid;
+  
+  if (Number(amount) > balance + 1) { // +1 por margen de redondeo
+    return res.status(400).json({ error: `El abono (${fmt(amount)}) excede el saldo pendiente (${fmt(balance)})` });
   }
-});
+
+  await prisma.salePayment.create({
+    data: {
+      saleId,
+      amount: Number(amount),
+      method: method || "Abono",
+      notes: notes || "",
+    },
+  });
+
+  const totalPaidUpdated = totalPaid + Number(amount);
+  const newStatus = totalPaidUpdated >= sale.totalAmount ? "completed" : "partial";
+  await prisma.sale.update({
+    where: { id: saleId },
+    data: { paymentStatus: newStatus },
+  });
+  res.json({ success: true, message: "Abono registrado" });
+}));
 
 // GET /api/stats — KPI Dashboard
-router.get("/stats", requireAuth, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const statsWhere = { NOT: { orders: { some: { status: "CANCELADO" } } } };
-
-    const [totalSales, totalRevenueAgg, salesToday, revenueTodayAgg] =
-      await Promise.all([
-        prisma.sale.count({ where: statsWhere }),
-        prisma.sale.aggregate({
-          _sum: { totalAmount: true },
-          where: statsWhere,
-        }),
-        prisma.sale.count({
-          where: { ...statsWhere, createdAt: { gte: today } },
-        }),
-        prisma.sale.aggregate({
-          _sum: { totalAmount: true },
-          where: { ...statsWhere, createdAt: { gte: today } },
-        }),
-      ]);
-
-    const totalRevenue = totalRevenueAgg._sum.totalAmount || 0;
-
-    res.json({
-      totalSales,
-      totalRevenue,
-      salesToday,
-      revenueToday: revenueTodayAgg._sum.totalAmount || 0,
-      avgTicket: totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get("/stats", requireAuth, asyncHandler(async (req, res) => {
+  const stats = await StatsService.getDashboardStats();
+  res.json(stats);
+}));
 
 // GET /api/analytics/top-products — KPI de productos más vendidos para el Dashboard
-router.get("/analytics/top-products", requireAuth, async (req, res) => {
-  try {
-    // Agrupamos los items de venta por producto y sumamos sus cantidades
-    const topProducts = await prisma.saleItem.groupBy({
-      by: ["productId", "product_name"],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: "desc",
-        },
-      },
-      take: 5,
-    });
-
-    const formatted = topProducts.map((item) => ({
-      name: item.product_name,
-      qty_sold: item._sum.quantity || 0,
-    }));
-
-    res.json(formatted);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Error al obtener estadísticas de productos" });
-  }
-});
+router.get("/analytics/top-products", requireAuth, asyncHandler(async (req, res) => {
+  const topProducts = await StatsService.getTopProducts(5);
+  res.json(topProducts);
+}));
 
 // POST /api/checkout/init — Generar parámetros de seguridad para Wompi
 router.post(
   "/checkout/init",
   validate(schemas.checkoutInit),
-  async (req, res) => {
-    const { saleId, amount, email } = req.body;
+  asyncHandler(async (req, res) => {
+    const { saleId, email } = req.body;
 
     const publicKey = process.env.WOMPI_PUBLIC_KEY;
     const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
+
+    // SEGURIDAD: No confiar en el 'amount' del body. Buscar el valor real en la DB.
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      select: { totalAmount: true }
+    });
+
+    if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+    const realAmount = Number(sale.totalAmount);
 
     // Si no hay configuración de Wompi en el .env, indicamos al front que use pago manual
     if (!publicKey || !integritySecret) {
@@ -393,11 +244,11 @@ router.post(
       return res.json({ isManual: true });
     }
 
-    const amountInCents = Math.round(amount * 100);
+    const amountInCents = Math.round(realAmount * 100);
     const currency = "COP";
 
     // Generar firma de integridad (Integrity Check) requerida por Wompi
-    const chain = `${saleId}${amountInCents}${currency}${integritySecret}`;
+    const chain = `${saleId}${amountInCents}${currency}${integritySecret.trim()}`;
     const integrity = require("crypto")
       .createHash("sha256")
       .update(chain)
@@ -413,7 +264,7 @@ router.post(
         customerEmail: email || "",
       },
     });
-  },
+  }),
 );
 
 module.exports = router;

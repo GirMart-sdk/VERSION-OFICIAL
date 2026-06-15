@@ -31,6 +31,15 @@ window.doLogout = function (silent = false) {
 };
 
 /**
+ * Valida la fortaleza de la contraseña (Min 8 caracteres, letras y números)
+ */
+function isStrongPassword(pass) {
+  // Mínimo 8 caracteres, al menos una letra y un número
+  const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+]{8,}$/;
+  return strongRegex.test(pass);
+}
+
+/**
  * Inicialización del formulario de Login
  */
 document.addEventListener("DOMContentLoaded", () => {

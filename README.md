@@ -1,9 +1,9 @@
 # 🏆 WINNER STORE v3.5 — Enterprise E-commerce & POS
 
-!Version
-!Node.js
-!Prisma
-!Database
+![Version](https://img.shields.io/badge/version-3.5-blue)
+![Node.js](https://img.shields.io/badge/node-%3E%3D18.x-green)
+![Prisma](https://img.shields.io/badge/ORM-Prisma-brightgreen)
+![Database](https://img.shields.io/badge/DB-PostgreSQL-blue)
 
 **Winner Store** es una plataforma integral de comercio electrónico y Punto de Venta (POS) diseñada para marcas de ropa _streetwear_. Esta versión 3.5 utiliza **Prisma ORM** y **PostgreSQL** para una gestión de datos robusta.
 
@@ -17,6 +17,11 @@
 - **Notificaciones**: Centro de mensajería automatizado por WhatsApp.
 
 ---
+
+## 🛠️ Requisitos Previos
+
+- Node.js v18 o superior.
+- Instancia de PostgreSQL (Local o Cloud).
 
 ## 🛠️ Instalación Rápida
 
@@ -41,13 +46,21 @@
 | Documento           | Descripción                                        |
 | ------------------- | -------------------------------------------------- |
 | API_AND_FEATURES.md | Catálogo completo de endpoints y funcionalidades.  |
+| proxy/nginx.conf    | Configuración de Proxy Inverso para Producción.    |
 | TECHNICAL_SPECS.md  | Detalles de implementación (Wompi, Prisma, Sharp). |
 | CONTRIBUTING.md     | Guía para desarrolladores.                         |
 
 ---
 
-## ⚖️ Licencia
+## ⚖️ Propiedad Intelectual y Licencia
 
-Propiedad de **GirMart-SDK**. Todos los derechos reservados.
+Este es un software **PROPIETARIO**. El código fuente, la lógica de negocio y el diseño de la interfaz son propiedad exclusiva de **GirMart-SDK**.
+
+**PROHIBIDO:** 
+- La redistribución o reventa del código.
+- El uso de este sistema sin una licencia válida.
+- El reclamo de autoría por parte de colaboradores externos.
+
+Para más detalles, consulte el archivo `LICENSE` y `CONTRIBUTING.md`.
 
 🚀 _Impulsando la cultura urbana._

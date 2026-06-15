@@ -111,7 +111,7 @@ function printReceipt(sale) {
     .row{display:flex;justify-content:space-between}
     .total{font-size:18px;font-weight:900}</style>
   </head><body>
-    <h2 style="margin-bottom:0">W●NNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
+    <h2 style="margin-bottom:0">WINNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
     ${isLayaway ? '<h3 style="text-align:center; border:1px solid #000; padding:5px; margin-top:10px; font-size:14px;">TICKET DE SEPARADO</h3>' : ""}
     <div class="line"></div>
     <p>Fecha: ${fmtDate(sale.timestamp)}</p>

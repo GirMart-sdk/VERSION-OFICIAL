@@ -2,12 +2,17 @@
    WINNER STORE — server.js  v3.5
    Backend completo: Productos · Inventario · Ventas · Auth (PostgreSQL)
    Merchant Feed CSV · Estadísticas · Seguridad JWT + API Key
+   
+   PROTECTED SOFTWARE - PROPIEDAD INTELECTUAL DE GIRMART-SDK
+   QUEDA PROHIBIDA LA COPIA O DISTRIBUCIÓN NO AUTORIZADA.
+   TODOS LOS DERECHOS RESERVADOS 2026.
    ═══════════════════════════════════════════════════════════ */
 "use strict";
 
 const path = require("path");
 const fs = require("fs");
 // 1. CARGAR CONFIGURACIÓN PRIMERO (Antes de cualquier otro import)
+const morgan = require("morgan");
 const isProdMode = process.env.NODE_ENV === "production";
 
 // Manejadores de errores globales para evitar que el servidor muera por fallos de SMTP o DB
@@ -46,8 +51,19 @@ const passCheck = process.env.SMTP_PASS
   : "NO DETECTADO";
 console.log(`[Mailer] Password: ${passCheck}`);
 
-const express = require("express");
+// Importar Servicios (Arquitectura de Capas)
+const InventoryService = require("./services/inventoryService");
+const SalesService = require("./services/salesService");
+const ReportService = require("./services/reportService");
+
+// Importar Utilidades y Middleware de Errores
 const cors = require("cors");
+const logger = require("./utils/logger"); // Importar el nuevo logger
+const asyncHandler = require("./utils/asyncHandler");
+const errorMiddleware = require("./middlewares/errorMiddleware");
+const securityMiddleware = require("./middlewares/securityMiddleware");
+
+const express = require("express");
 const sharp = require("sharp");
 const rateLimit = require("express-rate-limit");
 const https = require("https");
@@ -91,23 +107,32 @@ try {
   sendSaleEmail = mailer.sendSaleEmail;
   sendResetEmail = mailer.sendResetEmail;
   console.log("📧 [Mailer] Módulo cargado (Pendiente verificación SMTP)");
-} catch (e) {
-  console.error(
-    "⚠️ [Mailer] Error crítico cargando módulo de correos:",
-    e.message,
-  );
+} catch (err) {
+  logger.error("⚠️ [Mailer] Error crítico cargando módulo de correos:", {
+    message: err.message,
+    stack: err.stack,
+  });
 }
 const { validate, schemas } = require("./middlewares/validation");
 const { URL } = require("url");
 
 const app = express();
 
+// Habilitar la confianza en el proxy inverso (Nginx, Cloudflare, etc.)
+// Configuración de seguridad: confiamos en 1 nivel de proxy (Nginx).
+// Esto soluciona el error ValidationError de express-rate-limit.
+app.set('trust proxy', 1);
+
 // Limitador estricto para Login y Recuperación de contraseña
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 5, // Solo 5 intentos por ventana
   message: {
-    error: "Demasiados intentos. Por seguridad, bloqueado por 15 min.",
+    error: "Demasiados intentos de acceso. IP registrada.",
+  },
+  handler: (req, res, next, options) => {
+    logger.security("BRUTE_FORCE_ATTEMPT", { ip: req.ip, path: req.path });
+    res.status(options.statusCode).send(options.message);
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -145,29 +170,6 @@ app.use((req, res, next) => {
   };
   next();
 });
-
-const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
-
-async function hashPassword(password) {
-  const derivedKey = await scryptAsync(password, HASH_SALT, 64);
-  return derivedKey.toString("hex");
-}
-
-/**
- * Verifica si una contraseña coincide con un hash guardado en la BD
- */
-async function verifyPassword(password, hash) {
-  if (!password || !hash) return false;
-  try {
-    const derivedKey = await scryptAsync(password, HASH_SALT, 64);
-    return require("crypto").timingSafeEqual(
-      derivedKey,
-      Buffer.from(hash, "hex"),
-    );
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Genera la firma de integridad para Wompi
@@ -240,7 +242,7 @@ if (isProdMode) {
   console.log("🔄 [Autonomía] Verificando esquema de base de datos...");
   try {
     const { execSync } = require("child_process");
-    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    execSync("npx prisma migrate deploy", { stdio: "pipe" }); // Cambiado a pipe para que no imprima en consola principal
     console.log("✅ [Autonomía] Base de datos actualizada.");
   } catch (err) {
     console.error("⚠️ [Autonomía] Error en migraciones automáticas:", err.message);
@@ -250,11 +252,11 @@ if (isProdMode) {
 // Verificar conexión a la base de datos al arrancar para detectar errores de configuración
 prisma
   .$connect()
-  .then(() => console.log("🐘 Conexión verificada con éxito a PostgreSQL"))
+  .then(() => logger.info("🐘 Conexión verificada con éxito a PostgreSQL"))
   .catch((err) => {
-    console.error("❌ ERROR DE BASE DE DATOS:");
-    console.error("   Causa: SSL handshake fallido o host inalcanzable.");
-
+    logger.error("❌ ERROR DE BASE DE DATOS:", {
+      message: "SSL handshake fallido o host inalcanzable.",
+    });
     const maskedUrl = process.env.DATABASE_URL
       ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ":****@")
       : "No definida";
@@ -264,12 +266,12 @@ prisma
 
 // Validación de entorno Wompi para depuración
 if (!process.env.WOMPI_PUBLIC_KEY) {
-  console.warn(
+  logger.warn(
     "⚠️ [Wompi] WOMPI_PUBLIC_KEY no encontrada. Se usará la llave de pruebas por defecto.",
   );
 }
 if (!process.env.WOMPI_INTEGRITY_SECRET && IS_PRODUCTION) {
-  console.error(
+  logger.error(
     "❌ [Wompi] CRÍTICO: WOMPI_INTEGRITY_SECRET es obligatorio para transacciones reales.",
   );
 }
@@ -337,45 +339,19 @@ app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
+// 3. SEGURIDAD ACTIVA: Chequeo de IP Jail y Honeypot
+app.use(asyncHandler(securityMiddleware.checkIP));
+app.use(asyncHandler(securityMiddleware.honeypot));
+
+// Middleware para logs de acceso HTTP (Morgan)
+app.use(morgan("combined", { stream: logger.stream }));
+
 // Ignorar peticiones de favicon.ico para evitar errores 404 en los logs
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 // Endpoint para obtener el token CSRF inicial
 app.get("/api/get-csrf", csrfProtection, (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
-});
-
-// Aplicar CSRF a todas las rutas de la API, excepto Webhooks
-app.use("/api", (req, res, next) => {
-  if (req.path.includes("/webhooks")) return next();
-  return csrfProtection(req, res, next);
-});
-
-// Aplicar limitadores
-app.use("/api/auth/", authLimiter);
-app.use("/api/", generalApiLimiter);
-
-// Logger de peticiones para depuración
-app.use((req, res, next) => {
-  const start = Date.now();
-  const time = new Date().toLocaleTimeString();
-
-  // Escuchamos cuando la respuesta termina para dar el reporte completo
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    const { method, path, query } = req;
-    const status = res.statusCode;
-    const statusEmoji = status >= 400 ? "❌" : status >= 300 ? "⚠️" : "✅";
-    const queryStr = Object.keys(query).length
-      ? ` ?${JSON.stringify(query)}`
-      : "";
-
-    console.log(
-      `[${time}] ${statusEmoji} ${method} ${path}${queryStr} -> ${status} (${duration}ms)`,
-    );
-  });
-
-  next();
 });
 
 /* ── Error handler para bodyParser ──────────────────────– */
@@ -390,19 +366,20 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// Aplicar CSRF a todas las rutas de la API, excepto Webhooks
+app.use("/api", (req, res, next) => {
+  if (req.path.includes("/webhooks")) return next();
+  // Si el token falla, csurf lanzará un error que capturará el logger en errorMiddleware
+  return csrfProtection(req, res, next);
+});
+
+// Aplicar limitadores
+app.use("/api/auth/", authLimiter);
+app.use("/api/", generalApiLimiter);
+
 /* ── Seguridad de archivos sensibles ────────────────────── */
 const CLIENT_ROOT = path.join(__dirname, "..");
-const BLOCKED_EXTENSIONS = [".db", ".sqlite", ".env", ".log"];
-const BLOCKED_FILES = ["seed.js", "database.js", ".env", "server.js"];
-
 app.use((req, res, next) => {
-  const p = req.path.toLowerCase();
-  if (
-    BLOCKED_EXTENSIONS.some((ext) => p.endsWith(ext)) ||
-    BLOCKED_FILES.some((f) => p === "/" + f || p.endsWith("/" + f))
-  ) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
@@ -425,79 +402,104 @@ const getStructuredUploadPath = () => {
 };
 
 /* ── Endpoint de subida de archivos (Imágenes) ──────────── */
-app.post("/api/storage/upload", requireAuth, async (req, res) => {
+app.post("/api/storage/upload", requireAuth, asyncHandler(async (req, res) => {
   const { fileName, base64Data } = req.body;
 
   if (!base64Data) {
     return res.status(400).json({ error: "Datos de imagen no proporcionados" });
   }
 
-  try {
-    // Procesar el base64 (quitar cabecera si existe)
-    const matches = base64Data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-    let buffer;
+  // Procesar el base64 (quitar cabecera si existe)
+  const matches = base64Data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+  let buffer;
 
-    if (matches && matches.length === 3) {
-      buffer = Buffer.from(matches[2], "base64");
-    } else {
-      buffer = Buffer.from(base64Data, "base64");
+  if (matches && matches.length === 3) {
+    buffer = Buffer.from(matches[2], "base64");
+  } else {
+    buffer = Buffer.from(base64Data, "base64");
+  }
+
+    // Resiliencia Avanzada: Validar el "Magic Number" (Firma binaria del archivo)
+    // JPEG: ffd8ff, PNG: 89504e47, GIF: 47494638, WebP: 52494646 (RIFF)
+    const hex = buffer.toString('hex', 0, 4);
+    const isImage = /^(ffd8ff|89504e|474946|524946)/i.test(hex);
+    if (!isImage) {
+      return res.status(400).json({ error: "El archivo no es una imagen válida." });
     }
 
-    const uploadDir = getStructuredUploadPath();
-    // Generar nombre único para evitar duplicados
-    const ext = path.extname(fileName) || ".webp";
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}${ext}`;
-    const filePath = path.join(uploadDir, uniqueName);
+  const uploadDir = getStructuredUploadPath();
+  
+  // SEGURIDAD: Forzamos la extensión .webp y procesamos con Sharp.
+  // Sharp sanitiza la imagen, elimina metadatos peligrosos y verifica la integridad real del archivo.
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.webp`;
+  const filePath = path.join(uploadDir, uniqueName);
 
-    fs.writeFileSync(filePath, buffer);
+  await sharp(buffer)
+    .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toFile(filePath);
 
-    // Generar URL pública relativa
-    const publicPath = path.relative(CLIENT_ROOT, filePath).replace(/\\/g, "/");
-    const publicUrl = `/${publicPath}`;
+  // Generar URL pública relativa
+  const publicPath = path.relative(CLIENT_ROOT, filePath).replace(/\\/g, "/");
+  const publicUrl = `/${publicPath}`;
 
-    res.json({ success: true, publicUrl });
-  } catch (err) {
-    console.error("❌ Error guardando archivo:", err);
-    res.status(500).json({ error: "Fallo al procesar la carga del archivo" });
-  }
-});
+  res.json({ success: true, publicUrl });
+}));
 
 /* ── Endpoint de actualización masiva (CSV) ───────────────── */
-app.post("/api/inventory/bulk-update", requireAuth, async (req, res) => {
+app.post("/api/inventory/bulk-update", requireAuth, asyncHandler(async (req, res) => {
   const { updates } = req.body; // Array de { sku/id, size, qty }
   if (!Array.isArray(updates))
     return res.status(400).json({ error: "Formato inválido" });
 
-  try {
-    // Aumentamos el timeout a 30 segundos para soportar lotes de 500+ upserts
-    await prisma.$transaction(
-      async (tx) => {
-        for (const item of updates) {
-          const product = await tx.product.findFirst({
-            where: { OR: [{ id: item.id }, { sku: item.sku }] },
-          });
-          if (!product) continue;
-
-          await tx.inventory.upsert({
-            where: {
-              productId_size: { productId: product.id, size: item.size },
-            },
-            update: { quantity: item.qty },
-            create: {
-              productId: product.id,
-              size: item.size,
-              quantity: item.qty,
-            },
-          });
-        }
-      },
-      { timeout: 30000 },
-    );
-    res.json({ success: true, message: "Inventario actualizado masivamente" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  // Punto Ciego: Denegación de servicio por carga masiva
+  if (updates.length > 500) {
+    return res.status(400).json({ error: "El lote es demasiado grande. Máximo 500 registros." });
   }
-});
+
+  const results = await InventoryService.bulkUpdate(updates);
+  res.json({ 
+    success: true, 
+    message: `Inventario actualizado: ${results.length} registros procesados.` 
+  });
+}));
+
+// ── Endpoint para descargar reporte de arqueo (PDF) ──────
+app.get("/api/arqueo/report/:sessionId", requireAuth, asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+
+  // 1. Obtener datos de la sesión
+  const session = await prisma.cashSession.findUnique({
+    where: { id: sessionId }
+  });
+
+  if (!session) return res.status(404).json({ error: "Sesión no encontrada" });
+
+  // 2. Obtener ventas y gastos vinculados al rango de tiempo de la sesión
+  const sales = await prisma.sale.findMany({
+    where: {
+      createdAt: { gte: session.openedAt, lte: session.closedAt || new Date() },
+      deletedAt: null
+    }
+  });
+
+  const expenses = await prisma.expense.findMany({
+    where: {
+      createdAt: { gte: session.openedAt, lte: session.closedAt || new Date() }
+    }
+  });
+
+  // 3. Generar el PDF usando el ReportService
+  const pdfBuffer = await ReportService.generateCashClosingPDF(session, sales, expenses);
+
+  // 4. Enviar respuesta como archivo PDF
+  res.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename=Cierre_Caja_${sessionId}.pdf`,
+    "Content-Length": pdfBuffer.length,
+  });
+  res.end(pdfBuffer);
+}));
 
 /* ── MONTADO DE RUTAS MODULARES ── */
 app.use("/api", require("./routes/auth"));
@@ -541,21 +543,42 @@ app.get(/(.*)/, (req, res, next) => {
   res.sendFile(path.join(CLIENT_ROOT, "index.html"));
 });
 
-/* ── Manejo de errores global ────────────────────────────── */
-app.use((err, req, res, _next) => {
-  // En producción, podrías enviar esto a un servicio como Sentry
-  const errorResponse = {
-    error: "Error interno del servidor",
-    message: IS_PRODUCTION ? "Ocurrió un error inesperado" : err.message,
-  };
+// Centralización del manejo de errores
+// Importante: Debe ser el último middleware cargado
+app.use(errorMiddleware);
 
-  console.error(
-    `[${new Date().toISOString()}] ❌ ${req.method} ${req.path}:`,
-    err.stack,
-  );
+/* ── TAREAS DE MANTENIMIENTO AUTOMÁTICO ── */
+const maintenanceTask = setInterval(async () => {
+  try {
+    const now = new Date();
+    const retentionDate = new Date();
+    retentionDate.setDate(retentionDate.getDate() - 90); // Retener logs por 90 días
 
-  res.status(err.status || 500).json(errorResponse);
-});
+    // 1. Limpiar tokens expirados
+    await prisma.blacklistedToken.deleteMany({ where: { expiresAt: { lt: now } } });
+    // 2. Limpiar IPs cuya condena expiró
+    await prisma.bannedIp.deleteMany({ where: { expiresAt: { lt: now } } });
+    // 3. Purga de logs de auditoría antiguos (Resiliencia de DB)
+    await prisma.auditLog.deleteMany({ where: { createdAt: { lt: retentionDate } } });
+
+    logger.info("🧹 [Maintenance] Limpieza de seguridad completada con éxito.");
+  } catch (err) {
+    logger.error("❌ [Maintenance] Error en tarea de limpieza:", err.message);
+  }
+}, 24 * 60 * 60 * 1000); // Ejecutar una vez al día
+
+/* ── CIERRE AGRACIADO (Graceful Shutdown) ── */
+const gracefulShutdown = async () => {
+  logger.info("🛑 Recibida señal de apagado. Cerrando recursos...");
+  clearInterval(maintenanceTask);
+  await prisma.$disconnect();
+  // El servidor de express se cierra automáticamente al salir el proceso
+  logger.info("🐘 Recursos liberados correctamente.");
+  process.exit(0);
+};
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
 
 /**
  * Inicia el servidor intentando el puerto configurado.
@@ -568,15 +591,15 @@ function startServer(portToTry) {
       const localUrl = `http://localhost:${portToTry}`;
       const publicUrl = process.env.FRONTEND_URL;
 
-      console.log(`\n🚀 WINNER STORE Corriendo en: ${localUrl}`);
+      logger.info(`🚀 WINNER STORE Corriendo en: ${localUrl}`);
       if (publicUrl && !publicUrl.includes("localhost")) {
-        console.log(`🌐 Acceso Externo (Túnel): ${publicUrl}`);
+        logger.info(`🌐 Acceso Externo (Túnel): ${publicUrl}`);
       }
-      console.log(`🔐 Servidor iniciado con seguridad JWT y API Key activa\n`);
+      logger.info(`🔐 Servidor iniciado con seguridad JWT y API Key activa`);
     })
     .on("error", (err) => {
       if (err.code === "EADDRINUSE") {
-        console.warn(
+        logger.warn(
           `⚠️ Puerto ${portToTry} ocupado, intentando con ${portToTry + 1}...`,
         );
         startServer(portToTry + 1);

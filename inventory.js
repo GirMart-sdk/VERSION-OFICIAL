@@ -480,7 +480,7 @@ window.printSingleQR = () => {
         }
       </style>
       <body>
-        <div class="brand">W●NNER</div>
+        <div class="brand">WINNER</div>
         <img src="${imgData}">
         <div class="sku">${p.sku}</div>
         <div class="price">${fmt(p.price)}</div>
@@ -527,7 +527,7 @@ window.printAllQRs = () => {
     .map(
       (p) => `
     <div class="label-item">
-      <div class="brand">W●NNER</div>
+      <div class="brand">WINNER</div>
       <svg id="barcode-${p.id}"></svg>
       <div class="sku">${p.sku}</div>
       <div class="price">${fmt(p.price)}</div>

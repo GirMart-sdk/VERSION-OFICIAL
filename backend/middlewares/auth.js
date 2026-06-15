@@ -4,6 +4,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
+const { prisma } = require("../database");
 
 const API_KEY = process.env.API_KEY || "prod-api-key-winner-2026";
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,7 +25,7 @@ function requireApiKey(req, res, next) {
 /**
  * Middleware para requerir autenticación JWT o API Key.
  */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const auth = req.header("authorization") || "";
   const tokenFromCookie = req.cookies.w_token;
   const apiKey = req.header("x-api-key");
@@ -34,6 +35,14 @@ function requireAuth(req, res, next) {
     tokenFromCookie || (auth.startsWith("Bearer ") ? auth.slice(7) : null);
 
   if (token) {
+    // SEGURIDAD: Verificar si el token está en la lista negra
+    const isBlacklisted = await prisma.blacklistedToken.findUnique({
+      where: { token }
+    });
+    if (isBlacklisted) {
+      return res.status(401).json({ error: "Sesión invalidada por seguridad" });
+    }
+
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;

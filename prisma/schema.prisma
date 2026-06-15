@@ -15,8 +15,41 @@ model User {
   role      String   @default("admin")
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
+  auditLogs AuditLog[]
 
   @@map("users")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String   @map("admin_id")
+  action     String   // "CREATE", "UPDATE", "DELETE", "LOGIN"
+  targetType String   // "PRODUCT", "EXPENSE", "SALE", "INVENTORY"
+  targetId   String?  @map("target_id")
+  details    Json?    // Datos del cambio (ej. { "oldPrice": 100, "newPrice": 120 })
+  ip         String?  @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+  admin      User     @relation(fields: [adminId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+
+  @@map("blacklisted_tokens")
+}
+
+model BannedIp {
+  id        String   @id @default(uuid())
+  ip        String   @unique
+  reason    String?
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banned_ips")
 }
 
 model Product {
@@ -78,6 +111,7 @@ model Sale {
   shippingCarrier  String?    @map("shipping_carrier") @db.VarChar(100)
   referenceNumber  String?    @map("reference_number") @db.VarChar(100)
   payment_details  Json?
+  deletedAt        DateTime?  @map("deleted_at") @db.Timestamp(6)
   items_summary    String?    @map("items")
   items            SaleItem[]
   salePayments     SalePayment[]

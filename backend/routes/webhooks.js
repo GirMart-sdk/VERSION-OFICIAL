@@ -79,6 +79,15 @@ router.post("/wompi", async (req, res) => {
       });
 
       if (sale) {
+        // SEGURIDAD: Validar que el monto pagado en Wompi coincida con el total de la venta
+        const paidAmountCents = data.transaction.amount_in_cents;
+        const expectedAmountCents = Math.round(Number(sale.totalAmount) * 100);
+
+        if (status === "APPROVED" && Math.abs(paidAmountCents - expectedAmountCents) > 100) { // Margen de 1 peso
+          console.error(`❌ [Alerta Fraude] Monto discrepante en Webhook. Venta: ${sale.id}. Recibido: ${paidAmountCents}, Esperado: ${expectedAmountCents}`);
+          return res.status(400).send("Monto discrepante");
+        }
+
         await prisma.sale.update({
           where: { id: sale.id },
           data: {

@@ -16,14 +16,17 @@
     "start": "node backend/server.js",
     "start:dev": "NODE_ENV=development node backend/server.js",
     "start:local": "start-local.bat",
-    "setup": "npx prisma generate && npx prisma migrate deploy && node backend/seed.js",
+    "setup": "npx prisma generate && npx prisma db push && node backend/seed.js",
     "start:prod": "npm run setup && node backend/server.js",
     "develop": "watch 'npm start' .",
     "seed": "prisma db seed",
     "init": "npm install && npm run seed && npm start",
     "init:silent": "npm install --silent && npm run seed --silent && npm start",
-    "test": "node -c backend/server.js && echo '✅ Sintaxis validada'",
-    "lint": "echo '✅ Syntax check completado'",
+    "test": "node -c backend/server.js && npm run audit",
+    "audit": "npm audit --audit-level=high",
+    "audit:fix": "npm audit fix",
+    "lint": "eslint . --ext .js",
+    "security-scan": "eslint . --plugin security --rule 'security/detect-object-injection: warn' && echo '🛡️ Escaneo SAST completado'",
     "backup": "node backend/database-backup.js",
     "backup:local": "node scripts/backup-local.js",
     "db:migrate": "prisma migrate dev",
@@ -58,6 +61,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "helmet": "^7.2.0",
+    "morgan": "^1.10.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.10",
@@ -65,6 +69,8 @@
     "pg": "^8.21.0",
     "pm2": "^7.0.1",
     "sharp": "^0.33.5",
+    "winston": "^3.13.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -74,11 +80,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GirMart-sdk/winn_Vdf.git"
+    "url": "https://github.com/GirMart-sdk/VERSION-OFICIAL.git"
   },
   "bugs": {
-    "url": "https://github.com/GirMart-sdk/winn_Vdf/issues"
+    "url": "https://github.com/GirMart-sdk/VERSION-OFICIAL/issues"
   },
-  "homepage": "https://github.com/GirMart-sdk/winn_Vdf#readme",
+  "homepage": "https://github.com/GirMart-sdk/VERSION-OFICIAL#readme",
   "prettier": {}
 }

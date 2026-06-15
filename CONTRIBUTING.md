@@ -1,29 +1,20 @@
-# 🤝 Guía de Contribución - Winner Store v3.5
+# Políticas de Colaboración - WINNER STORE
 
-¡Bienvenido al equipo de desarrollo! Para mantener la integridad de **Winner Store**, por favor sigue estas directrices al proponer cambios.
+Si deseas colaborar en este proyecto, debes aceptar las siguientes condiciones de uso y propiedad:
 
-## 🚀 Proceso de Desarrollo
+## 1. Propiedad Intelectual
+Al contribuir con código, documentación o recursos visuales a este repositorio, transfieres de forma total y permanente todos los derechos de propiedad intelectual a **GirMart-SDK**. 
 
-1. **Sincronización**: Antes de empezar, asegúrate de tener la última versión de la rama `main`.
-2. **Ramas**: Crea una rama para tu tarea: `git checkout -b feature/nombre-mejora` o `git checkout -b fix/descripcion-error`.
-3. **Base de Datos**: Si modificas `schema.prisma`, genera la migración correspondiente usando `npx prisma migrate dev --name descripcion`.
-4. **Pruebas Locales**: Verifica que el servidor inicie correctamente usando `start-local.bat`.
+## 2. Confidencialidad
+La estructura de la base de datos, la lógica de integración con Wompi y las llaves de seguridad son información confidencial. Queda prohibida su divulgación a terceros.
 
-## 📝 Estándares de Commits
+## 3. Prohibición de Fork (Derivación)
+No se permite realizar "Forks" o copias del repositorio para proyectos personales o de terceros que compitan o utilicen la lógica de WINNER STORE.
 
-Usamos una versión simplificada de Commits Convencionales:
-
-- `feat:` Una nueva característica.
-- `fix:` Corrección de un error.
-- `docs:` Cambios solo en la documentación.
-- `refactor:` Cambio en el código que no corrige un error ni añade una característica.
-
-## 🛠️ Tecnologías Clave
-
-- **Prisma ORM**: Toda interacción con la DB debe ser a través de los modelos definidos en el esquema.
-- **Express v5**: Manejo de rutas y middleware de última generación.
-- **Vanilla JS**: Para mantener el rendimiento, evitamos frameworks pesados en el frontend.
+## 4. Proceso de Desarrollo
+- No se permiten cambios directos en la rama `main`.
+- Cada mejora debe ser auditada por el titular.
+- El titular se reserva el derecho de eliminar o modificar cualquier aporte sin previo aviso.
 
 ---
-
-_Winner Store: Liderando la cultura urbana a través de la tecnología._
+*El incumplimiento de estas políticas resultará en la revocación inmediata del acceso y las acciones legales correspondientes bajo la legislación de propiedad intelectual.*

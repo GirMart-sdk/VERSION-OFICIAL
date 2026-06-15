@@ -10,8 +10,11 @@ const { promisify } = require("util");
 const scryptAsync = promisify(scrypt);
 const { sendResetEmail } = require("../../emails/mailer");
 const { validate, schemas } = require("../middlewares/validation");
+const asyncHandler = require("../utils/asyncHandler");
 
 const { prisma } = require("../database");
+const { requireAuth } = require("../middlewares/auth");
+const AuditService = require("../services/auditService");
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -27,6 +30,25 @@ if (!JWT_SECRET && IS_PRODUCTION) {
 }
 
 /**
+ * Genera una contraseña aleatoria segura.
+ * @param {number} length - Longitud de la contraseña.
+ * @returns {string}
+ */
+function generateRandomPassword(length = 10) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+async function hashPassword(password) {
+  const derivedKey = await scryptAsync(password, HASH_SALT, 64);
+  return derivedKey.toString("hex");
+}
+
+/**
  * Verifica si una contraseña coincide con un hash guardado
  */
 async function verifyPassword(password, hash) {
@@ -39,7 +61,7 @@ async function verifyPassword(password, hash) {
   }
 }
 
-router.post("/login", validate(schemas.login), async (req, res) => {
+router.post("/login", validate(schemas.login), asyncHandler(async (req, res) => {
   const { user, pass } = req.body;
 
   // 1. Buscar usuario en la DB
@@ -100,13 +122,57 @@ router.post("/login", validate(schemas.login), async (req, res) => {
   }
 
   console.warn(`❌ Login fallido para: ${user}`);
-  res.status(401).json({ error: "Credenciales inválidas" });
-});
+  return res.status(401).json({ error: "Credenciales inválidas" });
+}));
 
-router.post("/logout", (req, res) => {
+/**
+ * PATCH /api/auth/update-password
+ * Cambio manual de contraseña con validación de seguridad
+ */
+router.patch("/auth/update-password", requireAuth, asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: "La nueva contraseña es demasiado débil." });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+  
+  // Validar contraseña actual
+  const isMatch = await verifyPassword(currentPassword, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ error: "La contraseña actual es incorrecta." });
+  }
+
+  const hashed = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed }
+  });
+
+  await AuditService.log(req, {
+    action: "UPDATE",
+    targetType: "USER",
+    targetId: user.id,
+    details: { message: "Contraseña actualizada por el usuario" }
+  });
+
+  res.json({ success: true, message: "Contraseña actualizada con éxito." });
+}));
+
+router.post("/logout", asyncHandler(async (req, res) => {
+  const token = req.cookies.w_token || (req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization").slice(7) : null);
+  
+  if (token) {
+    // Añadir a la lista negra (Expira en 7 días para limpiar la DB automáticamente)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await prisma.blacklistedToken.create({ data: { token, expiresAt } });
+  }
+
   res.clearCookie("w_token");
   res.json({ success: true });
-});
+}));
 
 /**
  * POST /api/auth/forgot-password
@@ -115,14 +181,13 @@ router.post("/logout", (req, res) => {
 router.post(
   "/auth/forgot-password",
   validate(schemas.forgotPassword),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "El correo es obligatorio" });
     }
 
-    try {
       // Buscamos al usuario por correo electrónico o username
       const user = await prisma.user.findFirst({
         where: {
@@ -130,11 +195,23 @@ router.post(
         },
       });
 
-      if (user && typeof sendResetEmail === "function") {
+      if (user) {
+        const tempPassword = generateRandomPassword(); // Generar nueva contraseña temporal
+        const hashedTempPassword = await hashPassword(tempPassword); // Hashear la contraseña
+
+        // Actualizar la contraseña del usuario en la base de datos
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: hashedTempPassword },
+        });
+
+        // Enviar correo con la nueva contraseña temporal
+        if (typeof sendResetEmail === "function") {
         console.log(
           `📩 [Auth] Enviando correo de recuperación a: ${user.email || user.username}`,
         );
-        await sendResetEmail(user);
+          await sendResetEmail(user, tempPassword); // Pasar la contraseña temporal
+        }
       } else {
         console.warn(
           `⚠️ [Auth] No se envió correo: Usuario no encontrado o sin email registrado para: ${email}`,
@@ -147,11 +224,7 @@ router.post(
         message:
           "Si el correo está registrado, recibirás instrucciones pronto.",
       });
-    } catch (err) {
-      console.error("❌ Error en forgot-password:", err.message);
-      res.status(500).json({ error: "Error interno del servidor" });
-    }
-  },
+  }),
 );
 
 module.exports = router;
