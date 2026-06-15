@@ -59,6 +59,7 @@ console.log(`[Mailer] Password: ${passCheck}`);
 const InventoryService = require("./services/inventoryService");
 const SalesService = require("./services/salesService");
 const ReportService = require("./services/reportService");
+const AuditService = require("./services/auditService");
 
 // Importar Utilidades y Middleware de Errores
 const cors = require("cors");
@@ -462,6 +463,15 @@ app.post("/api/inventory/bulk-update", requireAuth, asyncHandler(async (req, res
   }
 
   const results = await InventoryService.bulkUpdate(updates);
+
+  // REGISTRO DE AUDITORÍA: Prevenir manipulación silenciosa de inventario
+  await AuditService.log(req, {
+    action: "UPDATE",
+    targetType: "INVENTORY",
+    targetId: "BULK_UPDATE_CSV",
+    details: { count: updates.length, message: "Actualización masiva de stock realizada." }
+  });
+
   res.json({ 
     success: true, 
     message: `Inventario actualizado: ${results.length} registros procesados.` 

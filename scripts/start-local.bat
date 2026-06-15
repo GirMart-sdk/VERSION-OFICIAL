@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 title WINNER POS - FAST START
 set NODE_ENV=production
-cd /d "%~dp0"
+
 
 color 0b
 echo.
