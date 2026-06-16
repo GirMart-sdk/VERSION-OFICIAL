@@ -30,6 +30,7 @@ if (!process.env.DATABASE_URL) {
 
 // Importamos la instancia. Si el adaptador manual no expone 'user',
 // intentamos usar la instancia interna del cliente.
+<<<<<<< HEAD
 const database = require("./database");
 const db = database.prisma || database;
 
@@ -39,6 +40,13 @@ if (!db.user) {
   console.error("   Asegúrate de agregar el modelo 'User' a prisma/schema.prisma y ejecutar 'npx prisma generate'.");
   process.exit(1);
 }
+=======
+let prisma = require("./database");
+
+// Verificación de seguridad: si prisma.user no existe, el adaptador manual está incompleto.
+const prismaInstance = prisma.user ? prisma : prisma.prisma || prisma;
+const db = prisma.user ? prisma : prismaInstance;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
 
@@ -48,6 +56,7 @@ async function main() {
   // 1. Crear o actualizar usuario administrador inicial
   const adminUser = process.env.ADMIN_USER || "admin";
   const adminPass = process.env.ADMIN_PASSWORD || "winner2026";
+<<<<<<< HEAD
   // Normalizamos el correo para asegurar que coincida con la lógica de búsqueda en auth.js
   const adminEmail = process.env.EMAIL_USER?.trim().toLowerCase() || null;
 
@@ -55,10 +64,18 @@ async function main() {
     console.warn("⚠️ [Seed] ADVERTENCIA: La variable EMAIL_USER no está definida en el .env.");
     console.warn("   El usuario administrador se creará SIN correo electrónico.");
   }
+=======
+  const adminEmail = process.env.SMTP_USER || null; // Corregido: Usar SMTP_USER para consistencia con mailer.js
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
   // Generar hash de la contraseña
   const passwordHash = scryptSync(adminPass, HASH_SALT, 64).toString("hex");
 
+<<<<<<< HEAD
+=======
+  console.log(`[*] Sincronizando hash para el usuario: ${adminUser} con salt: ${HASH_SALT.substring(0, 5)}...`);
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   // Usamos upsert para asegurar que el admin tenga el email correcto incluso si ya existía
   await db.user.upsert({
     where: { username: adminUser },
@@ -76,10 +93,15 @@ async function main() {
     },
   });
   console.log(
+<<<<<<< HEAD
     `👤 [Seed] ¡SINCRO OK! -> Usuario: ${adminUser} | Email: ${adminEmail || "⚠️ NO DEFINIDO EN .ENV"}`,
   );
   const check = await db.user.findUnique({ where: { username: adminUser } });
   console.log(`📊 [Seed] Verificación en DB: El correo guardado es [${check.email}]`);
+=======
+    `👤 Usuario administrador sincronizado: ${adminUser} (${adminEmail || "sin email"})`,
+  );
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
   // 2. Definición de productos iniciales (Muestra representativa de los 26)
   const initialProducts = [
@@ -303,6 +325,62 @@ async function main() {
     });
   }
 
+<<<<<<< HEAD
+=======
+  // 4. Generar una venta de prueba para el historial
+  const sampleSaleId = "SALE-SEED-001";
+  const existingSale = await db.sale.findUnique({
+    where: { id: sampleSaleId },
+  });
+
+  if (!existingSale) {
+    console.log("📝 Generando venta de prueba...");
+    await db.sale.create({
+      data: {
+        id: sampleSaleId,
+        customerName: "Cliente de Prueba",
+        customerEmail: "prueba@winner.com",
+        customerPhone: "573000000000",
+        totalAmount: 130000,
+        paymentMethod: "Efectivo",
+        paymentStatus: "completed",
+        referenceNumber: "REF-SEED-001",
+        items: {
+          create: [
+            {
+              productId: "P004",
+              product_name: "Set Legging + Top W",
+              size: "M",
+              quantity: 1,
+              unitPrice: 130000,
+            },
+          ],
+        },
+        salePayments: {
+          create: [
+            {
+              amount: 130000,
+              method: "Efectivo",
+              notes: "Pago inicial completo (Seed)",
+            },
+          ],
+        },
+        orders: {
+          create: [
+            {
+              id: "ORD-SEED-001",
+              status: "ENTREGADO",
+              shippingMethod: "Recogida local",
+              shippingAddress: "Tienda Principal",
+            },
+          ],
+        },
+      },
+    });
+    console.log("✅ Venta de prueba creada.");
+  }
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   console.log("✅ Base de Datos PostgreSQL sincronizada con éxito.");
 }
 
@@ -312,5 +390,9 @@ main()
     process.exit(1);
   })
   .finally(async () => {
+<<<<<<< HEAD
     await db.$disconnect(); 
+=======
+    await db.prisma.$disconnect(); // Usar la instancia real de PrismaClient
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   });

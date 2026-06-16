@@ -4,6 +4,7 @@ const express = require("express");
 const { prisma } = require("../database");
 const { requireAuth, requireApiKey } = require("../middlewares/auth");
 const { randomUUID, createHash } = require("crypto");
+<<<<<<< HEAD
 const { sendSaleEmail, sendDailyReportEmail } = require("../../emails/mailer");
 const { validate, schemas } = require("../middlewares/validation");
 
@@ -17,6 +18,29 @@ router.get("/sales", requireAuth, async (req, res) => {
   if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
 
   try {
+=======
+const { sendSaleEmail } = require("../../emails/mailer");
+const { validate, schemas } = require("../middlewares/validation");
+const asyncHandler = require("../utils/asyncHandler");
+const StatsService = require("../services/statsService");
+const SalesService = require("../services/salesService");
+
+const router = express.Router();
+
+// Helper local para formateo de moneda en logs de error
+const fmt = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n || 0);
+
+// GET /api/sales — Historial completo
+router.get("/sales", requireAuth, asyncHandler(async (req, res) => {
+  const { from, to, limit = 500 } = req.query;
+  // Solo mostrar ventas que NO han sido anuladas
+  const where = {
+    deletedAt: null
+  };
+  if (from) where.createdAt = { gte: new Date(from) };
+  if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const sales = await prisma.sale.findMany({
       where,
       include: {
@@ -32,10 +56,17 @@ router.get("/sales", requireAuth, async (req, res) => {
       id: sale.id,
       timestamp: sale.createdAt.toISOString(),
       client: sale.customerName,
+<<<<<<< HEAD
+=======
+      customer_phone: sale.customerPhone,
+      shipping_address: sale.shippingAddress,
+      shipping_carrier: sale.shippingCarrier,
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       total: sale.totalAmount,
       method: sale.paymentMethod,
       payment_status: sale.paymentStatus,
       channel: sale.id.startsWith("ON") ? "online" : "fisica",
+<<<<<<< HEAD
       payment_details: sale.orders?.[0]
         ? {
             shipping_status: sale.orders[0].status,
@@ -181,6 +212,35 @@ router.post("/sales", validate(schemas.sale), async (req, res) => {
 router.patch("/sales/:id", requireAuth, async (req, res) => {
   const { payment_details, payment_status, shipping_address } = req.body;
   try {
+=======
+      payment_details: {
+        ...(typeof sale.payment_details === "string"
+          ? JSON.parse(sale.payment_details || "{}")
+          : sale.payment_details || {}),
+        ...(sale.orders?.[0]
+          ? {
+              shipping_status: sale.orders[0].status,
+              tracking_number: sale.orders[0].trackingNumber,
+            }
+          : {}),
+      },
+      total_paid: sale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0),
+    }));
+    res.json(formatted);
+}));
+
+// POST /api/sales — registrar venta (desde admin o tienda online)
+router.post("/sales", validate(schemas.sale), asyncHandler(async (req, res) => {
+    // Delegar toda la complejidad al SalesService para garantizar atomicidad
+    // y consistencia en el descuento de inventario.
+    const sale = await SalesService.createSale(req.body);
+    return res.json({ success: true, id: sale.id });
+}));
+
+// PATCH /api/sales/:id — Actualizar logística
+router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
+  const { payment_details, payment_status, shipping_address } = req.body;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     await prisma.$transaction(async (tx) => {
       const saleUpdate = {};
       if (shipping_address) saleUpdate.shippingAddress = shipping_address;
@@ -199,10 +259,14 @@ router.patch("/sales/:id", requireAuth, async (req, res) => {
           include: { salePayments: true },
         });
         if (currentSale) {
+<<<<<<< HEAD
           const paid = currentSale.salePayments.reduce(
             (sum, p) => sum + p.amount,
             0,
           );
+=======
+          const paid = currentSale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
           const balance = currentSale.totalAmount - paid;
           if (balance > 0) {
             await tx.salePayment.create({
@@ -250,6 +314,7 @@ router.patch("/sales/:id", requireAuth, async (req, res) => {
       }
     });
     res.json({ success: true });
+<<<<<<< HEAD
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -374,17 +439,86 @@ router.get("/analytics/top-products", requireAuth, async (req, res) => {
       .json({ error: "Error al obtener estadísticas de productos" });
   }
 });
+=======
+}));
+
+// DELETE /api/sales/:id
+router.delete("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
+  const saleId = req.params.id;
+
+  // En lugar de borrar, marcamos como eliminado (Soft Delete)
+  await prisma.sale.update({
+    where: { id: saleId },
+    data: { deletedAt: new Date() }
+  });
+
+  await AuditService.log(req, {
+    action: "ANNULMENT",
+    targetType: "SALE",
+    targetId: saleId,
+    details: { message: "Venta anulada por el administrador" }
+  });
+
+  res.json({ success: true, message: "Venta anulada correctamente" });
+}));
+
+// Gestión de Abonos
+router.get("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => {
+  const payments = await prisma.salePayment.findMany({
+    where: { saleId: req.params.id },
+    orderBy: { timestamp: "desc" },
+  });
+  res.json(payments);
+}));
+
+router.post("/sales/:id/payments", requireAuth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const paymentData = req.body; // { amount, method, notes }
+
+  const updatedSale = await SalesService.addPayment(id, paymentData);
+  res.json({ success: true, sale: updatedSale });
+}));
+
+// GET /api/stats — KPI Dashboard
+router.get("/stats", requireAuth, asyncHandler(async (req, res) => {
+  const stats = await StatsService.getDashboardStats();
+  res.json(stats);
+}));
+
+// GET /api/analytics/top-products — KPI de productos más vendidos para el Dashboard
+router.get("/analytics/top-products", requireAuth, asyncHandler(async (req, res) => {
+  const topProducts = await StatsService.getTopProducts(5);
+  res.json(topProducts);
+}));
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 // POST /api/checkout/init — Generar parámetros de seguridad para Wompi
 router.post(
   "/checkout/init",
   validate(schemas.checkoutInit),
+<<<<<<< HEAD
   async (req, res) => {
     const { saleId, amount, email } = req.body;
+=======
+  asyncHandler(async (req, res) => {
+    const { saleId, email } = req.body;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
     const publicKey = process.env.WOMPI_PUBLIC_KEY;
     const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
 
+<<<<<<< HEAD
+=======
+    // SEGURIDAD: No confiar en el 'amount' del body. Buscar el valor real en la DB.
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      select: { totalAmount: true }
+    });
+
+    if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+    const realAmount = Number(sale.totalAmount);
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     // Si no hay configuración de Wompi en el .env, indicamos al front que use pago manual
     if (!publicKey || !integritySecret) {
       console.warn(
@@ -393,11 +527,19 @@ router.post(
       return res.json({ isManual: true });
     }
 
+<<<<<<< HEAD
     const amountInCents = Math.round(amount * 100);
     const currency = "COP";
 
     // Generar firma de integridad (Integrity Check) requerida por Wompi
     const chain = `${saleId}${amountInCents}${currency}${integritySecret}`;
+=======
+    const amountInCents = Math.round(realAmount * 100);
+    const currency = "COP";
+
+    // Generar firma de integridad (Integrity Check) requerida por Wompi
+    const chain = `${saleId}${amountInCents}${currency}${integritySecret.trim()}`;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const integrity = require("crypto")
       .createHash("sha256")
       .update(chain)
@@ -413,6 +555,7 @@ router.post(
         customerEmail: email || "",
       },
     });
+<<<<<<< HEAD
   },
 );
 
@@ -474,4 +617,9 @@ router.post("/reports/send-daily", requireAuth, async (req, res) => {
   }
 });
 
+=======
+  }),
+);
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 module.exports = router;

@@ -5,6 +5,7 @@
 
 const express = require("express");
 const jwt = require("jsonwebtoken");
+<<<<<<< HEAD
 const { scrypt, timingSafeEqual, randomBytes, createHash } = require("crypto");
 const { promisify } = require("util");
 const scryptAsync = promisify(scrypt);
@@ -18,11 +19,26 @@ const router = express.Router();
 // Rastrear intentos fallidos en memoria (se limpia al reiniciar el servidor)
 const failureTracker = new Map();
 
+=======
+const { scrypt, timingSafeEqual } = require("crypto");
+const { promisify } = require("util");
+const scryptAsync = promisify(scrypt);
+const { sendResetEmail } = require("../../emails/mailer");
+const { validate, schemas } = require("../middlewares/validation");
+const asyncHandler = require("../utils/asyncHandler");
+
+const { prisma } = require("../database");
+const { requireAuth } = require("../middlewares/auth");
+const AuditService = require("../services/auditService");
+const router = express.Router();
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 const JWT_SECRET = process.env.JWT_SECRET;
 const API_KEY = process.env.API_KEY;
 const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
+<<<<<<< HEAD
 /**
  * Registra un fallo y verifica si se debe disparar una alerta de seguridad.
  */
@@ -70,6 +86,8 @@ function blockIPInWindowsFirewall(ip, user) {
   });
 }
 
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 if (!JWT_SECRET && IS_PRODUCTION) {
   console.error(
     "❌ ERROR CRÍTICO: JWT_SECRET no definido. El servidor no puede iniciar en producción.",
@@ -78,6 +96,32 @@ if (!JWT_SECRET && IS_PRODUCTION) {
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Genera una contraseña aleatoria segura.
+ * @param {number} length - Longitud de la contraseña.
+ * @returns {string}
+ */
+function generateRandomPassword(length = 12) {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const nums = '0123456789';
+  const syms = '!@#$';
+  const chars = upper + lower + nums + syms;
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+async function hashPassword(password) {
+  const derivedKey = await scryptAsync(password, HASH_SALT, 64);
+  return derivedKey.toString("hex");
+}
+
+/**
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
  * Verifica si una contraseña coincide con un hash guardado
  */
 async function verifyPassword(password, hash) {
@@ -90,6 +134,7 @@ async function verifyPassword(password, hash) {
   }
 }
 
+<<<<<<< HEAD
 /**
  * Genera un hash seguro para la nueva contraseña
  */
@@ -99,6 +144,9 @@ async function hashPassword(password) {
 }
 
 router.post("/login", validate(schemas.login), async (req, res) => {
+=======
+router.post("/login", validate(schemas.login), asyncHandler(async (req, res) => {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   const { user, pass } = req.body;
 
   // 1. Buscar usuario en la DB
@@ -110,8 +158,12 @@ router.post("/login", validate(schemas.login), async (req, res) => {
   });
 
   if (!dbUser) {
+<<<<<<< HEAD
     console.warn(`🚨 [Security] Intento de login con usuario inexistente: "${user}" desde IP: ${req.ip}`);
     await trackFailure(req, user);
+=======
+    console.warn(`❌ Login fallido (Usuario no existe): ${user}`);
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
@@ -119,7 +171,10 @@ router.post("/login", validate(schemas.login), async (req, res) => {
   const isPassValid = await verifyPassword(pass, dbUser.password);
 
   if (isPassValid) {
+<<<<<<< HEAD
     failureTracker.delete(req.ip); // Limpiar historial tras éxito
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     console.log(`✅ Login exitoso para: ${dbUser.username}`);
     const token = jwt.sign(
       { userId: dbUser.id, user: dbUser.username, role: dbUser.role },
@@ -160,6 +215,7 @@ router.post("/login", validate(schemas.login), async (req, res) => {
     });
   }
 
+<<<<<<< HEAD
   console.warn(`🚨 [Security] Contraseña incorrecta para usuario: "${user}" desde IP: ${req.ip}`);
   await trackFailure(req, user);
   res.status(401).json({ error: "Credenciales inválidas" });
@@ -169,21 +225,83 @@ router.post("/logout", (req, res) => {
   res.clearCookie("w_token");
   res.json({ success: true });
 });
+=======
+  console.warn(`❌ Login fallido para: ${user}`);
+  return res.status(401).json({ error: "Credenciales inválidas" });
+}));
+
+/**
+ * PATCH /api/auth/update-password
+ * Cambio manual de contraseña con validación de seguridad
+ */
+router.patch("/auth/update-password", requireAuth, asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: "La nueva contraseña es demasiado débil." });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+  
+  // Validar contraseña actual
+  const isMatch = await verifyPassword(currentPassword, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ error: "La contraseña actual es incorrecta." });
+  }
+
+  const hashed = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed }
+  });
+
+  await AuditService.log(req, {
+    action: "UPDATE",
+    targetType: "USER",
+    targetId: user.id,
+    details: { message: "Contraseña actualizada por el usuario" }
+  });
+
+  res.json({ success: true, message: "Contraseña actualizada con éxito." });
+}));
+
+router.post("/logout", asyncHandler(async (req, res) => {
+  const token = req.cookies.w_token || (req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization").slice(7) : null);
+  
+  if (token) {
+    // Añadir a la lista negra (Expira en 7 días para limpiar la DB automáticamente)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await prisma.blacklistedToken.create({ data: { token, expiresAt } });
+  }
+
+  res.clearCookie("w_token");
+  res.json({ success: true });
+}));
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 /**
  * POST /api/auth/forgot-password
  * Endpoint para solicitar la recuperación de contraseña.
  */
 router.post(
+<<<<<<< HEAD
   "/forgot-password",
   validate(schemas.forgotPassword),
   async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
+=======
+  "/auth/forgot-password",
+  validate(schemas.forgotPassword),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
     if (!email) {
       return res.status(400).json({ error: "El correo es obligatorio" });
     }
 
+<<<<<<< HEAD
     try {
       console.log(`🔍 [Auth] Buscando usuario para: "${email}"`);
 
@@ -202,10 +320,17 @@ router.post(
             { email: { equals: email, mode: 'insensitive' } },
             { username: { equals: email, mode: 'insensitive' } }
           ],
+=======
+      // Buscamos al usuario por correo electrónico o username
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: email }, { username: email }],
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
         },
       });
 
       if (user) {
+<<<<<<< HEAD
         const target = user.email || (user.username.includes("@") ? user.username : null);
         if (target) {
           // Generar Token de un solo uso (válido por 1 hora)
@@ -228,6 +353,27 @@ router.post(
       } else {
         console.warn(
           `⚠️ [Auth] Intento de recuperación fallido: El correo/usuario "${email}" no existe en la base de datos.`,
+=======
+        const tempPassword = generateRandomPassword(); // Generar nueva contraseña temporal
+        const hashedTempPassword = await hashPassword(tempPassword); // Hashear la contraseña
+
+        // Actualizar la contraseña del usuario en la base de datos
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: hashedTempPassword },
+        });
+
+        // Enviar correo con la nueva contraseña temporal
+        if (typeof sendResetEmail === "function") {
+        console.log(
+          `📩 [Auth] Enviando correo de recuperación a: ${user.email || user.username}`,
+        );
+          await sendResetEmail(user, tempPassword); // Pasar la contraseña temporal
+        }
+      } else {
+        console.warn(
+          `⚠️ [Auth] No se envió correo: Usuario no encontrado o sin email registrado para: ${email}`,
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
         );
       }
 
@@ -237,6 +383,7 @@ router.post(
         message:
           "Si el correo está registrado, recibirás instrucciones pronto.",
       });
+<<<<<<< HEAD
     } catch (err) {
       console.error("❌ Error en forgot-password:", err.message);
       res.status(500).json({ error: "Error interno del servidor" });
@@ -289,4 +436,9 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+=======
+  }),
+);
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 module.exports = router;

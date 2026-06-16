@@ -31,6 +31,11 @@ git commit -m "Sincronización inicial: Winner Store v3.5"
 echo [*] Cambiando a rama principal (main)...
 git branch -M main
 
+echo [*] Sincronizando con archivos existentes en el servidor...
+:: Esto descarga lo que haya en GitHub (como el README) y lo une a tu proyecto
+:: Si hay conflictos, Git intentara mezclarlos automaticamente.
+git pull origin main --allow-unrelated-histories --no-edit
+
 echo [*] Subiendo archivos a GitHub...
 echo (Es posible que se te pida autenticacion en una ventana emergente)
 git push -u origin main

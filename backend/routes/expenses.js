@@ -7,11 +7,20 @@ const express = require("express");
 const { prisma } = require("../database");
 const { requireAuth } = require("../middlewares/auth");
 const { validate, schemas } = require("../middlewares/validation");
+<<<<<<< HEAD
+=======
+const asyncHandler = require("../utils/asyncHandler");
+const AuditService = require("../services/auditService");
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 const router = express.Router();
 
 // GET /api/expenses?from=YYYY-MM-DD&to=YYYY-MM-DD&category=xxx
+<<<<<<< HEAD
 router.get("/expenses", requireAuth, async (req, res) => {
+=======
+router.get("/expenses", requireAuth, asyncHandler(async (req, res) => {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   const { from, to, category, month } = req.query;
   const where = {};
 
@@ -29,6 +38,7 @@ router.get("/expenses", requireAuth, async (req, res) => {
 
   if (category) where.category = category;
 
+<<<<<<< HEAD
   try {
     const expenses = await prisma.expense.findMany({
       where,
@@ -50,11 +60,32 @@ router.get("/expenses", requireAuth, async (req, res) => {
 
 // GET /api/expenses/summary?month=YYYY-MM
 router.get("/expenses/summary", requireAuth, async (req, res) => {
+=======
+  const expenses = await prisma.expense.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Mapeo para compatibilidad con el frontend (agrega el campo 'date')
+  const formatted = expenses.map((e) => ({
+    ...e,
+    date: e.createdAt.toISOString(),
+  }));
+
+  res.json(formatted);
+}));
+
+// GET /api/expenses/summary?month=YYYY-MM
+router.get("/expenses/summary", requireAuth, asyncHandler(async (req, res) => {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   const { month } = req.query; // formato YYYY-MM
   if (!month)
     return res.status(400).json({ error: "Se requiere mes (YYYY-MM)" });
 
+<<<<<<< HEAD
   try {
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const summary = await prisma.$queryRaw`
       SELECT
         SUM(amount) AS total_month,
@@ -86,6 +117,7 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
     result.top_amount = parseFloat(result.top_amount || 0);
 
     res.json(result);
+<<<<<<< HEAD
   } catch (err) {
     console.error("❌ Error fetching expenses summary:", err.message);
     res.status(500).json({ error: "Error al obtener resumen de gastos" });
@@ -98,6 +130,15 @@ router.get("/expenses/weekly", requireAuth, async (req, res) => {
   if (!month) return res.status(400).json({ error: "Se requiere mes" });
 
   try {
+=======
+}));
+
+// GET /api/expenses/weekly?month=YYYY-MM
+router.get("/expenses/weekly", requireAuth, asyncHandler(async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const weeklyExpenses = await prisma.$queryRaw`
       SELECT
         EXTRACT(WEEK FROM "created_at") AS week_number,
@@ -117,6 +158,7 @@ router.get("/expenses/weekly", requireAuth, async (req, res) => {
     }));
 
     res.json(result);
+<<<<<<< HEAD
   } catch (err) {
     console.error("❌ Error fetching weekly expenses:", err.message);
     res.status(500).json({ error: "Error al obtener gastos semanales" });
@@ -129,6 +171,15 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
   if (!month) return res.status(400).json({ error: "Se requiere mes" });
 
   try {
+=======
+}));
+
+// GET /api/expenses/by-category?month=YYYY-MM
+router.get("/expenses/by-category", requireAuth, asyncHandler(async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const totalMonthAmount = await prisma.expense.aggregate({
       _sum: { amount: true },
       where: {
@@ -163,18 +214,26 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
     }));
 
     res.json(result);
+<<<<<<< HEAD
   } catch (err) {
     console.error("❌ Error fetching expenses by category:", err.message);
     res.status(500).json({ error: "Error al obtener gastos por categoría" });
   }
 });
+=======
+}));
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 // POST /api/expenses
 router.post(
   "/expenses",
   requireAuth,
   validate(schemas.expense),
+<<<<<<< HEAD
   async (req, res) => {
+=======
+  asyncHandler(async (req, res) => {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     let { id, date, category, concept, detail, amount, method, description } =
       req.body;
 
@@ -185,7 +244,10 @@ router.post(
     const cleanAmount =
       parseFloat(String(amount).replace(/[^0-9.-]+/g, "")) || 0;
 
+<<<<<<< HEAD
     try {
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       // VALIDACIÓN DE DUPLICADOS
       const existing = await prisma.expense.findUnique({
         where: { id: expenseId },
@@ -211,15 +273,30 @@ router.post(
           amount: cleanAmount,
         },
       });
+<<<<<<< HEAD
+=======
+
+      await AuditService.log(req, {
+        action: "CREATE",
+        targetType: "EXPENSE",
+        targetId: expenseId,
+        details: { amount: cleanAmount, concept }
+      });
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       res.status(201).json({
         success: true,
         expense: { ...expense, date: expense.createdAt.toISOString() },
       });
+<<<<<<< HEAD
     } catch (err) {
       console.error("❌ Error creating expense:", err.message);
       res.status(500).json({ error: "Error al registrar gasto" });
     }
   },
+=======
+  }),
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 );
 
 // PUT /api/expenses/:id
@@ -227,12 +304,17 @@ router.put(
   "/expenses/:id",
   requireAuth,
   validate(schemas.expense),
+<<<<<<< HEAD
   async (req, res) => {
+=======
+  asyncHandler(async (req, res) => {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const { date, category, concept, detail, amount, method, description } =
       req.body;
     const cleanAmount =
       parseFloat(String(amount).replace(/[^0-9.-]+/g, "")) || 0;
 
+<<<<<<< HEAD
     try {
       const expenseDate =
         date && !isNaN(new Date(date)) ? new Date(date) : undefined;
@@ -273,5 +355,52 @@ router.delete("/expenses/:id", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Error al eliminar gasto" });
   }
 });
+=======
+    const expenseDate =
+      date && !isNaN(new Date(date)) ? new Date(date) : undefined;
+
+    const expense = await prisma.expense.update({
+      where: { id: req.params.id },
+      data: {
+        date: expenseDate,
+        createdAt: expenseDate,
+        category: category !== undefined ? category || null : undefined,
+        concept: concept !== undefined ? concept || null : undefined,
+        detail: detail !== undefined ? detail || null : undefined,
+        description:
+          description !== undefined ? description || null : undefined,
+        method: method !== undefined ? method || "Efectivo" : undefined,
+        amount: cleanAmount,
+        updatedAt: new Date(),
+      },
+    });
+
+    await AuditService.log(req, {
+      action: "UPDATE",
+      targetType: "EXPENSE",
+      targetId: req.params.id,
+      details: { amount: cleanAmount, concept }
+    });
+
+    res.json({
+      success: true,
+      expense: { ...expense, date: expense.createdAt.toISOString() },
+    });
+  }),
+);
+
+// DELETE /api/expenses/:id
+router.delete("/expenses/:id", requireAuth, asyncHandler(async (req, res) => {
+  await prisma.expense.delete({ where: { id: req.params.id } });
+  
+  await AuditService.log(req, {
+    action: "DELETE",
+    targetType: "EXPENSE",
+    targetId: req.params.id
+  });
+
+  res.json({ success: true, message: "Gasto eliminado" });
+}));
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 module.exports = router;

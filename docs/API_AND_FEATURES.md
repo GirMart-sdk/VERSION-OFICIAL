@@ -462,10 +462,13 @@ Predicción de demanda (ML simple)
 
 Exportar reporte a CSV
 
+<<<<<<< HEAD
 #### GET /api/health
 
 Endpoint de monitoreo. Verifica conectividad con PostgreSQL y estado del motor Prisma.
 
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 ---
 
 ### 🔐 AUTENTICACIÓN (3 endpoints)
@@ -928,6 +931,7 @@ GROUP BY i.product_id;
 
 Para poner la tienda en producción en otro dispositivo:
 
+<<<<<<< HEAD
 1. **Instalar:** Ejecutar `scripts/install-and-run.bat` (Configura Node, Prisma y PM2).
 2. **Automatizar:** Correr `scripts/setup-autotask.bat` para programar los respaldos nocturnos.
 3. **Iniciar:** Usar `scripts/start-local.bat` para levantar el servicio bajo PM2.
@@ -935,6 +939,15 @@ Para poner la tienda en producción en otro dispositivo:
 
 ### 🛠️ Suite de Scripts (Carpeta /scripts)
 Los archivos de automatización han sido centralizados y utilizan rutas relativas `cd /d "%~dp0.."` para operar de forma segura desde su subdirectorio.
+=======
+1. **Instalar Dependencias:** Ejecutar `install-and-run.bat` (instala Node, dependencias y sincroniza la DB).
+2. **Respaldos:** El script `backup-db.bat` crea volcados SQL de PostgreSQL automáticamente en la carpeta `/backups`.
+3. **Despliegue Profesional:** Usar `scripts/deploy-windows.bat`.
+   - Automatiza la instalación de PM2.
+   - Ejecuta las migraciones de Prisma.
+   - Realiza el Seed de datos iniciales.
+   - Configura el auto-inicio del servidor tras reinicios del PC.
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 ---
 

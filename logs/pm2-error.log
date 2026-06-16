@@ -1,0 +1,49 @@
+2026-06-10 23:48:03: ⚠️ Puerto 3000 ocupado, intentando con 30001...
+2026-06-10 23:50:58: [Mailer] Error enviando email: Error: Can't send mail - all recipients were rejected: 553-5.1.3 The recipient address <jmartxm23@gmai..com> is not a valid RFC 5321
+2026-06-10 23:50:58: 553-5.1.3 address. For more information, go to
+2026-06-10 23:50:58: 553-5.1.3  https://support.google.com/a/answer/3221692 and review RFC 5321
+2026-06-10 23:50:58: 553 5.1.3 specifications. 71dfb90a1353d-5bb0c92a51dsm467852e0c.11 - gsmtp
+2026-06-10 23:50:58:     at SMTPConnection._formatError (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:905:19)
+2026-06-10 23:50:58:     at SMTPConnection._actionRCPT (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1804:28)
+2026-06-10 23:50:58:     at SMTPConnection.<anonymous> (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1768:22)
+2026-06-10 23:50:58:     at SMTPConnection._processResponse (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1099:20)
+2026-06-10 23:50:58:     at SMTPConnection._onData (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:865:14)
+2026-06-10 23:50:58:     at SMTPConnection._onSocketData (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:224:44)
+2026-06-10 23:50:58:     at TLSSocket.emit (node:events:509:28)
+2026-06-10 23:50:58:     at addChunk (node:internal/streams/readable:563:12)
+2026-06-10 23:50:58:     at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+2026-06-10 23:50:58:     at Readable.push (node:internal/streams/readable:394:5) {
+2026-06-10 23:50:58:   code: 'EENVELOPE',
+2026-06-10 23:50:58:   response: '553-5.1.3 The recipient address <jmartxm23@gmai..com> is not a valid RFC 5321\n' +
+2026-06-10 23:50:58:     '553-5.1.3 address. For more information, go to\n' +
+2026-06-10 23:50:58:     '553-5.1.3  https://support.google.com/a/answer/3221692 and review RFC 5321\n' +
+2026-06-10 23:50:58:     '553 5.1.3 specifications. 71dfb90a1353d-5bb0c92a51dsm467852e0c.11 - gsmtp',
+2026-06-10 23:50:58:   responseCode: 553,
+2026-06-10 23:50:58:   command: 'RCPT TO',
+2026-06-10 23:50:58:   rejected: [ 'jmartxm23@gmai..com' ],
+2026-06-10 23:50:58:   rejectedErrors: [
+2026-06-10 23:50:58:     Error: Recipient command failed: 553-5.1.3 The recipient address <jmartxm23@gmai..com> is not a valid RFC 5321
+2026-06-10 23:50:58:     553-5.1.3 address. For more information, go to
+2026-06-10 23:50:58:     553-5.1.3  https://support.google.com/a/answer/3221692 and review RFC 5321
+2026-06-10 23:50:58:     553 5.1.3 specifications. 71dfb90a1353d-5bb0c92a51dsm467852e0c.11 - gsmtp
+2026-06-10 23:50:58:         at SMTPConnection._formatError (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:905:19)
+2026-06-10 23:50:58:         at SMTPConnection._actionRCPT (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1790:24)
+2026-06-10 23:50:58:         at SMTPConnection.<anonymous> (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1768:22)
+2026-06-10 23:50:58:         at SMTPConnection._processResponse (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:1099:20)
+2026-06-10 23:50:58:         at SMTPConnection._onData (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:865:14)
+2026-06-10 23:50:58:         at SMTPConnection._onSocketData (C:\DEZPY_v01\node_modules\nodemailer\lib\smtp-connection\index.js:224:44)
+2026-06-10 23:50:58:         at TLSSocket.emit (node:events:509:28)
+2026-06-10 23:50:58:         at addChunk (node:internal/streams/readable:563:12)
+2026-06-10 23:50:58:         at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+2026-06-10 23:50:58:         at Readable.push (node:internal/streams/readable:394:5) {
+2026-06-10 23:50:58:       code: 'EENVELOPE',
+2026-06-10 23:50:58:       response: '553-5.1.3 The recipient address <jmartxm23@gmai..com> is not a valid RFC 5321\n' +
+2026-06-10 23:50:58:         '553-5.1.3 address. For more information, go to\n' +
+2026-06-10 23:50:58:         '553-5.1.3  https://support.google.com/a/answer/3221692 and review RFC 5321\n' +
+2026-06-10 23:50:58:         '553 5.1.3 specifications. 71dfb90a1353d-5bb0c92a51dsm467852e0c.11 - gsmtp',
+2026-06-10 23:50:58:       responseCode: 553,
+2026-06-10 23:50:58:       command: 'RCPT TO',
+2026-06-10 23:50:58:       recipient: 'jmartxm23@gmai..com'
+2026-06-10 23:50:58:     }
+2026-06-10 23:50:58:   ]
+2026-06-10 23:50:58: }

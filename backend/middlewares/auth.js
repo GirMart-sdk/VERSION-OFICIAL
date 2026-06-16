@@ -4,16 +4,24 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
+<<<<<<< HEAD
 
 const API_KEY = process.env.API_KEY || "prod-api-key-winner-2026";
 const JWT_SECRET = process.env.JWT_SECRET;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+=======
+const { prisma } = require("../database");
+
+const API_KEY = process.env.API_KEY || "prod-api-key-winner-2026";
+const JWT_SECRET = process.env.JWT_SECRET;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 /**
  * Middleware para requerir una API Key válida.
  */
 function requireApiKey(req, res, next) {
   const key = req.header("x-api-key");
+<<<<<<< HEAD
 
   // En producción, prohibir terminantemente 'dev-api-key'
   const isAuthorized = IS_PRODUCTION 
@@ -26,13 +34,24 @@ function requireApiKey(req, res, next) {
   }
 
   console.warn(`🚨 [Security Alert] Intento de acceso con API Key inválida desde IP: ${req.ip}`);
+=======
+  // SEGURIDAD: Permitir la llave de producción o la de desarrollo
+  if (key === API_KEY || key === "dev-api-key") {
+    req.authenticated = "api-key";
+    return next();
+  }
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   return res.status(401).json({ error: "API key inválida" });
 }
 
 /**
  * Middleware para requerir autenticación JWT o API Key.
  */
+<<<<<<< HEAD
 function requireAuth(req, res, next) {
+=======
+async function requireAuth(req, res, next) {
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   const auth = req.header("authorization") || "";
   const tokenFromCookie = req.cookies.w_token;
   const apiKey = req.header("x-api-key");
@@ -42,6 +61,17 @@ function requireAuth(req, res, next) {
     tokenFromCookie || (auth.startsWith("Bearer ") ? auth.slice(7) : null);
 
   if (token) {
+<<<<<<< HEAD
+=======
+    // SEGURIDAD: Verificar si el token está en la lista negra
+    const isBlacklisted = await prisma.blacklistedToken.findUnique({
+      where: { token }
+    });
+    if (isBlacklisted) {
+      return res.status(401).json({ error: "Sesión invalidada por seguridad" });
+    }
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;

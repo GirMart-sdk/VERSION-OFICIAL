@@ -8,10 +8,14 @@ const prodEnv = path.resolve(process.cwd(), '.env.production');
 const envPath = fs.existsSync(prodEnv) ? prodEnv : path.resolve(process.cwd(), '.env');
 dotenv.config({ path: envPath });
 
+<<<<<<< HEAD
 let databaseUrl = process.env.DATABASE_URL || '';
 
 // Limpiar comillas accidentales de la cadena
 databaseUrl = databaseUrl.trim().replace(/^["']|["']$/g, "");
+=======
+const databaseUrl = process.env.DATABASE_URL;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 // Verificamos la URL antes de exportar para evitar errores silenciosos
 if (!databaseUrl) {

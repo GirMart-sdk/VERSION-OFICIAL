@@ -22,7 +22,11 @@
   gap: 12px;
   align-items: flex-end;
   margin-bottom: 24px;
+<<<<<<< HEAD
   background: #060606;
+=======
+  background: var(--gray2);
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   padding: 16px 20px;
   border-radius: 12px;
 }

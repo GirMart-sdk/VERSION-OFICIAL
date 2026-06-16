@@ -565,9 +565,13 @@ body {
   font-weight: 800 !important;
   text-transform: uppercase;
   cursor: pointer;
+<<<<<<< HEAD
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   animation: phTabAppear 0.4s ease-out forwards;
   opacity: 0;
+=======
+  transition: all 0.01s cubic-bezier(0.4, 0, 0.2, 1) !important;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 }
 
 .ph-tab.active,
@@ -576,6 +580,7 @@ body {
   background: linear-gradient(145deg, #f10000, #ffffff) !important;
   color: #000 !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.28) !important;
+<<<<<<< HEAD
   transform: scale(1.05);
 }
 
@@ -598,6 +603,8 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+=======
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 }
 
 .promo-badge {
@@ -1048,9 +1055,15 @@ input:focus {
 /* ══ TOOLBAR ════════════════════════════════════════════ */
 .toolbar {
   display: flex;
+<<<<<<< HEAD
   gap: 0px;
   margin-bottom: 20px;
   flex-wrap: wrap-reverse;
+=======
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   align-items: center;
 }
 
@@ -1061,7 +1074,11 @@ input:focus {
   border: 1px solid var(--border);
   color: var(--white);
   font-size: 13px;
+<<<<<<< HEAD
   padding: 8px 19px;
+=======
+  padding: 10px 16px;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   outline: none;
   transition: border-color 0.2s;
 }
@@ -1624,15 +1641,26 @@ input:focus {
   background: linear-gradient(120deg, #db0000 0%, #8b8989 60%, #ffc107 100%);
   color: var(--black);
   border: none;
+<<<<<<< HEAD
   padding: 9px;
   font-family: "Bebas Neue", sans-serif;
   font-size: 14px;
   letter-spacing: 1px;
+=======
+  padding: 14px;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 17px;
+  letter-spacing: 3px;
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   transition: background var(--trans);
   flex-shrink: 0;
   clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
   margin: 10px 14px;
+<<<<<<< HEAD
   width: calc(100% - 27px);
+=======
+  width: calc(100% - 28px);
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 }
 
 .pos-confirm-btn:hover {

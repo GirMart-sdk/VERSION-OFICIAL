@@ -111,7 +111,11 @@ function printReceipt(sale) {
     .row{display:flex;justify-content:space-between}
     .total{font-size:18px;font-weight:900}</style>
   </head><body>
+<<<<<<< HEAD
     <h2 style="margin-bottom:0">W●NNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
+=======
+    <h2 style="margin-bottom:0">WINNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     ${isLayaway ? '<h3 style="text-align:center; border:1px solid #000; padding:5px; margin-top:10px; font-size:14px;">TICKET DE SEPARADO</h3>' : ""}
     <div class="line"></div>
     <p>Fecha: ${fmtDate(sale.timestamp)}</p>
@@ -488,9 +492,14 @@ async function confirmPOSPaymentWithDetails() {
       channel: "fisica",
       vendor: $("posVendor")?.value || "Admin",
       client: $("posClient")?.value || "Mostrador",
+<<<<<<< HEAD
       customer_email: customerEmail, // Añadir el email del cliente a los datos de la venta
       customer_phone:
         customerPhone || $("posCustomerPhone")?.value.trim() || "",
+=======
+      customer_email: customerEmail,
+      customer_phone: customerPhone || $("posCustomerPhone")?.value.trim() || "", // Aseguramos que se tome de posCustomerPhone si no se llenó en el modal
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       payment_status: isLayaway ? "partial" : "completed",
       shipping_address:
         shippingAddress || (isLayaway ? "Apartado en Tienda" : "Venta Directa"),

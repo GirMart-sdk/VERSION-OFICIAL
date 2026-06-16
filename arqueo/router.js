@@ -6,6 +6,11 @@
 const express = require("express");
 const router = express.Router();
 const prisma = require("../backend/database");
+<<<<<<< HEAD
+=======
+const ReportService = require("../backend/services/reportService");
+const mailer = require("../emails/mailer");
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 const { requireAuth } = require("../backend/middlewares/auth");
 
 /**
@@ -129,6 +134,27 @@ router.post("/close", requireAuth, async (req, res) => {
       },
     });
 
+<<<<<<< HEAD
+=======
+    // --- ENVÍO DE REPORTE AUTOMÁTICO AL GMAIL ---
+    try {
+      // Obtener ventas y gastos del turno para el PDF
+      const sales = await prisma.sale.findMany({
+        where: { createdAt: { gte: session.openedAt, lte: closed.closedAt }, deletedAt: null }
+      });
+      const expenses = await prisma.expense.findMany({
+        where: { createdAt: { gte: session.openedAt, lte: closed.closedAt } }
+      });
+
+      // Generar PDF y enviar
+      const pdfBuffer = await ReportService.generateCashClosingPDF(closed, sales, expenses);
+      await mailer.sendCashClosingEmail(closed, pdfBuffer);
+      console.log(`✅ [Arqueo] Reporte de cierre enviado con éxito a admin.`);
+    } catch (mailErr) {
+      console.error("⚠️ [Arqueo] Error al enviar correo de cierre:", mailErr.message);
+    }
+
+>>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     res.json({ success: true, session: closed });
   } catch (err) {
     res.status(500).json({ error: err.message });
