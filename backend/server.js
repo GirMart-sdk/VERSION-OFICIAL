@@ -58,8 +58,8 @@ app.use((req, res, next) => {
 });
 
 // 5. Archivos estáticos
-const frontendPath = path.join(__dirname, "..", "frontend");
-app.use(express.static(frontendPath));
+const rootPath = path.join(__dirname, "..");
+app.use(express.static(rootPath));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // 6. Rutas de salud y diagnóstico
