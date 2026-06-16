@@ -11,50 +11,62 @@ echo.
 
 :: 1. Verificar conectividad con el repositorio
 echo [*] Verificando actualizaciones en GitHub...
-git fetch origin main >nul 2>&1
+:: Corregir estado de "HEAD desprendido" si existe y asegurar rama main
+git checkout -B main >nul 2>&1
+git fetch origin main --quiet
 
 :: Comprobar si estamos por detrás del repositorio remoto
-FOR /F "tokens=*" %%g IN ('git rev-parse HEAD') DO SET LOCAL=%%g
-FOR /F "tokens=*" %%g IN ('git rev-parse @{u}') DO SET REMOTE=%%g
+for /f "tokens=*" %%g in ('git rev-parse HEAD') do set LOCAL=%%g
+for /f "tokens=*" %%g in ('git rev-parse origin/main') do set REMOTE=%%g
 
-if "%LOCAL%"=="%REMOTE%" (
+if "!LOCAL!"=="!REMOTE!" (
     echo ✅ El servidor ya esta actualizado con la ultima version oficial.
-    timeout /t 2 > nul
+    goto START_SERVICES
 ) else (
     echo [!] NUEVA ACTUALIZACION DETECTADA. Iniciando descarga...
 )
 
 :: 2. Sincronizacion Forzada (Modo Produccion)
-:: Usamos reset --hard para asegurar que el equipo remoto sea un espejo
-:: exacto de GitHub, eliminando cualquier corrupcion o marca de conflicto.
-echo [*] Limpiando y aplicando version oficial...
-git fetch origin main >nul 2>&1
+echo [*] Sincronizando archivos con la version oficial...
 git reset --hard origin/main
 if %errorlevel% neq 0 (
     echo ❌ ERROR: No se pudo sincronizar con GitHub.
     pause
     exit /b 1
 )
-echo ✅ Archivos restaurados y actualizados.
+echo ✅ Archivos actualizados correctamente.
 
 :: 3. Actualizar dependencias si hubo cambios en package.json
 echo [*] Refrescando modulos y motor Prisma...
-call npm install --silent
+:: Solo ejecutar install si es necesario para ahorrar tiempo
+call npm install --no-audit --no-fund --quiet
 call npx prisma generate >nul
 
 :: 4. Sincronizar Base de Datos (Crucial para que no falle el otro equipo)
 echo [*] Aplicando cambios en la estructura de datos...
-call npx prisma db push --skip-generate
+call npx prisma db push --skip-generate >nul
 
-:START_SERVER
+:START_SERVICES
 echo.
-echo ✅ PUENTE SINCRONIZADO CON EXITO.
-echo [*] Lanzando servidor en el equipo remoto...
+echo ✅ SISTEMA SINCRONIZADO.
+echo [*] Reiniciando servicios con PM2 para maxima estabilidad...
 
-:: Cerramos cualquier instancia previa antes de relanzar
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %%a >nul 2>&1
+:: Verificar si PM2 esta instalado
+where pm2 >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [!] PM2 no detectado. Iniciando con Node directamente...
+    for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %%a >nul 2>&1
+    start /b "WINNER_SRV" node backend/server.js
+) else (
+    :: Usar el archivo de configuracion de PM2
+    call pm2 restart ecosystem.config.js --env production >nul 2>&1
+    if %errorlevel% neq 0 (
+        call pm2 start ecosystem.config.js --env production
+    )
+)
 
-start /b "WINNER_SRV" node backend/server.js
-timeout /t 2 /nobreak > nul
+echo.
+echo [OK] El sistema esta corriendo en segundo plano.
+timeout /t 3 > nul
 start http://localhost:3000/admin-panel.html
 exit
