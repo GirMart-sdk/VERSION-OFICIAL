@@ -4,26 +4,12 @@ const express = require("express");
 const { prisma } = require("../database");
 const { requireAuth, requireApiKey } = require("../middlewares/auth");
 const { randomUUID, createHash } = require("crypto");
-<<<<<<< HEAD
 const { sendSaleEmail, sendDailyReportEmail } = require("../../emails/mailer");
-const { validate, schemas } = require("../middlewares/validation");
-
-const router = express.Router();
-
-// GET /api/sales — Historial completo
-router.get("/sales", requireAuth, async (req, res) => {
-  const { from, to, limit = 500 } = req.query;
-  const where = {};
-  if (from) where.createdAt = { gte: new Date(from) };
-  if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
-
-  try {
-=======
-const { sendSaleEmail } = require("../../emails/mailer");
 const { validate, schemas } = require("../middlewares/validation");
 const asyncHandler = require("../utils/asyncHandler");
 const StatsService = require("../services/statsService");
 const SalesService = require("../services/salesService");
+const AuditService = require("../services/auditService");
 
 const router = express.Router();
 
@@ -34,13 +20,9 @@ const fmt = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency:
 router.get("/sales", requireAuth, asyncHandler(async (req, res) => {
   const { from, to, limit = 500 } = req.query;
   // Solo mostrar ventas que NO han sido anuladas
-  const where = {
-    deletedAt: null
-  };
+  const where = { deletedAt: null };
   if (from) where.createdAt = { gte: new Date(from) };
   if (to) where.createdAt = { ...where.createdAt, lte: new Date(to) };
-
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const sales = await prisma.sale.findMany({
       where,
       include: {
@@ -56,163 +38,13 @@ router.get("/sales", requireAuth, asyncHandler(async (req, res) => {
       id: sale.id,
       timestamp: sale.createdAt.toISOString(),
       client: sale.customerName,
-<<<<<<< HEAD
-=======
       customer_phone: sale.customerPhone,
       shipping_address: sale.shippingAddress,
       shipping_carrier: sale.shippingCarrier,
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       total: sale.totalAmount,
       method: sale.paymentMethod,
       payment_status: sale.paymentStatus,
       channel: sale.id.startsWith("ON") ? "online" : "fisica",
-<<<<<<< HEAD
-      payment_details: sale.orders?.[0]
-        ? {
-            shipping_status: sale.orders[0].status,
-            tracking_number: sale.orders[0].trackingNumber,
-          }
-        : {},
-      total_paid: sale.salePayments.reduce((sum, p) => sum + p.amount, 0),
-    }));
-    res.json(formatted);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/sales — registrar venta (desde admin o tienda online)
-router.post("/sales", validate(schemas.sale), async (req, res) => {
-  const {
-    id,
-    total,
-    items,
-    client,
-    customer_email,
-    customer_phone,
-    payment_method,
-    payment_status,
-    shipping_address,
-    shipping_carrier,
-    payment_details,
-  } = req.body;
-
-  if (!total || !items?.length)
-    return res
-      .status(400)
-      .json({ error: "Datos de venta incompletos", success: false });
-
-  const saleId = id || `S${Date.now().toString(36).toUpperCase()}`;
-
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const finalItems = [];
-      for (const item of items) {
-        let pId = item.id || item.productId;
-        const inv = await tx.inventory.findFirst({
-          where: { productId: pId, size: item.size || "U" },
-        });
-        if (!inv || inv.quantity < item.qty)
-          throw new Error(
-            `Stock insuficiente para ${item.name} (${item.size || "U"})`,
-          );
-        await tx.inventory.update({
-          where: {
-            productId_size: {
-              productId: inv.productId,
-              size: inv.size,
-            },
-          },
-          data: { quantity: { decrement: item.qty } },
-        });
-        finalItems.push({ ...item, correctedId: pId });
-      }
-
-      return await tx.sale.create({
-        data: {
-          id: saleId,
-          customerName: client || "Consumidor Final",
-          customerEmail: customer_email || null,
-          customerPhone: customer_phone || null,
-          totalAmount: total,
-          paymentMethod: payment_method || "Efectivo",
-          paymentStatus: payment_status || "completed",
-          shippingAddress: shipping_address || null,
-          referenceNumber: saleId,
-          items: {
-            create: finalItems.map((it) => ({
-              productId: it.correctedId,
-              product_name: it.name,
-              size: it.size,
-              quantity: it.qty,
-              unitPrice: it.price,
-            })),
-          },
-          salePayments:
-            !payment_status || payment_status === "completed"
-              ? {
-                  create: [
-                    {
-                      amount: total,
-                      method: payment_method || "Efectivo",
-                      notes: "Pago inicial completo",
-                    },
-                  ],
-                }
-              : payment_details?.abonoAmount > 0
-                ? {
-                    create: [
-                      {
-                        amount: Number(payment_details.abonoAmount),
-                        method: payment_method || "Abono",
-                        notes: "Abono inicial",
-                      },
-                    ],
-                  }
-                : undefined,
-          orders:
-            shipping_address || shipping_carrier || payment_status === "partial"
-              ? {
-                  create: [
-                    {
-                      id: "ORD-" + randomUUID().slice(0, 8),
-                      status:
-                        payment_details?.shipping_status ||
-                        (payment_status === "partial" ? "ABONO" : "PENDIENTE"),
-                      shippingMethod: shipping_carrier || "Estándar",
-                      shippingAddress:
-                        shipping_address ||
-                        (payment_status === "partial"
-                          ? "Tienda (Apartado)"
-                          : ""),
-                      trackingNumber: "",
-                    },
-                  ],
-                }
-              : [],
-        },
-      });
-    });
-
-    const fullSale = await prisma.sale.findUnique({
-      where: { id: result.id },
-      include: { items: { include: { product: true } } },
-    });
-    sendSaleEmail(fullSale).catch((err) =>
-      console.error("❌ Fallo crítico al enviar email:", err.message),
-    );
-
-    return res.json({ success: true, id: result.id });
-  } catch (error) {
-    return res.status(400).json({ error: error.message, success: false });
-  }
-});
-
-// PATCH /api/sales/:id — Actualizar logística
-router.patch("/sales/:id", requireAuth, async (req, res) => {
-  const { payment_details, payment_status, shipping_address } = req.body;
-  try {
-=======
       payment_details: {
         ...(typeof sale.payment_details === "string"
           ? JSON.parse(sale.payment_details || "{}")
@@ -231,8 +63,6 @@ router.patch("/sales/:id", requireAuth, async (req, res) => {
 
 // POST /api/sales — registrar venta (desde admin o tienda online)
 router.post("/sales", validate(schemas.sale), asyncHandler(async (req, res) => {
-    // Delegar toda la complejidad al SalesService para garantizar atomicidad
-    // y consistencia en el descuento de inventario.
     const sale = await SalesService.createSale(req.body);
     return res.json({ success: true, id: sale.id });
 }));
@@ -240,7 +70,6 @@ router.post("/sales", validate(schemas.sale), asyncHandler(async (req, res) => {
 // PATCH /api/sales/:id — Actualizar logística
 router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
   const { payment_details, payment_status, shipping_address } = req.body;
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     await prisma.$transaction(async (tx) => {
       const saleUpdate = {};
       if (shipping_address) saleUpdate.shippingAddress = shipping_address;
@@ -259,14 +88,7 @@ router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
           include: { salePayments: true },
         });
         if (currentSale) {
-<<<<<<< HEAD
-          const paid = currentSale.salePayments.reduce(
-            (sum, p) => sum + p.amount,
-            0,
-          );
-=======
           const paid = currentSale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
           const balance = currentSale.totalAmount - paid;
           if (balance > 0) {
             await tx.salePayment.create({
@@ -314,132 +136,6 @@ router.patch("/sales/:id", requireAuth, asyncHandler(async (req, res) => {
       }
     });
     res.json({ success: true });
-<<<<<<< HEAD
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE /api/sales/:id
-router.delete("/sales/:id", requireAuth, async (req, res) => {
-  try {
-    await prisma.sale.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Gestión de Abonos
-router.get("/sales/:id/payments", requireAuth, async (req, res) => {
-  try {
-    const payments = await prisma.salePayment.findMany({
-      where: { saleId: req.params.id },
-      orderBy: { timestamp: "desc" },
-    });
-    res.json(payments);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post("/sales/:id/payments", requireAuth, async (req, res) => {
-  const { amount, method, notes } = req.body;
-  const saleId = req.params.id;
-  if (!amount || amount <= 0)
-    return res.status(400).json({ error: "Monto inválido" });
-  try {
-    await prisma.salePayment.create({
-      data: {
-        saleId,
-        amount: Number(amount),
-        method: method || "Abono",
-        notes: notes || "",
-      },
-    });
-    const sale = await prisma.sale.findUnique({
-      where: { id: saleId },
-      include: { salePayments: { select: { amount: true } } },
-    });
-    const totalPaid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
-    const newStatus = totalPaid >= sale.totalAmount ? "completed" : "partial";
-    await prisma.sale.update({
-      where: { id: saleId },
-      data: { paymentStatus: newStatus },
-    });
-    res.json({ success: true, message: "Abono registrado" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/stats — KPI Dashboard
-router.get("/stats", requireAuth, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const statsWhere = { NOT: { orders: { some: { status: "CANCELADO" } } } };
-
-    const [totalSales, totalRevenueAgg, salesToday, revenueTodayAgg] =
-      await Promise.all([
-        prisma.sale.count({ where: statsWhere }),
-        prisma.sale.aggregate({
-          _sum: { totalAmount: true },
-          where: statsWhere,
-        }),
-        prisma.sale.count({
-          where: { ...statsWhere, createdAt: { gte: today } },
-        }),
-        prisma.sale.aggregate({
-          _sum: { totalAmount: true },
-          where: { ...statsWhere, createdAt: { gte: today } },
-        }),
-      ]);
-
-    const totalRevenue = totalRevenueAgg._sum.totalAmount || 0;
-
-    res.json({
-      totalSales,
-      totalRevenue,
-      salesToday,
-      revenueToday: revenueTodayAgg._sum.totalAmount || 0,
-      avgTicket: totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/analytics/top-products — KPI de productos más vendidos para el Dashboard
-router.get("/analytics/top-products", requireAuth, async (req, res) => {
-  try {
-    // Agrupamos los items de venta por producto y sumamos sus cantidades
-    const topProducts = await prisma.saleItem.groupBy({
-      by: ["productId", "product_name"],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: "desc",
-        },
-      },
-      take: 5,
-    });
-
-    const formatted = topProducts.map((item) => ({
-      name: item.product_name,
-      qty_sold: item._sum.quantity || 0,
-    }));
-
-    res.json(formatted);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Error al obtener estadísticas de productos" });
-  }
-});
-=======
 }));
 
 // DELETE /api/sales/:id
@@ -490,26 +186,17 @@ router.get("/analytics/top-products", requireAuth, asyncHandler(async (req, res)
   const topProducts = await StatsService.getTopProducts(5);
   res.json(topProducts);
 }));
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 // POST /api/checkout/init — Generar parámetros de seguridad para Wompi
 router.post(
   "/checkout/init",
   validate(schemas.checkoutInit),
-<<<<<<< HEAD
-  async (req, res) => {
-    const { saleId, amount, email } = req.body;
-=======
   asyncHandler(async (req, res) => {
     const { saleId, email } = req.body;
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
     const publicKey = process.env.WOMPI_PUBLIC_KEY;
     const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
 
-<<<<<<< HEAD
-=======
-    // SEGURIDAD: No confiar en el 'amount' del body. Buscar el valor real en la DB.
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },
       select: { totalAmount: true }
@@ -518,7 +205,6 @@ router.post(
     if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
     const realAmount = Number(sale.totalAmount);
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     // Si no hay configuración de Wompi en el .env, indicamos al front que use pago manual
     if (!publicKey || !integritySecret) {
       console.warn(
@@ -527,19 +213,11 @@ router.post(
       return res.json({ isManual: true });
     }
 
-<<<<<<< HEAD
-    const amountInCents = Math.round(amount * 100);
-    const currency = "COP";
-
-    // Generar firma de integridad (Integrity Check) requerida por Wompi
-    const chain = `${saleId}${amountInCents}${currency}${integritySecret}`;
-=======
     const amountInCents = Math.round(realAmount * 100);
     const currency = "COP";
 
     // Generar firma de integridad (Integrity Check) requerida por Wompi
     const chain = `${saleId}${amountInCents}${currency}${integritySecret.trim()}`;
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const integrity = require("crypto")
       .createHash("sha256")
       .update(chain)
@@ -555,71 +233,7 @@ router.post(
         customerEmail: email || "",
       },
     });
-<<<<<<< HEAD
-  },
-);
-
-/**
- * POST /api/reports/send-daily
- * Procesa y envía el reporte diario por correo.
- */
-router.post("/reports/send-daily", requireAuth, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // 1. Recolectar Ventas de hoy (que no hayan fallado)
-    const sales = await prisma.sale.findMany({
-      where: { createdAt: { gte: today }, NOT: { paymentStatus: 'failed' } }
-    });
-
-    // 2. Recolectar Gastos de hoy
-    const expenses = await prisma.expense.findMany({
-      where: { createdAt: { gte: today } }
-    });
-
-    // 3. Cálculos de resumen
-    const totalSales = sales.reduce((sum, s) => sum + s.totalAmount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    
-    const methodBreakdown = {};
-    sales.forEach(s => {
-      methodBreakdown[s.paymentMethod] = (methodBreakdown[s.paymentMethod] || 0) + s.totalAmount;
-    });
-
-    // 4. Buscar el Arqueo de hoy (si existe)
-    const arqueo = await prisma.cashSession.findFirst({
-      where: { openedAt: { gte: today } },
-      orderBy: { openedAt: 'desc' }
-    });
-
-    const reportData = {
-      date: new Date().toLocaleDateString('es-CO'),
-      totalSales,
-      totalExpenses,
-      netCash: totalSales - totalExpenses,
-      methodBreakdown,
-      arqueo: arqueo ? {
-        realBalance: arqueo.realBalance,
-        difference: arqueo.difference
-      } : null
-    };
-
-    await sendDailyReportEmail(reportData);
-
-    res.json({ 
-      success: true, 
-      message: "Informe enviado correctamente al correo del administrador." 
-    });
-  } catch (err) {
-    console.error("Error enviando reporte diario:", err);
-    res.status(500).json({ error: "No se pudo generar el reporte" });
-  }
-});
-
-=======
   }),
 );
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 module.exports = router;

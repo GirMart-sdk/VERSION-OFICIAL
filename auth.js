@@ -26,17 +26,11 @@ window.showApp = function () {
 window.doLogout = function (silent = false) {
   if (!silent && !confirm("¿Cerrar sesión?")) return;
   if (typeof SS !== "undefined") SS.set("session", null);
-<<<<<<< HEAD
-  localStorage.removeItem("w_api_key");
-=======
   localStorage.removeItem("winner_w_api_key");
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   window.location.reload();
 };
 
 /**
-<<<<<<< HEAD
-=======
  * Valida la fortaleza de la contraseña (Min 8 caracteres, letras y números)
  */
 function isStrongPassword(pass) {
@@ -46,7 +40,6 @@ function isStrongPassword(pass) {
 }
 
 /**
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
  * Inicialización del formulario de Login
  */
 document.addEventListener("DOMContentLoaded", () => {
@@ -88,11 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
           loginBtn.innerHTML = 'VERIFICANDO... <span class="store-dot"></span>';
         }
 
-<<<<<<< HEAD
-        const res = await window.apiFetch(`${window.API_URL}/auth/login`, {
-=======
         const res = await window.apiFetch(`${window.API_URL}/login`, {
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
           method: "POST",
           body: JSON.stringify({ user, pass }),
         });

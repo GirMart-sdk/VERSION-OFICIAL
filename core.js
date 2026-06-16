@@ -18,26 +18,15 @@ const API_URL = (() => {
   const origin = window.location.origin;
 
   // Mejoramos la lógica para producción pública
-<<<<<<< HEAD
-  if (origin.startsWith("file:") || origin === "null") {
-    console.warn("⚠️ Estás abriendo el archivo localmente. Se recomienda usar http://localhost:3000");
-=======
   if (origin.startsWith("file:")) {
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     const savedIp = localStorage.getItem("w_server_ip") || "localhost";
     return `http://${savedIp}:3000/api`;
   }
 
-<<<<<<< HEAD
-  // Normalización de la URL base
-  const base = origin.endsWith('/') ? origin.slice(0, -1) : origin;
-  return `${base}/api`;
-=======
-  // Aseguramos que si estamos en producción, el API_URL coincida con el protocolo actual (http/https)
+  // Aseguramos que el API_URL coincida con el protocolo actual (http/https)
   const base = origin.replace(/\/$/, "");
 
-  return `${base.replace(/\/$/, "")}/api`;
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+  return `${base}/api`;
 })();
 window.API_URL = API_URL;
 
@@ -145,15 +134,6 @@ const apiFetch = async (url, options = {}) => {
     ...options,
     headers,
     credentials: "include", // Manejo global de cookies (Sesión y CSRF)
-<<<<<<< HEAD
-  }).catch((err) => {
-    console.error(`🌐 Error de red al conectar con ${url}:`, err);
-    const host = new URL(url).host;
-    return Promise.reject(
-      new Error(`No hay conexión con el servidor (${host}). ¿Olvidaste ejecutar el archivo .bat?`)
-    );
-=======
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   }).then(async (res) => {
     if (res.status === 401) {
       // Si falla la API Key, la borramos para que en el próximo intento use la de desarrollo
