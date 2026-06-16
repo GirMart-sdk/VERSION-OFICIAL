@@ -2,6 +2,7 @@
 setlocal enabledelayedexpansion
 title WINNER BRIDGE - SYNC SYSTEM
 cd /d "%~dp0\.."
+chcp 65001 >nul
 
 color 0b
 echo.
@@ -18,14 +19,23 @@ FOR /F "tokens=*" %%g IN ('git rev-parse @{u}') DO SET REMOTE=%%g
 
 if "%LOCAL%"=="%REMOTE%" (
     echo ✅ El servidor ya esta actualizado con la ultima version oficial.
-    timeout /t 3 > nul
-    goto START_SERVER
+    timeout /t 2 > nul
+) else (
+    echo [!] NUEVA ACTUALIZACION DETECTADA. Iniciando descarga...
 )
 
-echo [!] NUEVA ACTUALIZACION DETECTADA. Iniciando descarga...
-
-:: 2. Bajar cambios (Puente)
-git pull origin main
+:: 2. Sincronizacion Forzada (Modo Produccion)
+:: Usamos reset --hard para asegurar que el equipo remoto sea un espejo
+:: exacto de GitHub, eliminando cualquier corrupcion o marca de conflicto.
+echo [*] Limpiando y aplicando version oficial...
+git fetch origin main >nul 2>&1
+git reset --hard origin/main
+if %errorlevel% neq 0 (
+    echo ❌ ERROR: No se pudo sincronizar con GitHub.
+    pause
+    exit /b 1
+)
+echo ✅ Archivos restaurados y actualizados.
 
 :: 3. Actualizar dependencias si hubo cambios en package.json
 echo [*] Refrescando modulos y motor Prisma...

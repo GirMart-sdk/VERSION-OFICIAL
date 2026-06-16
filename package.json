@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-  "$schema": "https://json.schemastore.org/package",
-=======
   "$schema": "https://json.schemastore.org/package.json",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   "name": "winner-store",
   "version": "2.0.0",
   "description": "🏆 WINNER STORE - Plataforma de e-commerce moderna para tiendas de ropa streetwear colombianas",
@@ -19,29 +15,19 @@
     "prestart": "prisma generate",
     "start": "node backend/server.js",
     "start:dev": "NODE_ENV=development node backend/server.js",
-<<<<<<< HEAD
-    "start:prod": "NODE_ENV=production node backend/server.js",
-    "start:local": "start-local.bat",
-=======
+    "start:prod": "npm run setup && node backend/server.js",
     "start:local": "scripts/start-local.bat",
     "sync:bridge": "scripts/sync-bridge.bat",
     "setup": "npx prisma generate && npx prisma db push && node backend/seed.js",
-    "start:prod": "npm run setup && node backend/server.js",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     "develop": "watch 'npm start' .",
     "seed": "prisma db seed",
     "init": "npm install && npm run seed && npm start",
     "init:silent": "npm install --silent && npm run seed --silent && npm start",
-<<<<<<< HEAD
-    "test": "node -c backend/server.js && echo '✅ Sintaxis validada'",
-    "lint": "echo '✅ Syntax check completado'",
-=======
     "test": "node -c backend/server.js && npm run audit",
     "audit": "npm audit --audit-level=high",
     "audit:fix": "npm audit fix",
-    "lint": "eslint . --ext .js",
+    "lint": "eslint . --ext .js && echo '✅ Syntax check completado'",
     "security-scan": "eslint . --plugin security --rule 'security/detect-object-injection: warn' && echo '🛡️ Escaneo SAST completado'",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     "backup": "node backend/database-backup.js",
     "backup:local": "node scripts/backup-local.js",
     "db:migrate": "prisma migrate dev",
@@ -72,18 +58,11 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csurf": "^1.11.0",
-<<<<<<< HEAD
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "helmet": "^7.2.0",
-=======
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-rate-limit": "^8.5.2",
-    "helmet": "^7.2.0",
     "morgan": "^1.10.0",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.10",
@@ -91,32 +70,16 @@
     "pg": "^8.21.0",
     "pm2": "^7.0.1",
     "sharp": "^0.33.5",
-<<<<<<< HEAD
-=======
     "winston": "^3.13.0",
     "winston-daily-rotate-file": "^5.0.0",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@prisma/config": "^6.19.3",
-<<<<<<< HEAD
     "prisma": "^6.19.3",
-    "watch": "^0.13.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/GirMart-sdk/winn_Vdf.git"
-  },
-  "bugs": {
-    "url": "https://github.com/GirMart-sdk/winn_Vdf/issues"
-  },
-  "homepage": "https://github.com/GirMart-sdk/winn_Vdf#readme",
-=======
+    "watch": "^0.13.0",
     "eslint": "^8.57.0",
-    "eslint-plugin-security": "^2.1.1",
-    "prisma": "^6.19.3",
-   "watch": "^0.13.0"
+    "eslint-plugin-security": "^2.1.1"
   },
   "repository": {
     "type": "git",
@@ -126,6 +89,5 @@
     "url": "https://github.com/GirMart-sdk/VERSION-OFICIAL/issues"
   },
   "homepage": "https://github.com/GirMart-sdk/VERSION-OFICIAL#readme",
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   "prettier": {}
 }
