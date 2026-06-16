@@ -6,9 +6,6 @@
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-<<<<<<< HEAD
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
-=======
 
 const isProdMode = process.env.NODE_ENV === "production";
 let envPath = path.resolve(__dirname, "..", isProdMode ? ".env.production" : ".env");
@@ -19,7 +16,6 @@ if (!fs.existsSync(envPath)) {
 }
 
 require("dotenv").config({ path: envPath });
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 const BACKUP_DIR = path.join(__dirname, "../backups");
 
@@ -28,8 +24,6 @@ if (!fs.existsSync(BACKUP_DIR)) {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * Elimina respaldos con más de 7 días de antigüedad
  */
 function cleanupOldBackups() {
@@ -53,7 +47,6 @@ function cleanupOldBackups() {
 }
 
 /**
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
  * Ejecuta el comando pg_dump para extraer la estructura y datos
  */
 function performBackup() {
@@ -62,24 +55,17 @@ function performBackup() {
   const filePath = path.join(BACKUP_DIR, fileName);
 
   // Extraemos la URL de la DB del .env
-<<<<<<< HEAD
-  const dbUrl = process.env.DATABASE_URL;
-=======
   let dbUrl = String(process.env.DATABASE_URL || "").trim();
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
   if (!dbUrl) {
     console.error("❌ Error: DATABASE_URL no encontrada en el archivo .env");
     return;
   }
 
-<<<<<<< HEAD
-=======
   // Limpieza profunda: eliminamos comillas de inicio/fin y parámetros de query (?schema=...)
   // Esto garantiza que pg_dump reciba una URI de conexión pura.
   dbUrl = dbUrl.replace(/^["']|["']$/g, "").split("?")[0].trim();
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   console.log(`🚀 Iniciando respaldo de Winner Store v3.5...`);
 
   // Comando para PostgreSQL (requiere tener pg_dump instalado en el sistema)
@@ -87,15 +73,6 @@ function performBackup() {
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
-<<<<<<< HEAD
-      console.error(`❌ Error al crear el respaldo: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.warn(`⚠️ Advertencia: ${stderr}`);
-    }
-    console.log(`✅ Respaldo completado con éxito: ${fileName}`);
-=======
       console.error(`❌ [Backup] Error al crear el respaldo: ${error.message}`);
       return;
     }
@@ -106,7 +83,6 @@ function performBackup() {
     const fileSize = (stats.size / (1024 * 1024)).toFixed(2);
     console.log(`✅ [Backup] Respaldo completado con éxito: ${fileName} (${fileSize} MB)`);
     cleanupOldBackups();
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   });
 }
 

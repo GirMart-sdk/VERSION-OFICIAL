@@ -21,7 +21,7 @@ if %errorlevel% equ 0 (
 echo.
 set /p msg="Introduce un mensaje para este cambio (ej: actualizacion de stock): "
 
-if "%msg%"=="" set msg="Actualizacion automatica Winner Store"
+if "%msg%"=="" set "msg=Actualizacion automatica Winner Store"
 
 echo [*] Forzando la inclusion de todos los scripts (Asegurando 11 archivos .bat)...
 git add -f scripts/*.bat

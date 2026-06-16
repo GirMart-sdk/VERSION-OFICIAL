@@ -12,11 +12,7 @@ const fs = require("fs");
 
 // 1. Asegurar carga de variables si el archivo se requiere fuera de server.js (como en el seed)
 if (!process.env.DATABASE_URL) {
-<<<<<<< HEAD
-  const envPath = path.join(process.cwd(), ".env");
-=======
   const envPath = path.resolve(__dirname, "..", ".env");
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   if (fs.existsSync(envPath)) {
     require("dotenv").config({ path: envPath });
   }
@@ -78,10 +74,7 @@ module.exports = {
   customerProfile: prisma.customerProfile,
   reorderRule: prisma.reorderRule,
   demandForecast: prisma.demandForecast,
-<<<<<<< HEAD
-=======
   auditLog: prisma.auditLog,
   blacklistedToken: prisma.blacklistedToken,
   bannedIp: prisma.bannedIp,
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 };
