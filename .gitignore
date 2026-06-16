@@ -1,39 +1,27 @@
-<<<<<<< HEAD
 # Dependencias
 node_modules/
 jspm_packages/
 
-# Entorno y Secretos
+dist/
+build/
+
+# --- Entorno y Secretos ---
 .env
 .env.test
 .env.production
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-*.log
-
-# Base de Datos y Prisma
-prisma/*.db
-prisma/*.db-journal
-
-# Archivos de Sistema y Editor
-.DS_Store
-Thumbs.db
-
-# Carpeta de archivos subidos (Imágenes de productos locales)
-uploads/
-=======
-node_modules/
-.env
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.DS_Store
-dist/
-build/
-.vscode/
-logs/
 *.local
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+
+# --- Logs y Temporales ---
+logs/
+*.log
+npm-debug.log*
+
+# --- Base de Datos y Backups ---
+backups/*.sql
+prisma/migrations/
+
+# --- Multimedia y Sistema ---
+uploads/
+
+Thumbs.db
+.vscode/
