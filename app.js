@@ -421,8 +421,6 @@ function addToCart(productId, sizeId) {
     }
   }
 
-<<<<<<< HEAD
-=======
   // Punto Ciego: Validación estricta antes de procesar
   const stockTotal = Object.values(product.stock || {}).reduce((a, b) => a + b, 0);
   if (stockTotal <= 0) {
@@ -433,7 +431,6 @@ function addToCart(productId, sizeId) {
     return showToast(`❌ Talla ${selectedSize} agotada.`);
   }
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   // Buscar si ya existe EN ESA MISMA TALLA
   const existing = cart.find(
     (i) => i.id === productId && i.size === selectedSize,

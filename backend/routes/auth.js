@@ -26,6 +26,13 @@ const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 /**
+ * Genera una contraseña segura de un solo uso
+ */
+function generateRandomPassword(length = 10) {
+  return randomBytes(length).toString('hex').slice(0, length);
+}
+
+/**
  * Registra un fallo y verifica si se debe disparar una alerta de seguridad.
  */
 async function trackFailure(req, user) {

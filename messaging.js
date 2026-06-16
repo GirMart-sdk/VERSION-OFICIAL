@@ -36,13 +36,8 @@ window.renderMessagingCenter = function () {
         typeof s.payment_details === "string"
           ? JSON.parse(s.payment_details || "{}")
           : s.payment_details || {};
-<<<<<<< HEAD
-      // Una venta está "pendiente de envío" si tiene dirección de envío y su estado no es "ENTREGADO" ni "CANCELADO"
-      const shippingStatus = d.shipping_status?.toUpperCase();
-      return s.shipping_address && shippingStatus && shippingStatus !== "ENTREGADO" && shippingStatus !== "CANCELADO";
-=======
-      return s.shipping_address && d.shipping_status === "PENDIENTE";
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+      const shippingStatus = (d.shipping_status || "PENDIENTE").toUpperCase();
+      return s.shipping_address && shippingStatus !== "ENTREGADO" && shippingStatus !== "CANCELADO";
     });
   } else if (filter === "pending_pay") {
     filtered = filtered.filter((s) => s.payment_status === "partial");
@@ -52,24 +47,11 @@ window.renderMessagingCenter = function () {
     .map((s) => {
       const phone = (s.customer_phone || s.phone || "").replace(/\D/g, "");
       const cleanPhone = phone.startsWith("57") ? phone : "57" + phone;
-<<<<<<< HEAD
-=======
       const displayPhone = (s.customer_phone || s.phone || "").trim();
-
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       const d =
         typeof s.payment_details === "string"
           ? JSON.parse(s.payment_details || "{}")
           : s.payment_details || {};
-
-<<<<<<< HEAD
-      return `
-        <div class="dash-neon-box" style="padding:15px; margin-bottom:10px; flex-direction:row; justify-content:space-between; text-align:left; align-items:center;">
-            <div style="z-index:1">
-                <div style="font-weight:700; font-size:14px; color:white">${esc(s.client)}</div>
-                <div style="font-size:11px; color:var(--gray-text)">Orden #${s.id.slice(-6).toUpperCase()} • ${fmtDate(s.timestamp)}</div>
-                <div style="margin-top:5px">
-=======
       const paid = Number(s.total_paid || 0);
       const balance = Number(s.total || 0) - paid;
 
@@ -83,7 +65,6 @@ window.renderMessagingCenter = function () {
                 ${balance > 0 ? `<div style="font-size:12px; color:var(--orange); font-weight:700; margin-top:5px;">SALDO: ${fmt(balance)}</div>` : ""}
 
                 <div style="margin-top:8px">
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
                     <span class="status-badge ${s.payment_status === "completed" ? "s-ok" : "s-low"}">${s.payment_status === "completed" ? "PAGADO" : "PENDIENTE"}</span>
                     ${s.shipping_address ? `<span class="status-badge s-fisica">${d.shipping_status || "PENDIENTE"}</span>` : ""}
                 </div>

@@ -4,10 +4,7 @@
 let _invStockFilter = "all"; // 'all', 'low', 'out'
 let cropperInstance = null;
 let currentCropFile = null;
-<<<<<<< HEAD
 let videoStream = null;
-=======
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 async function fetchInventory() {
   try {
@@ -386,7 +383,6 @@ window.handleImageUpload = async (e) => {
   e.target.value = ""; // Reset para permitir subir la misma foto tras correcciones
 };
 
-<<<<<<< HEAD
 window.startProductCamera = async () => {
   const video = $("productVideo");
   const container = $("cameraContainer");
@@ -456,8 +452,6 @@ window.captureProductPhoto = () => {
   img.src = imageData;
 };
 
-=======
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 window.confirmCrop = async () => {
   if (!cropperInstance) {
     console.error("❌ No hay una instancia de Cropper activa.");
@@ -556,11 +550,7 @@ window.printSingleQR = () => {
         }
       </style>
       <body>
-<<<<<<< HEAD
         <div class="brand">W●NNER</div>
-=======
-        <div class="brand">WINNER</div>
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
         <img src="${imgData}">
         <div class="sku">${p.sku}</div>
         <div class="price">${fmt(p.price)}</div>
@@ -607,11 +597,7 @@ window.printAllQRs = () => {
     .map(
       (p) => `
     <div class="label-item">
-<<<<<<< HEAD
       <div class="brand">W●NNER</div>
-=======
-      <div class="brand">WINNER</div>
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       <svg id="barcode-${p.id}"></svg>
       <div class="sku">${p.sku}</div>
       <div class="price">${fmt(p.price)}</div>

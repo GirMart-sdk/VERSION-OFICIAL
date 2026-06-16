@@ -15,10 +15,7 @@ async function fetchSalesLog() {
     window.allSalesData = data.map((s) => ({
       ...s,
       total: Number(s.total), // Asegurar que sea número
-<<<<<<< HEAD
-=======
       total_paid: Number(s.total_paid || 0), // Forzar conversión a número para evitar errores de visualización
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
     }));
 
@@ -28,13 +25,10 @@ async function fetchSalesLog() {
     renderSalesKPIs();
     renderSalesCharts();
     renderSalesTable();
-<<<<<<< HEAD
     
     // Notificar al módulo de caja que los datos de ventas han cambiado
     if (typeof updateCashUI === 'function') updateCashUI();
 
-=======
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     if (typeof renderLayawaySales === "function") renderLayawaySales();
   } catch (e) {
     console.error("Error fetching sales:", e);
@@ -314,12 +308,9 @@ window.viewSaleDetails = (id) => {
 
   const shipStatus = details.shipping_status || "PENDIENTE";
   const trackingNum = details.tracking_number || "";
-<<<<<<< HEAD
-=======
   const paid = Number(sale.total_paid || 0);
   const balance = Math.max(0, sale.total - paid);
   const isDone = balance <= 0;
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
   let overlay = $("saleDetailsOverlay");
   let modal = $("saleDetailsModal");
@@ -351,8 +342,6 @@ window.viewSaleDetails = (id) => {
         <strong>Dirección:</strong> <span style="color:white">${esc(sale.shipping_address || "Mostrador / Sin envío")}</span>
       </div>
 
-<<<<<<< HEAD
-=======
       <!-- RESUMEN FINANCIERO DEL SEPARADO -->
       <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border)">
         <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
@@ -370,7 +359,6 @@ window.viewSaleDetails = (id) => {
         </div>
       </div>
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
       <div class="form-group" style="margin-bottom:15px">
         <label>Estado del Separado</label>
         <select id="editShipStatus" class="tb-select" style="width:100%; background:var(--dark);">
@@ -546,10 +534,6 @@ function updateLayawayKPIs(data) {
 }
 
 window.openLayawayPayment = async (saleId) => {
-<<<<<<< HEAD
-  const amount = prompt("Ingrese el monto del abono (COP):");
-  if (!amount || isNaN(amount) || amount <= 0) return;
-=======
   const sale = window.allSalesData.find(x => x.id === saleId);
   if (!sale) return;
 
@@ -557,8 +541,6 @@ window.openLayawayPayment = async (saleId) => {
   const amount = prompt(`💸 REGISTRAR ABONO - Orden #${saleId.slice(-6).toUpperCase()}\nSaldo Pendiente: ${fmt(currentBalance)}\n\nIngrese el monto del abono (COP):`, currentBalance);
   
   if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
-
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   try {
     const res = await apiFetch(`${API_URL}/sales/${saleId}/payments`, {
       method: "POST",

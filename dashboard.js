@@ -13,13 +13,10 @@ async function renderDashboard() {
     const statsRes = await apiFetch(`${API_URL}/stats`);
     const stats = await statsRes.json();
 
-<<<<<<< HEAD
-=======
     // 1.1 Obtener estado del Arqueo de Caja (Sesión Activa)
     const arqueoRes = await apiFetch(`${API_URL}/arqueo/status`);
     const arqueo = await arqueoRes.json();
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     if (stats) {
       // Sincronización con IDs reales de index.html y admin-panel.html
       const revEl = $("kpiTotalRevenue") || $("kpiRevenueToday");
@@ -35,45 +32,28 @@ async function renderDashboard() {
       if ($("kpiTotalDebt"))
         $("kpiTotalDebt").textContent = fmt(stats.totalDebt || 0);
 
-<<<<<<< HEAD
-      if ($("kpiConversion")) {
-        const convVal = Number(stats.conversion) || 0;
-        $("kpiConversion").textContent = convVal.toFixed(1) + "%";
-=======
       // Priorizar el saldo del Arqueo de Caja si hay una sesión abierta
       if ($("kpiNetCash")) {
-        const isActive = arqueo && arqueo.active;
-        const cashDisplay = isActive
-          ? arqueo.calculations.theoreticalBalance
-          : stats.netCash;
-
-        $("kpiNetCash").textContent = fmt(cashDisplay || 0);
-
-        // Indicador visual de que la caja está abierta
-        const label =
-          $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
-        if (label && isActive) {
-          label.innerHTML =
-            "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>ACTIVA</span>";
-        }
+          const isActive = arqueo && arqueo.active;
+          const cashDisplay = isActive ? arqueo.calculations.theoreticalBalance : (stats.netCash || 0);
+          $("kpiNetCash").textContent = fmt(cashDisplay);
+          
+          const label = $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
+          if (label && isActive) {
+              label.innerHTML = "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>ACTIVA</span>";
+          }
       }
 
       if ($("kpiConversion")) {
-        $("kpiConversion").textContent = stats.conversion || "0%";
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+        const convVal = Number(stats.conversion) || 0;
+        $("kpiConversion").textContent = (stats.conversion || "0%") + (typeof stats.conversion === 'number' ? '%' : '');
       }
 
       if ($("kpiConversionTrend")) {
         const trend = stats.conversion_trend || "estable";
         $("kpiConversionTrend").textContent = trend;
         // Sincronización con clases dk-trend para Glassmorphism
-<<<<<<< HEAD
-        $("kpiConversionTrend").className = "dk-trend " + 
-          (trend.includes("↑") ? "up" : trend.includes("↓") ? "down" : "stable");
-=======
-        $("kpiConversionTrend").className =
-          "dk-trend " + (trend.includes("↑") ? "up" : "down");
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+        $("kpiConversionTrend").className = "dk-trend " + (trend.includes("↑") ? "up" : trend.includes("↓") ? "down" : "stable");
       }
 
       // Actualizar Totales Históricos (Parte inferior)
@@ -83,17 +63,13 @@ async function renderDashboard() {
         $("stTransTotal").textContent = stats.totalSales || 0;
     }
 
-<<<<<<< HEAD
-=======
     // 1.2 Renderizar el Widget de Control de Caja
     renderArqueoWidget(arqueo);
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     // 2. Asegurar que las ventas recientes estén cargadas para la actividad en vivo
     if (!window.salesLog || window.salesLog.length === 0) {
       await fetchSalesLog();
     }
-<<<<<<< HEAD
 
     // --- CÁLCULO DE MÉTRICAS EN VIVO (CLIENT-SIDE) ---
     // Esto asegura que si el backend reporta 0, el frontend sume las ventas cargadas
@@ -144,8 +120,6 @@ async function renderDashboard() {
       }
     }
 
-=======
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   } catch (e) {
     console.error("❌ Error fetching dashboard summary analytics:", e);
   }
@@ -164,31 +138,11 @@ async function renderDashboard() {
     .then((res) => res.json())
     .then((data) => renderTopProductsApex(data))
     .catch(() => renderTopProductsApex([]));
-<<<<<<< HEAD
 
     // Sincronizar KPI de caja desde el módulo local
     if (typeof updateCashUI === 'function') updateCashUI();
 }
 
-/**
- * Los controladores de Arqueo han sido movidos a cash-logic.js
- * para evitar duplicados y conflictos de estado.
- */
-
-window.handleSendDailyReport = async () => {
-  toast("⌛ Generando informe PDF y enviando...");
-  try {
-    // Usamos window.API_URL para asegurar la ruta correcta
-    const res = await apiFetch(`${window.API_URL}/reports/send-daily`, {
-      method: "POST"
-    });
-    // Si apiFetch no lanza excepción, es que fue exitoso
-    toast("✅ Informe enviado correctamente");
-  } catch (e) {
-    // Mostramos el error real capturado por apiFetch
-    toast("❌ " + e.message);
-=======
-}
 
 /**
  * Renderiza el widget de Apertura/Cierre de caja en el Dashboard
@@ -295,7 +249,6 @@ window.handleCloseArqueo = async () => {
     }
   } catch (e) {
     toast("❌ Error de red");
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   }
 };
 
