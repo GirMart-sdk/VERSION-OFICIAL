@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+jspm_packages/
+
+# Entorno y Secretos
+.env
+.env.test
+.env.production
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Base de Datos y Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Archivos de Sistema y Editor
+.DS_Store
+Thumbs.db
+
+# Carpeta de archivos subidos (Imágenes de productos locales)
+uploads/

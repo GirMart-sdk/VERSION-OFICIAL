@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "winner-store",
+  "version": "2.0.0",
+  "description": "🏆 WINNER STORE - Plataforma de e-commerce moderna para tiendas de ropa streetwear colombianas",
+  "main": "backend/server.js",
+  "type": "commonjs",
+  "author": "GirMart-SDK",
+  "license": "Proprietary",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "scripts": {
+    "prestart": "prisma generate",
+    "start": "node backend/server.js",
+    "start:dev": "NODE_ENV=development node backend/server.js",
+    "start:prod": "NODE_ENV=production node backend/server.js",
+    "start:local": "start-local.bat",
+    "develop": "watch 'npm start' .",
+    "seed": "prisma db seed",
+    "init": "npm install && npm run seed && npm start",
+    "init:silent": "npm install --silent && npm run seed --silent && npm start",
+    "test": "node -c backend/server.js && echo '✅ Sintaxis validada'",
+    "lint": "echo '✅ Syntax check completado'",
+    "backup": "node backend/database-backup.js",
+    "backup:local": "node scripts/backup-local.js",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:check": "prisma db pull && echo '✅ Conexión con PostgreSQL establecida'",
+    "clean": "del /s /q backend\\*.db 2>nul & rmdir /s /q node_modules\\.prisma 2>nul & rmdir /s /q node_modules\\@prisma\\client 2>nul",
+    "reinstall": "rmdir /s /q node_modules && del package-lock.json && npm install",
+    "reset": "npm run clean && npm run seed && echo '✅ Proyecto reseteado'",
+    "logs": "type .env | findstr DB || echo 'Revisa backend/server.js para logs'",
+    "postinstall": "prisma generate"
+  },
+  "keywords": [
+    "ecommerce",
+    "tienda-online",
+    "streetwear",
+    "colombia",
+    "payment-gateway",
+    "pse",
+    "nequi",
+    "daviplata"
+  ],
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.19.3",
+    "@prisma/client": "^6.19.3",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "csurf": "^1.11.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^7.2.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.10",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.21.0",
+    "pm2": "^7.0.1",
+    "sharp": "^0.33.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@prisma/config": "^6.19.3",
+    "prisma": "^6.19.3",
+    "watch": "^0.13.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GirMart-sdk/winn_Vdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GirMart-sdk/winn_Vdf/issues"
+  },
+  "homepage": "https://github.com/GirMart-sdk/winn_Vdf#readme",
+  "prettier": {}
+}

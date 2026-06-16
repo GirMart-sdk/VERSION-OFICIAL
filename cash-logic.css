@@ -1,0 +1,84 @@
+/* Winner Store - Cash Logic Styles */
+.session-badge-mini {
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.session-badge-mini.abierta { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+.session-badge-mini.cerrada { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; }
+
+.cash-session-card {
+    background: var(--gray);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.session-info-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+}
+
+.session-status-big { display: flex; align-items: center; gap: 15px; }
+.session-status-big span { font-size: 32px; }
+.session-status-big h2 { font-family: 'Bebas Neue'; font-size: 28px; letter-spacing: 1px; color: var(--white); }
+
+.session-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.detail-item label { font-size: 10px; color: var(--gray-text); text-transform: uppercase; letter-spacing: 1px; }
+.detail-item span { font-size: 20px; color: var(--white); font-weight: 600; }
+
+.arqueo-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.arqueo-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.arqueo-row label { color: var(--gray-text); }
+.arqueo-row span { color: var(--white); font-weight: 600; }
+.arqueo-row.total { border-top: 1px solid var(--border); border-bottom: none; padding-top: 15px; font-size: 18px; }
+.arqueo-row.total span { color: var(--accent); }
+
+.btn-orange {
+    background: var(--orange);
+    color: var(--black);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Bebas Neue';
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn-orange:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+.status-pill { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+.status-pill.abierta { background: #10b981; color: white; }
+.status-pill.cerrada { background: #666; color: white; }

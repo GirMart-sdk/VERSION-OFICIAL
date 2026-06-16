@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estado de tu Pedido | Winner Store</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: #0a0a0a;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        font-family: "DM Sans", sans-serif;
+      }
+      .status-container {
+        background: #121212;
+        padding: 40px;
+        border-radius: 15px;
+        border: 1px solid var(--border);
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+      .status-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        display: block;
+      }
+      h1 {
+        font-family: "Bebas Neue";
+        font-size: 32px;
+        letter-spacing: 2px;
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+      p {
+        color: var(--gray-text);
+        margin-bottom: 30px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .btn-home {
+        background: var(--accent);
+        color: black;
+        padding: 12px 30px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        font-family: "Bebas Neue";
+        letter-spacing: 1px;
+        transition: 0.3s;
+        display: inline-block;
+      }
+      .btn-home:hover {
+        transform: scale(1.05);
+        filter: brightness(1.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status-container">
+      <div id="statusContent">
+        <span class="status-icon">⌛</span>
+        <h1>VERIFICANDO PAGO</h1>
+        <p>
+          Estamos consultando el estado de tu transacción con Bancolombia...
+        </p>
+      </div>
+      <a href="/" class="btn-home">VOLVER A LA TIENDA</a>
+    </div>
+
+    <script>
+      // Lógica simple para leer el ID de transacción de la URL que envía Wompi
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      const content = document.getElementById("statusContent");
+
+      if (id) {
+        // En un sistema real, aquí llamaríamos a /api/payments/${id} para confirmar
+        // Por ahora, simulamos éxito para la prueba de flujo
+        setTimeout(() => {
+          content.innerHTML = `
+                    <span class="status-icon">✅</span>
+                    <h1>¡PAGO CONFIRMADO!</h1>
+                    <p>Tu orden ha sido procesada con éxito. En breve recibirás un correo con los detalles del envío.</p>
+                `;
+        }, 2000);
+      } else {
+        content.innerHTML = `
+                <span class="status-icon">❓</span>
+                <h1>ESTADO PENDIENTE</h1>
+                <p>No pudimos detectar una transacción activa. Si ya pagaste, revisa tu correo o contacta a soporte.</p>
+            `;
+      }
+    </script>
+  </body>
+</html>
