@@ -79,8 +79,6 @@ router.post("/wompi", async (req, res) => {
       });
 
       if (sale) {
-<<<<<<< HEAD
-=======
         // SEGURIDAD: Validar que el monto pagado en Wompi coincida con el total de la venta
         const paidAmountCents = data.transaction.amount_in_cents;
         const expectedAmountCents = Math.round(Number(sale.totalAmount) * 100);
@@ -90,7 +88,6 @@ router.post("/wompi", async (req, res) => {
           return res.status(400).send("Monto discrepante");
         }
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
         await prisma.sale.update({
           where: { id: sale.id },
           data: {
@@ -103,11 +100,7 @@ router.post("/wompi", async (req, res) => {
         });
 
         if (status === "APPROVED") {
-<<<<<<< HEAD
-          const paid = sale.salePayments.reduce((sum, p) => sum + p.amount, 0);
-=======
           const paid = sale.salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
           const balance = sale.totalAmount - paid;
 
           if (balance > 0) {

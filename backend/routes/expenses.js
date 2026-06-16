@@ -35,6 +35,18 @@ router.get("/expenses", requireAuth, asyncHandler(async (req, res) => {
     where,
     orderBy: { createdAt: "desc" },
   });
+
+  // Mapeo para compatibilidad con el frontend (agrega el campo 'date')
+  const formatted = expenses.map((e) => ({
+    ...e,
+    date: e.createdAt.toISOString(),
+  }));
+
+  res.json(formatted);
+}));
+
+// GET /api/expenses/summary?month=YYYY-MM
+router.get("/expenses/summary", requireAuth, asyncHandler(async (req, res) => {
   const { month } = req.query; // formato YYYY-MM
   if (!month)
     return res.status(400).json({ error: "Se requiere mes (YYYY-MM)" });
@@ -70,6 +82,13 @@ router.get("/expenses", requireAuth, asyncHandler(async (req, res) => {
     result.top_amount = parseFloat(result.top_amount || 0);
 
     res.json(result);
+}));
+
+// GET /api/expenses/weekly?month=YYYY-MM
+router.get("/expenses/weekly", requireAuth, asyncHandler(async (req, res) => {
+    const { month } = req.query;
+    if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
     const weeklyExpenses = await prisma.$queryRaw`
       SELECT
         EXTRACT(WEEK FROM "created_at") AS week_number,
@@ -89,6 +108,13 @@ router.get("/expenses", requireAuth, asyncHandler(async (req, res) => {
     }));
 
     res.json(result);
+}));
+
+// GET /api/expenses/by-category?month=YYYY-MM
+router.get("/expenses/by-category", requireAuth, asyncHandler(async (req, res) => {
+    const { month } = req.query;
+    if (!month) return res.status(400).json({ error: "Se requiere mes" });
+
     const totalMonthAmount = await prisma.expense.aggregate({
       _sum: { amount: true },
       where: {
