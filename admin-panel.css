@@ -3,24 +3,24 @@
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --black: #0a0a0a;
-  --bg: #0a0a0a;
-  --bg2: #111111;
-  --gray: #1a1a1a;
-  --gray2: #252525;
-  --gray3: #333;
-  --border: rgba(255, 255, 255, 0.08);
-  --white: #f5f5f0; /* text color */
-  --accent: #e8ff47;
-  --accent2: rgba(232, 255, 71, 0.15);
+  --black: #f8f9fa;
+  --bg: #f0f2f5;
+  --bg2: #ffffff;
+  --gray: #ffffff;
+  --gray2: #f1f3f5;
+  --gray3: #dee2e6;
+  --border: rgba(0, 0, 0, 0.08);
+  --white: #2d3436; /* texto principal - gris muy oscuro */
+  --accent: #d4e500; /* Ajustado para mejor contraste en blanco */
+  --accent2: rgba(212, 229, 0, 0.1);
   --red: #ff3c3c;
   --green: #28a745;
   --orange: #f28c28;
   --blue: #2f80ed;
-  --gray-text: #999;
+  --gray-text: #636e72;
   --radius: 0px;
   --trans: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
 }
 
 *,
@@ -36,7 +36,7 @@ html {
 }
 
 body {
-  background: #0a0a0a;
+  background: var(--bg);
   color: var(--white);
   font-family: "Poppins", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -48,10 +48,10 @@ body {
   height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--gray3);
+  background: #cbd5e0;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -257,7 +257,7 @@ textarea {
 
 .login-btn {
   width: 100%;
-  background: linear-gradient(120deg, #e8ff47 0%, #c7ff64 60%, #a4ff7a 100%);
+  background: linear-gradient(120deg, #d4e500 0%, #b3cc00 100%);
   color: #041400;
   border: none;
   padding: 14px;
@@ -298,14 +298,14 @@ textarea {
 .sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #040404 0%, #000000 100%);
+  background: #ffffff;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   transition: transform var(--trans);
   z-index: 50;
-  box-shadow: 6px 0 30px rgba(15, 17, 23, 0.08);
+  box-shadow: 4px 0 15px rgba(0,0,0,0.02);
 }
 
 .sidebar-logo {
@@ -314,8 +314,7 @@ textarea {
   letter-spacing: 5px;
   padding: 22px 20px;
   border-bottom: 1px solid var(--border);
-  background: rgb(0, 0, 0);
-  box-shadow: 0 0px 0px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
   flex-shrink: 0;
 }
 
@@ -338,10 +337,10 @@ textarea {
   padding: 20px 18px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: #f8f9fa;
   border-radius: 12px;
   margin: 8px;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }
 
 .su-avatar {
@@ -373,14 +372,14 @@ textarea {
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --neon-accent: #0ee80b;
-  --glossy-surface: #0a0a0a;
+  --neon-accent: #2ecc71;
+  --glossy-surface: #ffffff;
 }
 
 /* Sobrescritura de cuerpo para look premium */
 body {
-  background-color: #000 !important;
-  color: #fff !important;
+  background-color: var(--bg) !important;
+  color: var(--white) !important;
 }
 
 /* Tarjetas y Modales con Efecto Glossy */
@@ -389,9 +388,9 @@ body {
 .pos-product-card,
 .pay-method-card,
 .modal {
-  background: linear-gradient(145deg, #0a0a0a 0%, #000000 100%) !important;
-  border: 3px solid #3a4d66 !important;
-  box-shadow: 0 2px 5px rgb(56 132 58) !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04) !important;
   transition: all 0.9s ease;
 }
 
@@ -400,11 +399,11 @@ body {
 .phcb-filters,
 .pay-register-card {
   position: relative;
-  background: #000 !important;
+  background: #fff !important;
   overflow: hidden;
   z-index: 1;
   border-radius: 14px !important;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
 }
 /* Remove padding from phc-summary, it will be applied to phc-summary-grid */
 .phc-summary {
@@ -493,8 +492,8 @@ body {
 .pay-register-card::after {
   content: "";
   position: absolute;
-  inset: 2px;
-  background: linear-gradient(165deg, #000000 0%, #000 100%);
+  inset: 1px;
+  background: #ffffff;
   border-radius: 10px;
   z-index: -1;
 }
@@ -516,12 +515,7 @@ body {
   justify-content: center;
   text-align: center;
   padding: 15px 10px;
-  background: rgba(
-    0,
-    0,
-    0,
-    0.5
-  ); /* Slightly darker background for individual items */
+  background: #f8f9fa;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05); /* Subtle border */
 }
@@ -540,8 +534,7 @@ body {
   display: block;
   font-family: "Bebas Neue", sans-serif;
   font-size: 32px;
-  color: rgb(251 251 251); /* Green neon */
-  text-shadow: 0 0 20px rgba(14, 232, 11, 0.4); /* Green neon glow */
+  color: var(--white);
   line-height: 1.1;
 }
 
@@ -556,9 +549,9 @@ body {
 
 /* Botones de Filtro Rápido (Tabs) */
 .ph-tab {
-  background: transparent !important;
-  border: none !important;
-  color: #ffffff !important;
+  background: #f1f3f5 !important;
+  border: 1px solid var(--border) !important;
+  color: var(--gray-text) !important;
   padding: 8px 38px !important;
   border-radius: 8px !important;
   font-size: 12px !important;
@@ -619,9 +612,9 @@ input[type="text"],
 input[type="password"],
 select,
 input[type="date"] {
-  background: #000 !important;
-  border: 1px solid #000 !important;
-  color: #ffffff !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  color: var(--white) !important;
   border-radius: 8px !important;
 }
 
@@ -672,7 +665,7 @@ input:focus {
   gap: 14px;
   background: none;
   border: none;
-  color: #ffffff;
+  color: var(--gray-text);
   padding: 14px 12px;
   font-size: 15px;
   font-weight: 500;
@@ -748,7 +741,7 @@ input:focus {
 /* ── TOPBAR ── */
 .topbar {
   height: 58px;
-  background: linear-gradient(90deg, #111111 0%, #0f0f0f 70%, #0a0a0a 100%);
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -939,8 +932,8 @@ input:focus {
 }
 
 .dash-card {
-  background: linear-gradient(145deg, rgb(0 0 0) 0%, rgb(0 0 0 / 0%) 100%);
-  border: 1px solid rgb(255 255 255 / 0%);
+  background: #ffffff;
+  border: 1px solid var(--border);
   padding: 0px;
   border-radius: 0px;
   box-shadow: 0 11px 38px rgba(0, 0, 0, 0.26);
@@ -1314,7 +1307,7 @@ input:focus {
 
 .pos-search {
   flex: 1;
-  background: var(--gray);
+  background: #ffffff;
   border: 1px solid var(--border);
   color: var(--white);
   font-size: 15px;
@@ -1389,8 +1382,8 @@ input:focus {
 }
 
 .pos-right {
-  background: #000;
-  border: 1px solid rgb(0, 0, 0);
+  background: #ffffff;
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1401,7 +1394,7 @@ input:focus {
   align-items: center;
   justify-content: space-between;
   padding: 15px 0px;
-  border-bottom: 1px solid rgb(0, 0, 0);
+  border-bottom: 1px solid var(--border);
 }
 
 .pos-sale-header h3 {
@@ -1424,13 +1417,13 @@ input:focus {
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #ffffff;
+  color: var(--gray-text);
   margin-bottom: 15px;
 }
 
 .pos-field input {
   width: 100%;
-  background: var(--black);
+  background: #ffffff;
   border: 1px solid var(--border);
   color: var(--white);
   font-size: 14px;
@@ -1543,8 +1536,8 @@ input:focus {
 
 .pos-subtotals {
   padding: 7px 6px;
-  border-top: 0px solid var(--border);
-  background: #000;
+  border-top: 1px solid var(--border);
+  background: #f8f9fa;
 }
 
 .pos-subtotal-row {
@@ -1560,7 +1553,7 @@ input:focus {
   font-weight: 700;
   font-size: 14px;
   padding-top: 7px;
-  border-top: 0px solid var(--border);
+  border-top: 1px solid var(--border);
   margin-top: 1px;
 }
 
@@ -1788,8 +1781,8 @@ input:focus {
 }
 
 .pay-register-card {
-  background: var(--gray);
-  border: 1 solid var(--border);
+  background: #ffffff;
+  border: 1px solid var(--border);
   padding: 10px;
   margin-bottom: 10px;
 }
@@ -1821,7 +1814,7 @@ input:focus {
 }
 
 .data-table thead {
-  background: var(--black);
+  background: #f8f9fa;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1920,7 +1913,7 @@ input:focus {
 }
 
 .scanner-card {
-  background: var(--black);
+  background: #ffffff;
   border: 1px solid var(--border);
   padding: 22px;
 }
@@ -1960,7 +1953,7 @@ input:focus {
 .scanner-box {
   width: 100%;
   height: 280px;
-  background: var(--black);
+  background: #000;
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
@@ -2054,7 +2047,7 @@ input:focus {
 }
 
 .ls-card {
-  background: var(--gray2);
+  background: #ffffff;
   border: 1px solid var(--border);
   padding: 14px;
   display: flex;
@@ -2137,8 +2130,8 @@ input:focus {
   align-items: center;
   justify-content: space-between;
   padding: 18px 22px;
-  border-bottom: 1px solid rgb(255, 255, 255);
-  background: #000000;
+  border-bottom: 1px solid var(--border);
+  background: #ffffff;
   flex-shrink: 0;
 }
 
@@ -2165,13 +2158,13 @@ input:focus {
   padding: 22px;
   overflow-y: auto;
   flex: 1;
-  background: #000000;
+  background: #ffffff;
 }
 
 .modal-footer {
   padding: 14px 22px;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
-  background: #000000;
+  background: #f8f9fa;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -2217,7 +2210,7 @@ input:focus {
 
 /* QR preview */
 .qr-preview-box {
-  background: #010101;
+  background: #ffffff;
   border: 1px solid var(--border);
   padding: 20px;
   display: flex;
@@ -2245,14 +2238,14 @@ input:focus {
   font-weight: 800;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #ff0000;
+  color: var(--white);
   text-align: center;
 }
 
 .size-cell input {
-  background: #000000;
-  border: 1px solid rgb(45 45 45);
-  color: #fff;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--white);
   font-size: 14px;
   padding: 0px 0px;
   text-align: center;
@@ -2309,9 +2302,9 @@ input:focus {
 
 .form-group input,
 .form-group select {
-  background: #00000000;
-  border: 1px solid rgb(35 35 35 / 10%);
-  color: #41599f;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--white);
   font-size: 14px;
   padding: 12px 10px;
   outline: none;
@@ -2703,7 +2696,7 @@ input:focus {
 
 /* ══ CUSTOM SELECTOR FOR MANUAL PAY REGISTRATION ══════ */
 .custom-select-trigger {
-  background: #000 !important;
+  background: #fff !important;
   border: 1px solid var(--border) !important;
   color: var(--white) !important;
   padding: 12px 14px !important;
@@ -2734,7 +2727,7 @@ input:focus {
 
 .dash-neon-box {
   position: relative;
-  background: #000 !important;
+  background: #fff !important;
   overflow: hidden;
   z-index: 1;
   border-radius: 12px !important;
@@ -2772,7 +2765,7 @@ input:focus {
   content: "";
   position: absolute;
   inset: 2px;
-  background: linear-gradient(165deg, #0a0a0a 0%, #000 100%);
+  background: #ffffff;
   border-radius: 10px;
   z-index: -1;
 }
@@ -2781,8 +2774,7 @@ input:focus {
   display: block;
   font-family: "Bebas Neue", sans-serif;
   font-size: 38px;
-  color: rgb(255, 255, 255);
-  text-shadow: 0 0 25px rgba(0, 0, 0, 0);
+  color: var(--white);
   line-height: 1.1;
   position: relative;
   z-index: 1;

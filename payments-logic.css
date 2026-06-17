@@ -24,11 +24,7 @@
 }
 
 .payment-method-card {
-<<<<<<< HEAD
-  background: #000000;
-=======
   background: var(--gray);
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 18px;
@@ -108,11 +104,7 @@
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
-<<<<<<< HEAD
-  background: #070707;
-=======
   background: var(--gray2);
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 32px;
