@@ -2512,6 +2512,7 @@ input:focus {
   .kpi-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .kpi-grid-bars { grid-template-columns: 1fr; }
   .inv-stats-row {
     grid-template-columns: 1fr 1fr;
   }
@@ -2837,6 +2838,21 @@ input:focus {
   color: var(--accent) !important;
   text-shadow: 0 0 20px rgba(232, 255, 71, 0.4);
 }
+.kpi-grid-bars {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 15px;
+}
+.dash-neon-box.horizontal {
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  padding: 15px 30px !important;
+  text-align: left !important;
+  gap: 20px;
+}
+.dash-neon-box.horizontal .dash-label-impact { margin-bottom: 0 !important; flex: 1; }
+.dash-neon-box.horizontal .dash-sub-impact { margin-top: 0 !important; text-align: right; }
 
 .dash-label-impact {
   display: block;
