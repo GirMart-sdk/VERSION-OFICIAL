@@ -1,16 +1,9 @@
 # 🏆 WINNER STORE v3.5 — Enterprise E-commerce & POS
 
-<<<<<<< HEAD
-!Version
-!Node.js
-!Prisma
-!Database
-=======
 ![Version](https://img.shields.io/badge/version-3.5-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D18.x-green)
 ![Prisma](https://img.shields.io/badge/ORM-Prisma-brightgreen)
 ![Database](https://img.shields.io/badge/DB-PostgreSQL-blue)
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 **Winner Store** es una plataforma integral de comercio electrónico y Punto de Venta (POS) diseñada para marcas de ropa _streetwear_. Esta versión 3.5 utiliza **Prisma ORM** y **PostgreSQL** para una gestión de datos robusta.
 

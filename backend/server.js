@@ -38,12 +38,18 @@ const app = express();
 const authRoutes = require("./routes/auth");
 const salesRoutes = require("./routes/sales");
 const expensesRoutes = require("./routes/expenses");
+const productsRoutes = require("./routes/products");
 const webhookRoutes = require("./routes/webhooks");
 
 // 3. Middlewares Globales
 app.use(helmet({
   contentSecurityPolicy: false, // Desactivado para facilitar carga de recursos externos en local
 }));
+
+app.get("/api/get-csrf", (req, res) => {
+  res.json({ csrfToken: "winner-csrf-token-2026" });
+});
+
 app.use(cors({
   origin: true, // Permite cualquier origen en desarrollo, o especifica el de tu frontend
   credentials: true
@@ -56,11 +62,8 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/api", authRoutes);
 app.use("/api", salesRoutes);
 app.use("/api", expensesRoutes);
+app.use("/api", productsRoutes);
 app.use("/api", webhookRoutes);
-
-app.get("/api/get-csrf", (req, res) => {
-  res.json({ csrfToken: "winner-csrf-token-2026" });
-});
 
 // Aplicar limitador a todas las rutas de la API
 app.use("/api/", limiter);

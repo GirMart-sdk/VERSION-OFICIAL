@@ -1,10 +1,6 @@
 # 📊 REPORTE FINAL - WINNER STORE v3.5 (Dezpy Inventory Edition)
 
-<<<<<<< HEAD
-**Fecha:** 12 de junio de 2026  
-=======
-**Fecha:** 15 de mayo de 2026  
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
+**Fecha:** 12 de junio de 2026
 **Versión:** 3.5 PostgreSQL Native (Foco Tienda Física)  
 **Estado:** ✅ OPERATIVO PARA CONTROL DE STOCK
 
@@ -35,21 +31,13 @@
 | Base de Datos         | ✅     | Prisma 7 (PostgreSQL: `dezpy_v01`) con **Barcodes** y **Stock Mínimo** por tallas.     |
 | Backend Node.js       | ✅     | 40+ endpoints, JWT, Nodemailer para emails y Sharp para procesamiento de imágenes.     |
 | Frontend POS          | ✅     | **Rediseño premium**, animaciones, captura de email para factura.                      |
-<<<<<<< HEAD
 | Infraestructura       | ✅     | **Totalmente Autónoma** via PM2 con rotación de logs y persistencia.                   |
-=======
-| Sistema de Pagos      | ✅     | Captura de metadatos (Voucher, Teléfono, Cambio, Email).                               |
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 | Gestión de Inventario | ✅     | Stock por talla + QR + Alertas + **Carga masiva inteligente CSV**.                     |
 | Inteligencia          | ✅     | Predicción de demanda y Reorden automático.                                            |
 | Sistema de Tallas     | ✅     | Categórico: Ropa (letras), Calzado (números), Accesorios (**talla U**).                |
 | Datos de Prueba       | ✅     | Seed optimizado para PostgreSQL y SQLite.                                              |
 | Documentación         | ✅     | APIs, setup, y guías operacionales.                                                    |
-<<<<<<< HEAD
 | Automatización        | ✅     | Suite de Scripts en `/scripts` con **Backups Blindados** y **Alertas Visuales**.       |
-=======
-| Automatización        | ✅     | Scripts `.bat` para **Backup**, **Deploy** con PM2 e **Instalación rápida**.           |
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 | Dashboard             | ✅     | **Layout GRID dinámico, ApexCharts, KPIs con Sparklines, Actividad en vivo, Heatmap.** |
 
 ---
