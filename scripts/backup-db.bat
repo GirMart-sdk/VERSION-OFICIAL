@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 :: Configuración - El directorio de backups sigue siendo la raiz para facil acceso
-set BACKUP_DIR=c:\MI TIENDA\WINNER\backups
+set BACKUP_DIR=c:\DEZPY_v01\backups
 
 echo [%TIME%] [1/4] Obteniendo marca de tiempo...
 :: Obtenemos fecha/hora de forma universal usando PowerShell
