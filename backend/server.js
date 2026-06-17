@@ -39,6 +39,7 @@ const authRoutes = require("./routes/auth");
 const salesRoutes = require("./routes/sales");
 const expensesRoutes = require("./routes/expenses");
 const productsRoutes = require("./routes/products");
+const arqueoRoutes = require("./routes/arqueo");
 const webhookRoutes = require("./routes/webhooks");
 
 // 3. Middlewares Globales
@@ -63,6 +64,7 @@ app.use("/api", authRoutes);
 app.use("/api", salesRoutes);
 app.use("/api", expensesRoutes);
 app.use("/api", productsRoutes);
+app.use("/api", arqueoRoutes);
 app.use("/api", webhookRoutes);
 
 // Aplicar limitador a todas las rutas de la API
