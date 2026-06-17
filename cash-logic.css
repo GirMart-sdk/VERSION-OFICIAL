@@ -1,16 +1,36 @@
 /* Winner Store - Cash Logic Styles */
 .session-badge-mini {
     font-size: 10px;
-    padding: 4px 10px;
+    padding: 5px 14px;
     border-radius: 20px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     cursor: pointer;
-    transition: 0.3s;
+    transition: var(--trans);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
 }
-.session-badge-mini.abierta { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
-.session-badge-mini.cerrada { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; }
+.session-badge-mini::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.session-badge-mini.abierta { 
+    background: rgba(16, 185, 129, 0.1); 
+    color: var(--green); 
+    border-color: rgba(16, 185, 129, 0.3); 
+}
+.session-badge-mini.abierta::before { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.session-badge-mini.cerrada { 
+    background: rgba(255, 60, 60, 0.1); 
+    color: var(--red); 
+    border-color: rgba(255, 60, 60, 0.3); 
+}
+.session-badge-mini.cerrada::before { background: var(--red); }
 
 .cash-session-card {
     background: var(--gray);

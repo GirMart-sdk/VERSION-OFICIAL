@@ -387,9 +387,7 @@
           </button>
           <div class="topbar-title" id="pageTitle">Dashboard</div>
           <div class="topbar-right" id="topbarRightControls">
-            <div id="topSessionBadge" class="session-badge-mini" onclick="navigateTo('cash')">
-              Cargando...
-            </div>
+            <div id="topSessionBadge" class="session-badge-mini cerrada" onclick="navigateTo('cash')">Caja Cerrada</div>
             <div class="topbar-clock" id="topbarClock"></div>
             <div class="topbar-store" onclick="navigateTo('cash')" style="cursor: pointer;">
               <span class="store-dot"></span>
@@ -432,60 +430,37 @@
           <div class="kpi-grid redesign" style="margin-top: 15px">
             <div class="dash-neon-box">
               <label class="dash-label-impact">Deuda Clientes</label>
-              <span
-                class="dash-val-large"
-                id="kpiTotalDebt"
-                style="color: var(--orange)"
+              <span class="dash-val-large dash-val-warn" id="kpiTotalDebt"
                 >$0</span
               >
-              <div class="dash-sub-impact">PENDIENTE POR COBRAR</div>
+              <div class="dash-sub-impact warn">PENDIENTE POR COBRAR</div>
             </div>
             <div class="dash-neon-box">
               <label class="dash-label-impact">Efectivo Neto (Caja)</label>
-              <span
-                class="dash-val-large"
-                id="kpiNetCash"
-                style="color: var(--accent)"
+              <span class="dash-val-large dash-val-accent" id="kpiNetCash"
                 >$0</span
               >
               <div class="dash-sub-impact">DINERO REAL DISPONIBLE</div>
             </div>
           </div>
 
-          <!-- PAGOS Y SUGERENCIAS -->
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 0px;
-              margin-top: 10px;
-              margin-top: 15px;
-            "
-          >
-            <!-- Distribución de Pagos -->
-            <div class="dash-card redesign">
-              <div class="dash-card-header">
-                <div>
-                  <h3>Distribución por Método</h3>
-                  <p>Canales más utilizados en ventas</p>
-                </div>
-              </div>
-              <div id="payDistributionContainer" class="pay-dist-grid">
-                <!-- JS poblara esto -->
-              </div>
-            </div>
-          </div>
+          <!-- El bloque de Distribución de Pagos ahora es una consulta flotante -->
 
           <div class="dash-grid" style="margin-top: 20px">
-            <!-- TOP 5 PRODUCTOS (KEEP) -->
-            <div class="dash-card chart-card chart-compact">
-              <div
-                class="dash-card-header"
-                style="margin-bottom: 8px; padding-bottom: 8px"
-              >
-                <h3>Top 5 Productos Vendidos</h3>
+            <!-- RANKING DE PRODUCTOS ESTRELLA -->
+            <div class="dash-card premium-rank-card">
+              <div class="dash-card-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <div>
+                    <h3>Ranking de Artículos</h3>
+                    <p style="font-size: 11px; color: var(--gray-text); margin-top: 4px;">Los 5 productos más vendidos del periodo</p>
+                  </div>
+                  <span class="badge-rank">INSIGHTS</span>
+                </div>
               </div>
-              <canvas id="chartTopProducts" height="130"></canvas>
+              <div id="chartTopProducts">
+                <!-- ApexCharts inyectará aquí un gráfico de barras horizontales -->
+              </div>
             </div>
 
             <!-- RECENT SALES (OPTIONAL, KEEPING FOR NOW OR MOVE TO BOTTOM) -->
@@ -1396,7 +1371,8 @@
               </div>
               <div class="dash-neon-box">
                 <label class="dash-label-impact">Saldos Pendientes</label>
-                <span class="dash-val-large" id="sepTotalPending" style="color: var(--orange)">$0</span>
+                <span class="dash-val-large dash-val-warn" id="sepTotalPending">$0</span>
+                <div class="dash-sub-impact warn">POR RECAUDAR</div>
               </div>
             </div>
 
@@ -2763,6 +2739,27 @@
       </div>
     </div>
 
+    <!-- ══ COMPONENTE FLOTANTE: CONSULTA DE MÉTODOS ══ -->
+    <div class="floating-query-container" id="payDistFloating">
+      <div class="floating-query-panel" id="payDistPanel">
+        <div class="floating-query-header">
+          <div>
+            <h3>Distribución por Método</h3>
+            <p>Canales más utilizados en ventas</p>
+          </div>
+          <button class="panel-close" onclick="togglePayDistPanel()">✕</button>
+        </div>
+        <div id="payDistributionContainer" class="pay-dist-grid">
+          <!-- JS poblara esto dinámicamente -->
+        </div>
+      </div>
+      <button class="floating-query-btn" onclick="togglePayDistPanel()" title="Distribución de Pagos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      </button>
+    </div>
+
     <!-- TOAST -->
     <div class="toast" id="adminToast"><span id="adminToastMsg"></span></div>
 
@@ -2781,5 +2778,12 @@
     <script src="payments-logic.js"></script>
     <script src="goper/expenses-logic.js"></script>
     <script src="cash-logic.js"></script>
+    <script>
+      // Función para abrir/cerrar el panel flotante
+      function togglePayDistPanel() {
+        const panel = document.getElementById('payDistPanel');
+        if (panel) panel.classList.toggle('open');
+      }
+    </script>
   </body>
 </html>

@@ -53,9 +53,8 @@ function renderPOSProducts() {
         return `
         <div class="pos-product-card" data-product-id="${p.id}" id="prod-card-${p.id}">
           <img src="${p.img || p.image}" alt="${p.name}" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%231a1a1a%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23333%22 font-family=%22sans-serif%22 font-size=%2212%22%3ESin foto%3C/text%3E%3C/svg%3E'"/>
-          <span class="ppc-stock-tag ${stat.cls}">${ts} DISP.</span>
           <div class="pos-product-card-info">
-            <div class="ppc-cat">${p.cat}</div>
+            <div class="ppc-sku">${p.sku}</div>
             <div class="ppc-name">${p.name}</div>
             <div class="ppc-price">${fmt(p.price)}</div>
           </div>
@@ -367,12 +366,17 @@ function openPOSPaymentModal(isLayawayInitially = false) {
     $("posPayTotal").textContent = $("posTotal").textContent;
   $("posPayOverlay").classList.add("open");
   $("posPayModal").classList.add("open");
-  $("posPayStep1").style.display = "block";
 
-  // Pre-configurar si es separado
+  // Reiniciar flujo del modal
+  $("posPayStep1").style.display = "block";
+  $("posPayStep2").style.display = "none";
+  $("posPayConfirmBtn").style.display = "none";
+  $("posPayBackBtn").style.display = "none";
+
+  // Configurar estado de Separado/Apartado
   if ($("posPayIsLayaway")) {
     $("posPayIsLayaway").checked = isLayawayInitially;
-    toggleLayawayFields();
+    window.toggleLayawayFields(); // Usar versión global
   }
 
   // Resetear campos de envío
@@ -382,9 +386,6 @@ function openPOSPaymentModal(isLayawayInitially = false) {
   if ($("posShippingAddress")) $("posShippingAddress").value = "";
   if ($("posCustomerPhone")) $("posCustomerPhone").value = "";
   if ($("posShippingCarrier")) $("posShippingCarrier").value = "";
-  $("posPayStep2").style.display = "none";
-  $("posPayConfirmBtn").style.display = "none";
-  $("posPayBackBtn").style.display = "none";
 }
 
 window.selectPOSPaymentMethod = function (id, name, type) {

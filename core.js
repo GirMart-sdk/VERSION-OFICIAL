@@ -425,6 +425,12 @@ window.navigateTo = function (page) {
   if ($("pageTitle")) $("pageTitle").textContent = page.toUpperCase();
   if ($("sidebar")) $("sidebar").classList.remove("mobile-open");
 
+  // Control de visibilidad del botón de consulta flotante
+  const floatBtn = $("payDistFloating");
+  if (floatBtn) {
+    floatBtn.style.display = (page === "dashboard") ? "flex" : "none";
+  }
+
   if (page === "dashboard") {
     window.refreshAll();
     if (typeof renderDashboard === "function") renderDashboard();

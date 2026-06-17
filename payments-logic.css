@@ -34,9 +34,9 @@
 }
 
 .payment-method-card.enabled {
-  border-color: rgba(232, 255, 71, 0.2);
-  background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent);
+  background: var(--gray);
+  box-shadow: var(--shadow);
 }
 
 .payment-method-card.enabled::before {
@@ -59,7 +59,7 @@
 .method-name {
   font-weight: 700;
   font-size: 15px;
-  color: white;
+  color: var(--white);
 }
 
 .method-badge {
@@ -104,7 +104,7 @@
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
-  background: var(--gray2);
+  background: var(--gray);
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 32px;

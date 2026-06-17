@@ -27,8 +27,8 @@ if (fs.existsSync(envPath)) {
 // 2. Configuración de seguridad (Rate Limit)
 const rateLimitConfig = {
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Demasiados intentos. Por seguridad, bloqueado por 15 min." }
+  max: 500, // Aumentado para evitar bloqueos durante pruebas
+  message: { error: "Límite de seguridad alcanzado. Intenta de nuevo en 15 min." }
 };
 const limiter = rateLimit(rateLimitConfig);
 
@@ -51,6 +51,13 @@ app.get("/api/get-csrf", (req, res) => {
   res.json({ csrfToken: "winner-csrf-token-2026" });
 });
 
+// Ruta de configuración dinámica (Evita el 404)
+app.get("/api/config", (req, res) => {
+  res.json({
+    social: { whatsapp: process.env.WHATSAPP_PHONE || "573135642283" }
+  });
+});
+
 app.use(cors({
   origin: true, // Permite cualquier origen en desarrollo, o especifica el de tu frontend
   credentials: true
@@ -59,6 +66,9 @@ app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
+// Aplicar limitador ANTES de las rutas
+app.use("/api/", limiter);
+
 // Montar Rutas de la API
 app.use("/api", authRoutes);
 app.use("/api", salesRoutes);
@@ -66,9 +76,6 @@ app.use("/api", expensesRoutes);
 app.use("/api", productsRoutes);
 app.use("/api", arqueoRoutes);
 app.use("/api", webhookRoutes);
-
-// Aplicar limitador a todas las rutas de la API
-app.use("/api/", limiter);
 
 // 4. Seguridad de archivos sensibles
 const BLOCKED_FILES = [".env", "server.js", "database.js", "seed.js", ".db", ".log"];
