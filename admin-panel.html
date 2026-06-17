@@ -337,29 +337,6 @@
             </svg>
             Productos Separados
           </button>
-          <button
-            class="snav-item"
-            data-page="qrscan"
-            onclick="navigateTo('qrscan')"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              width="18"
-              height="18"
-            >
-              <path
-                d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"
-              />
-              <rect x="7" y="7" width="4" height="4" />
-              <rect x="13" y="7" width="4" height="4" />
-              <rect x="7" y="13" width="4" height="4" />
-              <path d="M13 13h1v1M15 15h2v2M13 17h2" />
-            </svg>
-            Escáner de Barras
-          </button>
         </nav>
         <button class="sidebar-logout" onclick="doLogout()">
           <svg
@@ -2756,6 +2733,24 @@
       <button class="floating-query-btn" onclick="togglePayDistPanel()" title="Distribución de Pagos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- ══ BURBUJA DE ESCANEO INTELIGENTE (INVENTARIO) ══ -->
+    <div class="scan-bubble-container" id="quickScanner">
+      <div class="scan-info-bubble" id="scanInfoCard">
+        <div class="compact-scanner-view" id="bubbleReader"></div>
+        <div id="scanBubbleContent">
+          <p style="font-size: 11px; color: var(--gray-text); text-align: center;">ESPERANDO LECTURA...</p>
+        </div>
+      </div>
+      <button class="floating-query-btn" style="background: var(--blue); color: white;" onclick="toggleQuickScanner()" title="Escáner Rápido">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+          <rect x="7" y="7" width="4" height="4" />
+          <rect x="13" y="7" width="4" height="4" />
+          <rect x="7" y="13" width="4" height="4" />
         </svg>
       </button>
     </div>

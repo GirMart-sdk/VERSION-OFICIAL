@@ -425,10 +425,26 @@ window.navigateTo = function (page) {
   if ($("pageTitle")) $("pageTitle").textContent = page.toUpperCase();
   if ($("sidebar")) $("sidebar").classList.remove("mobile-open");
 
+  // Sincronizar estado de página activa
+  if (window.WinnerApp) window.WinnerApp.state.activePage = page;
+
   // Control de visibilidad del botón de consulta flotante
   const floatBtn = $("payDistFloating");
   if (floatBtn) {
     floatBtn.style.display = (page === "dashboard") ? "flex" : "none";
+  }
+
+  // Control de visibilidad de la burbuja de escaneo rápido
+  const scannerBubble = $("quickScanner");
+  if (scannerBubble) {
+    const isScannerActive = (page === "inventory" || page === "pos");
+    scannerBubble.style.display = isScannerActive ? "flex" : "none";
+    
+    // Apagar cámara si navegamos fuera de las secciones permitidas
+    if (!isScannerActive && typeof stopBubbleScanner === "function") {
+      stopBubbleScanner();
+      if ($("scanInfoCard")) $("scanInfoCard").classList.remove('active');
+    }
   }
 
   if (page === "dashboard") {
@@ -490,5 +506,93 @@ document.addEventListener("DOMContentLoaded", async () => {
     setTimeout(() => {
       if (typeof window.showApp === "function") window.showApp();
     }, 50);
+  }
+});
+
+/* ══ LOGIC PARA BURBUJA DE ESCANEO RÁPIDO ══ */
+let bubbleScanner = null;
+
+window.toggleQuickScanner = async function() {
+  const card = $("scanInfoCard");
+  if (!card) return;
+  
+  const isActive = card.classList.toggle('active');
+  
+  if (isActive) {
+    startBubbleScanner();
+  } else {
+    stopBubbleScanner();
+  }
+};
+
+async function startBubbleScanner() {
+  const content = $("scanBubbleContent");
+  if (!bubbleScanner) {
+    bubbleScanner = new Html5Qrcode("bubbleReader");
+  }
+  
+  try {
+    const config = { fps: 15, qrbox: { width: 150, height: 150 } };
+    await bubbleScanner.start(
+      { facingMode: "environment" }, 
+      config, 
+      (decodedText) => {
+        handleQuickScanResult(decodedText);
+      }
+    );
+  } catch (err) {
+    content.innerHTML = `<p style="color:var(--red); font-size:10px; text-align:center;">Cámara no disponible o bloqueada</p>`;
+  }
+}
+
+function stopBubbleScanner() {
+  if (bubbleScanner && bubbleScanner.isScanning) {
+    bubbleScanner.stop().catch(() => {});
+  }
+}
+
+function handleQuickScanResult(code) {
+  const product = (window.inventory || []).find(p => p.sku === code || p.id === code);
+  const content = $("scanBubbleContent");
+  
+  if (product) {
+    content.innerHTML = `
+      <div style="display:flex; gap:10px; align-items:center; animation: fadeIn 0.3s;">
+        <img src="${product.img}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid var(--accent);">
+        <div style="flex:1">
+          <div style="font-weight:700; font-size:13px; color:white; margin-bottom:2px;">${product.name}</div>
+          <div style="color:var(--accent); font-weight:800; font-size:16px;">${fmt(product.price)}</div>
+          <div style="font-size:10px; color:var(--gray-text); text-transform:uppercase; letter-spacing:1px;">STOCK: ${totalStock(product)} und.</div>
+        </div>
+      </div>
+    `;
+    toast("Producto: " + product.name);
+  } else {
+    content.innerHTML = `<div style="text-align:center; color:var(--orange); font-size:11px; padding:10px; border:1px dashed var(--orange);">CÓDIGO: ${code}<br><strong>NO ENCONTRADO</strong></div>`;
+  }
+}
+
+/* SOPORTE PARA ESCÁNER FÍSICO (HID SCANNER) */
+let scanBuffer = "";
+let lastKeyTime = Date.now();
+
+document.addEventListener('keydown', (e) => {
+  const currentTime = Date.now();
+  if (currentTime - lastKeyTime > 50) scanBuffer = ""; 
+  lastKeyTime = currentTime;
+
+  if (e.key === 'Enter') {
+    if (scanBuffer.length > 2) {
+      // Solo procesar escaneo físico si estamos en Inventario o POS
+      const currentPage = window.WinnerApp?.state?.activePage;
+      if (currentPage === "inventory" || currentPage === "pos") {
+        if (!$("scanInfoCard").classList.contains('active')) window.toggleQuickScanner();
+        handleQuickScanResult(scanBuffer);
+        e.preventDefault();
+      }
+      scanBuffer = "";
+    }
+  } else if (e.key.length === 1) {
+    scanBuffer += e.key;
   }
 });
