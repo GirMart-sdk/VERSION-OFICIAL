@@ -46,7 +46,6 @@ El módulo `messaging.js` genera URLs dinámicas usando la API `wa.me`.
 
 El servidor cuenta con una función de **Auto-Incremento de Puerto**. Si el puerto `3000` está ocupado, buscará automáticamente el `3001` y así sucesivamente, notificando el cambio en la consola para evitar colisiones con otros servicios locales.
 
-<<<<<<< HEAD
 ## 🚀 Automatización y Resiliencia
 
 ### Lógica de Scripts (.bat)
@@ -66,8 +65,3 @@ Se utiliza PM2 con el módulo `pm2-logrotate` configurado a 10MB por archivo y 7
 ---
 
 _Documentación técnica actualizada al 12 de junio de 2026._
-=======
----
-
-_Documentación técnica actualizada al 4 de junio de 2026._
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
