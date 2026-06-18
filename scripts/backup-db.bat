@@ -17,7 +17,7 @@ if "%PGPASSWORD%"=="" (
 )
 
 echo [%TIME%] [3/4] Ejecutando pg_dump (Respaldo en curso)...
-call pg_dump -U postgres -d dezpy_v01 -f "%BACKUP_DIR%\%FILENAME%" 2> "%BACKUP_DIR%\last_error.log"
+call pg_dump -U postgres -d winn_11 -f "%BACKUP_DIR%\%FILENAME%" 2> "%BACKUP_DIR%\last_error.log"
 
 if %ERRORLEVEL% EQU 0 (
     echo [%TIME%] [4/4] Finalizando: Respaldo completado con exito.

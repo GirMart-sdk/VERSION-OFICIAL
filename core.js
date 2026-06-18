@@ -482,8 +482,6 @@ window.navigateTo = function (page) {
     if (typeof fetchSalesLog === "function") fetchSalesLog();
     else console.warn("Módulo de ventas no cargado");
   }
-  if (page === "sessions" && typeof renderSessions === "function")
-    renderSessions();
 };
 
 window.toggleSidebar = () => $("sidebar").classList.toggle("mobile-open");
@@ -537,7 +535,7 @@ async function startBubbleScanner() {
   const content = $("scanBubbleContent");
 
   // Verificación de Seguridad: La cámara requiere HTTPS o Localhost
-  if (!window.isSecureContext && window.location.hostname !== "localhost" && !window.location.hostname.includes("192.168.")) {
+  if (!window.isSecureContext && window.location.hostname !== "localhost" && !window.location.hostname.includes("192.168.") && !window.location.hostname.includes("[::1]")) {
     content.innerHTML = `
       <div style="color:var(--red); font-size:10px; text-align:center; padding:10px; background:rgba(255,60,60,0.1); border-radius:8px;">
         <strong>⚠️ ERROR DE SSL</strong><br>
@@ -619,69 +617,3 @@ document.addEventListener('keydown', (e) => {
     scanBuffer += e.key;
   }
 });
-
-/* ══ AUDITORÍA DE SESIONES ══ */
-async function renderSessions() {
-  const sessionsTableBody = $("activeSessionsTableBody");
-  if (!sessionsTableBody) return;
-
-  sessionsTableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Cargando sesiones activas...</td></tr>';
-
-  try {
-    const res = await apiFetch(`${window.API_URL}/admin/sessions`);
-    const sessions = await res.json();
-
-    if (!Array.isArray(sessions)) {
-      console.error("API /admin/sessions did not return an array:", sessions);
-      throw new Error("Respuesta inválida del servidor para sesiones.");
-    }
-
-    if (sessions.length === 0) {
-      sessionsTableBody.innerHTML = '<tr class="empty-row"><td colspan="6">No hay sesiones activas.</td></tr>';
-      return;
-    }
-
-    sessionsTableBody.innerHTML = sessions.map(session => `
-      <tr>
-        <td>${esc(session.username)} (${esc(session.role)})</td>
-        <td>${esc(session.ipAddress)}</td>
-        <td>${esc(session.userAgent || 'Desconocido')}</td>
-        <td>${fmtDate(session.loginTime)}</td>
-        <td>${fmtDate(session.lastActivity)}</td>
-        <td>
-          <button class="action-btn del" onclick="revokeSession('${session.id}')" title="Revocar sesión">
-            ✕
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-  } catch (error) {
-    console.error("Error al cargar sesiones activas:", error);
-    sessionsTableBody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--red);">Error al cargar sesiones: ${esc(error.message)}</td></tr>`;
-  }
-}
-window.renderSessions = renderSessions;
-
-async function revokeSession(sessionId) {
-  if (!confirm("¿Estás seguro de que quieres revocar esta sesión? El usuario será desconectado.")) {
-    return;
-  }
-
-  try {
-    const res = await apiFetch(`${window.API_URL}/admin/sessions/${sessionId}`, {
-      method: 'DELETE',
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast("Sesión revocada con éxito.");
-      renderSessions(); // Refrescar la lista de sesiones
-    } else {
-      toast(`Error: ${data.error || "No se pudo revocar la sesión."}`);
-    }
-  } catch (error) {
-    console.error("Error al revocar sesión:", error);
-    toast(`Error de conexión: ${error.message}`);
-  }
-}
-window.revokeSession = revokeSession;

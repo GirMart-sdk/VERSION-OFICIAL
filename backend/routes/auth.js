@@ -224,8 +224,11 @@ router.post("/login", validate(schemas.login), async (req, res) => {
 router.patch("/auth/update-password", requireAuth, asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!newPassword || newPassword.length < 8) {
-    return res.status(400).json({ error: "La nueva contraseña es demasiado débil." });
+  // Validación de complejidad: Min 8 chars, 1 Letra, 1 Número, 1 Caracter Especial
+  const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+  
+  if (!newPassword || !strongRegex.test(newPassword)) {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres, incluir números y un caracter especial (@$!%*#?&)." });
   }
 
   const user = await prisma.user.findUnique({ where: { id: req.user.userId } });

@@ -46,4 +46,19 @@ router.delete("/admin/sessions/:id", requireAuth, requireAdminIp, asyncHandler(a
   res.json({ success: true, message: "Sesión revocada con éxito." });
 }));
 
+// GET /api/admin/banned-ips - Lista de IPs bloqueadas permanentemente
+router.get("/admin/banned-ips", requireAuth, requireAdminIp, asyncHandler(async (req, res) => {
+  const bans = await prisma.bannedIp.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(bans);
+}));
+
+// DELETE /api/admin/banned-ips/:id - Desbloquear IP manualmente
+router.delete("/admin/banned-ips/:id", requireAuth, requireAdminIp, asyncHandler(async (req, res) => {
+  await prisma.bannedIp.delete({ where: { id: req.params.id } });
+  logger.info(`🔓 IP desbloqueada por administrador: ${req.user.user}`);
+  res.json({ success: true });
+}));
+
 module.exports = router;

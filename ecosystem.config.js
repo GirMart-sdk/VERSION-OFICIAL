@@ -1,23 +1,19 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 module.exports = {
   apps: [
     {
-      name: "winner-store-backend",
-      script: "./backend/server.js",
+            name: "winner-store", // <-- ¡Aquí está el nombre correcto!
+            script: "./backend/server.js",
       cwd: "./",
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: "1G",
-      env: {
-        NODE_ENV: "development",
-      },
-      env_development: {
-        NODE_ENV: "development",
-        PORT: 3000
-      },
       env_production: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 3000,
       },
       cron_restart: "0 0 * * *",
       exp_backoff_restart_delay: 1000, // Si falla, espera cada vez más para no saturar

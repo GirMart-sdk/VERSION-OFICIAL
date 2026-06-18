@@ -15,6 +15,7 @@ const { prisma } = require("./database");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const { requireAdminIp } = require("./middlewares/securityMiddleware"); // Import new middleware
+const { requireAuth } = require("./middlewares/auth"); // Importar middleware de autenticación
 // 1. Cargar configuración de entorno
 const isProdMode = process.env.NODE_ENV === "production";
 const envPath = path.resolve(__dirname, "..", isProdMode ? ".env.production" : ".env");
@@ -160,7 +161,7 @@ app.use("/api", authRoutes);
 app.use("/api", requireAdminIp);
 
 // Admin-specific routes
-app.use("/api", productsRoutes); // Montar productsRoutes en /api para que /api/products funcione
+app.use("/api", productsRoutes); // Montar productsRoutes directamente bajo /api
 app.use("/api", salesRoutes);
 app.use("/api", expensesRoutes);
 app.use("/api", arqueoRoutes);
@@ -178,8 +179,12 @@ const BLOCKED_PATTERNS = [
   /\.vbs/i,
   /node_modules/i,
   /scripts/i,
+  /backups/i,
+  /logs/i,
+  /package/i,
+  /\.gitignore/i,
+  /prisma/i,
   /\.git/i,
-  /prisma/i
 ];
 app.use((req, res, next) => {
   const p = req.path.toLowerCase();
@@ -196,7 +201,7 @@ app.use(express.static(rootPath));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // 6. Rutas de salud y diagnóstico
-app.get("/api/health", async (req, res) => {
+app.get("/api/health", requireAuth, requireAdminIp, async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ 

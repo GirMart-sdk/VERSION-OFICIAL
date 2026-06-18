@@ -119,14 +119,10 @@ echo [*] Iniciando servicios en segundo plano...
 echo.
 
 :: Usamos PM2 para ejecución persistente y oculta
-call npx --yes pm2 delete winner-backend >nul 2>&1
+call npx --yes pm2 delete winner-store >nul 2>&1
 
-:: Pasamos NGROK_URL como variable de entorno a PM2 si esta definida
-set "PM2_ENV_VARS=NETWORK_IP=%NETWORK_IP_FROM_ENV%,ALLOWED_ADMIN_IPS=%ALLOWED_ADMIN_IPS_FROM_ENV%"
-if defined NGROK_URL (
-    set "PM2_ENV_VARS=%PM2_ENV_VARS%,NGROK_URL=%NGROK_URL%"
-)
-call npx --yes pm2 start backend/server.js --name winner-backend --env %PM2_ENV_VARS% >nul
+:: Lanzamos usando el archivo de ecosistema, que es más robusto para variables de entorno
+call npx --yes pm2 start ecosystem.config.js --env production
 
 :: Abrimos el panel y finalizamos el script
 timeout /t 2 /nobreak > nul
