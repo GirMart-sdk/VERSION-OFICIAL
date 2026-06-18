@@ -58,7 +58,15 @@ echo [*] Lanzando servidor en el equipo remoto...
 :: Cerramos cualquier instancia previa antes de relanzar
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %%a >nul 2>&1
 
-start /b "WINNER_SRV" node backend/server.js
+echo.
+echo 📱 [MODO ESCÁNER MÓVIL ACTIVADO]
+echo Para usar la cámara desde tu celular:
+echo 1. Entra a: http://192.168.1.3:3000
+echo 2. Configura Chrome Flags: chrome://flags/#unsafely-treat-insecure-origin-as-secure
+echo 3. Agrega http://192.168.1.3:3000 y cambia a ENABLED.
+echo.
+
+start "WINNER_SRV" node backend/server.js
 timeout /t 2 /nobreak > nul
 start http://localhost:3000/admin-panel.html
 exit

@@ -54,6 +54,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.19.3",
+    "axios": "^1.18.0",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -62,9 +63,9 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "helmet": "^7.2.0",
-    "morgan": "^1.10.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "nodemailer": "^8.0.10",
     "pdfkit": "^0.18.0",
     "pg": "^8.21.0",
@@ -76,10 +77,10 @@
   },
   "devDependencies": {
     "@prisma/config": "^6.19.3",
-    "prisma": "^6.19.3",
-    "watch": "^0.13.0",
     "eslint": "^8.57.0",
-    "eslint-plugin-security": "^2.1.1"
+    "eslint-plugin-security": "^2.1.1",
+    "prisma": "^6.19.3",
+    "watch": "^0.13.0"
   },
   "repository": {
     "type": "git",

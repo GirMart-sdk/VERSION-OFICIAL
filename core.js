@@ -18,15 +18,21 @@ const API_URL = (() => {
   const origin = window.location.origin;
 
   // Mejoramos la lógica para producción pública
+  // Si se abre el archivo localmente (doble click al .html)
   if (origin.startsWith("file:")) {
-    const savedIp = localStorage.getItem("w_server_ip") || "localhost";
+    const savedIp = localStorage.getItem("w_server_ip") || "192.168.1.3";
     return `http://${savedIp}:3000/api`;
   }
 
-  // Aseguramos que el API_URL coincida con el protocolo actual (http/https)
-  const base = origin.replace(/\/$/, "");
-
-  return `${base}/api`;
+  // Si el hostname incluye "ngrok.io" o "ngrok-free.app", forzamos HTTPS
+  // Esto es crucial para que la cámara funcione en el móvil a través de Ngrok
+  if (window.location.hostname.includes("ngrok.io") || window.location.hostname.includes("ngrok-free.app")) {
+    return `https://${window.location.hostname}/api`;
+  } else {
+    // De lo contrario, usamos el origen actual (HTTP o HTTPS)
+    const base = origin.replace(/\/$/, "");
+    return `${base}/api`;
+  }
 })();
 window.API_URL = API_URL;
 
@@ -476,6 +482,8 @@ window.navigateTo = function (page) {
     if (typeof fetchSalesLog === "function") fetchSalesLog();
     else console.warn("Módulo de ventas no cargado");
   }
+  if (page === "sessions" && typeof renderSessions === "function")
+    renderSessions();
 };
 
 window.toggleSidebar = () => $("sidebar").classList.toggle("mobile-open");
@@ -527,6 +535,19 @@ window.toggleQuickScanner = async function() {
 
 async function startBubbleScanner() {
   const content = $("scanBubbleContent");
+
+  // Verificación de Seguridad: La cámara requiere HTTPS o Localhost
+  if (!window.isSecureContext && window.location.hostname !== "localhost" && !window.location.hostname.includes("192.168.")) {
+    content.innerHTML = `
+      <div style="color:var(--red); font-size:10px; text-align:center; padding:10px; background:rgba(255,60,60,0.1); border-radius:8px;">
+        <strong>⚠️ ERROR DE SSL</strong><br>
+        El navegador bloquea la cámara en redes locales no seguras.<br>
+        <button class="btn-ghost-sm" onclick="alert('Para solucionar:\\n1. En Chrome/Edge ve a: chrome://flags/#unsafely-treat-insecure-origin-as-secure\\n2. Agrega tu URL: http://${window.location.host}\\n3. Cambia a Enabled y reinicia.')" style="margin-top:5px; font-size:9px; color:var(--accent); border-color:var(--accent);">¿CÓMO SOLUCIONAR?</button>
+      </div>
+    `;
+    return;
+  }
+
   if (!bubbleScanner) {
     bubbleScanner = new Html5Qrcode("bubbleReader");
   }
@@ -577,6 +598,8 @@ let scanBuffer = "";
 let lastKeyTime = Date.now();
 
 document.addEventListener('keydown', (e) => {
+  if (!e.key) return; // Evitar error si la tecla es indefinida
+
   const currentTime = Date.now();
   if (currentTime - lastKeyTime > 50) scanBuffer = ""; 
   lastKeyTime = currentTime;
@@ -596,3 +619,69 @@ document.addEventListener('keydown', (e) => {
     scanBuffer += e.key;
   }
 });
+
+/* ══ AUDITORÍA DE SESIONES ══ */
+async function renderSessions() {
+  const sessionsTableBody = $("activeSessionsTableBody");
+  if (!sessionsTableBody) return;
+
+  sessionsTableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Cargando sesiones activas...</td></tr>';
+
+  try {
+    const res = await apiFetch(`${window.API_URL}/admin/sessions`);
+    const sessions = await res.json();
+
+    if (!Array.isArray(sessions)) {
+      console.error("API /admin/sessions did not return an array:", sessions);
+      throw new Error("Respuesta inválida del servidor para sesiones.");
+    }
+
+    if (sessions.length === 0) {
+      sessionsTableBody.innerHTML = '<tr class="empty-row"><td colspan="6">No hay sesiones activas.</td></tr>';
+      return;
+    }
+
+    sessionsTableBody.innerHTML = sessions.map(session => `
+      <tr>
+        <td>${esc(session.username)} (${esc(session.role)})</td>
+        <td>${esc(session.ipAddress)}</td>
+        <td>${esc(session.userAgent || 'Desconocido')}</td>
+        <td>${fmtDate(session.loginTime)}</td>
+        <td>${fmtDate(session.lastActivity)}</td>
+        <td>
+          <button class="action-btn del" onclick="revokeSession('${session.id}')" title="Revocar sesión">
+            ✕
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+  } catch (error) {
+    console.error("Error al cargar sesiones activas:", error);
+    sessionsTableBody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--red);">Error al cargar sesiones: ${esc(error.message)}</td></tr>`;
+  }
+}
+window.renderSessions = renderSessions;
+
+async function revokeSession(sessionId) {
+  if (!confirm("¿Estás seguro de que quieres revocar esta sesión? El usuario será desconectado.")) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`${window.API_URL}/admin/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast("Sesión revocada con éxito.");
+      renderSessions(); // Refrescar la lista de sesiones
+    } else {
+      toast(`Error: ${data.error || "No se pudo revocar la sesión."}`);
+    }
+  } catch (error) {
+    console.error("Error al revocar sesión:", error);
+    toast(`Error de conexión: ${error.message}`);
+  }
+}
+window.revokeSession = revokeSession;

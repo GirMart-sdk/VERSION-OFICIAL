@@ -18,14 +18,11 @@
 
 ---
 
-<<<<<<< HEAD
-=======
 ## 🛠️ Requisitos Previos
 
 - Node.js v18 o superior.
 - Instancia de PostgreSQL (Local o Cloud).
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 ## 🛠️ Instalación Rápida
 
 1. Instala las dependencias:
@@ -49,20 +46,12 @@
 | Documento           | Descripción                                        |
 | ------------------- | -------------------------------------------------- |
 | API_AND_FEATURES.md | Catálogo completo de endpoints y funcionalidades.  |
-<<<<<<< HEAD
-=======
 | proxy/nginx.conf    | Configuración de Proxy Inverso para Producción.    |
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 | TECHNICAL_SPECS.md  | Detalles de implementación (Wompi, Prisma, Sharp). |
 | CONTRIBUTING.md     | Guía para desarrolladores.                         |
 
 ---
 
-<<<<<<< HEAD
-## ⚖️ Licencia
-
-Propiedad de **GirMart-SDK**. Todos los derechos reservados.
-=======
 ## ⚖️ Propiedad Intelectual y Licencia
 
 Este es un software **PROPIETARIO**. El código fuente, la lógica de negocio y el diseño de la interfaz son propiedad exclusiva de **GirMart-SDK**.
@@ -73,6 +62,5 @@ Este es un software **PROPIETARIO**. El código fuente, la lógica de negocio y 
 - El reclamo de autoría por parte de colaboradores externos.
 
 Para más detalles, consulte el archivo `LICENSE` y `CONTRIBUTING.md`.
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 
 🚀 _Impulsando la cultura urbana._

@@ -1,72 +1,38 @@
 "use strict";
 
-const { bannedIp } = require("../database");
 const logger = require("../utils/logger");
 
-// Rutas trampa que un usuario normal NUNCA tocaría
-const TRAP_PATHS = [
-  "/phpmyadmin",
-  "/.git",
-  "/.env",
-  "/wp-admin",
-  "/wp-login.php",
-  "/shell.php",
-  "/cmd.php",
-  "/config.php",
-  "/setup.php",
-  "/.vscode",
-  "/etc/passwd"
-];
+/**
+ * Middleware para restringir el acceso a IPs específicas para el panel administrativo.
+ * Las IPs permitidas se configuran en la variable de entorno ALLOWED_ADMIN_IPS,
+ * separadas por comas.
+ */
+function requireAdminIp(req, res, next) {
+  const allowedIps = process.env.ALLOWED_ADMIN_IPS;
+  const clientIp = req.ip; // req.ip ya es la IP real gracias a app.set('trust proxy', 1)
 
-const securityMiddleware = {
-  /**
-   * Verifica si la IP está en la cárcel antes de procesar cualquier petición.
-   */
-  async checkIP(req, res, next) {
-    const ip = req.ip;
-    
-    const ban = await bannedIp.findUnique({ where: { ip } });
-    
-    if (ban) {
-      if (new Date() < ban.expiresAt) {
-        return res.status(403).json({
-          error: "ACCESS_DENIED",
-          message: "Tu IP ha sido bloqueada por actividad sospechosa."
-        });
-      }
-      // Si expiró, la borramos de forma segura (deleteMany evita error si ya no existe)
-      await bannedIp.deleteMany({ where: { ip } });
-    }
-    next();
-  },
-
-  /**
-   * Activa la trampa si se accede a rutas prohibidas.
-   */
-  async honeypot(req, res, next) {
-    const path = req.path.toLowerCase();
-    if (TRAP_PATHS.some(trap => path.includes(trap))) {
-      const ip = req.ip;
-      const duration = 12 * 60 * 60 * 1000; // Bloqueo de 12 horas
-      const expiresAt = new Date(Date.now() + duration);
-
-      await bannedIp.upsert({
-        where: { ip },
-        update: { expiresAt, reason: "HONEYPOT_HIT" },
-        create: { ip, expiresAt, reason: "HONEYPOT_HIT" }
-      });
-      
-      logger.security("HONEYPOT_TRAP_HIT", { 
-        ip, 
-        path, 
-        userAgent: req.get('user-agent'),
-        message: "IP persistida en BannedIps por 12 horas." 
-      });
-
-      return res.status(403).json({ error: "Security violation" });
-    }
-    next();
+  if (!allowedIps) {
+    logger.warn("⚠️ [Seguridad] ALLOWED_ADMIN_IPS no configurado. Acceso al panel sin restricción de IP.");
+    return next(); // Permitir acceso si no hay IPs configuradas (solo en desarrollo, no recomendado en prod)
   }
-};
 
-module.exports = securityMiddleware;
+  // Normalize IP addresses for comparison
+  const normalizeIp = (ip) => {
+    if (ip === '::1' || ip === '0:0:0:0:0:0:0:1') return '::1'; // IPv6 localhost
+    if (ip === '127.0.0.1') return '127.0.0.1'; // IPv4 localhost
+    return ip;
+  };
+
+  const normalizedClientIp = normalizeIp(clientIp);
+  const allowedIpList = allowedIps.split(',').map(ip => normalizeIp(ip.trim()));
+
+  logger.info(`🛡️ [Seguridad] Verificando IP: ${normalizedClientIp} contra lista: [${allowedIpList.join(', ')}]`);
+  if (allowedIpList.includes(normalizedClientIp)) {
+    return next();
+  }
+
+  logger.warn(`🛡️ [Seguridad] Acceso denegado al panel desde IP no autorizada: ${clientIp}`);
+  res.status(403).json({ error: "Acceso denegado: IP no autorizada para el panel administrativo." });
+}
+
+module.exports = { requireAdminIp };

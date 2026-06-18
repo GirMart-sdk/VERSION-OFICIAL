@@ -12,8 +12,8 @@ async function fetchInventory() {
     window.inventory = await res.json();
     renderInventory();
     if (typeof renderPOSProducts === "function") renderPOSProducts();
-  } catch (e) {
-    toast("⚠️ Error al cargar productos");
+  } catch (error) {
+    toast(`⚠️ Error al cargar productos: ${error.message || error}`);
   }
 }
 

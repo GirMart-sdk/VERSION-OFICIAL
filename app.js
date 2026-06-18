@@ -6,11 +6,18 @@
 // Detecta automáticamente si estamos en localhost o en la IP 192.168.1.8
 window.API_URL = (() => {
   const origin = window.location.origin;
+  const hostname = window.location.hostname;
   // Si se abre el archivo localmente (doble click al .html)
-  if (origin.startsWith("file:")) return "http://localhost:3000/api";
-  // Si estamos en desarrollo por IP o localhost, normalizamos la URL
-  const base = origin.replace(/\/$/, "");
-  return `${base}/api`;
+  if (origin.startsWith("file:")) return "http://192.168.1.3:3000/api";
+
+  // Si el hostname incluye "ngrok.io" o "ngrok-free.app", forzamos HTTPS
+  if (hostname.includes("ngrok.io") || hostname.includes("ngrok-free.app")) {
+    return `https://${hostname}/api`;
+  } else {
+    // Si estamos en desarrollo por IP o localhost, normalizamos la URL
+    const base = origin.replace(/\/$/, "");
+    return `${base}/api`;
+  }
 })();
 window.API_KEY = "dev-api-key"; // Key por defecto para desarrollo
 

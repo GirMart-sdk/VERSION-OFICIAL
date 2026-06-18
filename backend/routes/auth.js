@@ -36,8 +36,17 @@ function generateRandomPassword(length = 10) {
  * Registra un fallo y verifica si se debe disparar una alerta de seguridad.
  */
 async function trackFailure(req, user) {
-  const ip = req.ip;
-  if (ip === "::1" || ip === "127.0.0.1") return; // No bloquear localhost
+  // Con trust proxy activo, req.ip será la IP real del atacante incluso tras Ngrok
+  const ip = req.ip; 
+  
+  // Verificar si ya está en la tabla de baneo persistente
+  const isBanned = await prisma.bannedIp.findUnique({ where: { ip } });
+  if (isBanned) {
+    if (isBanned.expiresAt > new Date()) return; // Ya está bloqueado
+    await prisma.bannedIp.delete({ where: { ip } }); // El bloqueo expiró
+  }
+
+  if (ip === "::1" || ip === "127.0.0.1" || ip.includes("192.168.")) return; // No bloquear red local
 
   const now = Date.now();
   let data = failureTracker.get(ip) || { shortTerm: [], total: 0 };
@@ -57,6 +66,16 @@ async function trackFailure(req, user) {
 
   // Alerta 2: 50 fallos totales (Bloqueo Permanente en Firewall)
   if (data.total >= 50) {
+    // Registrar en base de datos para persistencia
+    await prisma.bannedIp.upsert({
+      where: { ip },
+      update: { expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }, // 30 días
+      create: { 
+        ip, 
+        reason: `Fuerza bruta contra usuario: ${user}`,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    });
     blockIPInWindowsFirewall(ip, user);
   }
 }
@@ -69,14 +88,22 @@ function blockIPInWindowsFirewall(ip, user) {
   const command = `netsh advfirewall firewall add rule name="${ruleName}" dir=in action=block remoteip=${ip} description="Bloqueo automatico por fuerza bruta WINNER - Usuario: ${user}"`;
 
   console.error(`🚫 [HARD BLOCK] Bloqueando IP ${ip} permanentemente en el Firewall de Windows...`);
+  // NOTA DE SEGURIDAD: Si el servidor está detrás de un proxy (ej. Ngrok, Cloudflare),
+  // 'req.ip' podría ser la IP del proxy, no la del atacante real.
+  // Bloquear la IP del proxy podría dejar el servicio inaccesible.
+  // En producción, se recomienda usar un WAF o bloqueo a nivel del proxy.
   
-  exec(command, (error) => {
-    if (error) {
-      console.error(`❌ Error al ejecutar bloqueo de Firewall: ${error.message}. ¿Node tiene permisos de Admin?`);
-    } else {
-      sendAdminAlert("IP BLOQUEADA PERMANENTEMENTE", `La IP ${ip} ha sido baneada del servidor tras 50 intentos fallidos contra el usuario ${user}.`, "error");
-    }
-  });
+  if (process.platform === "win32") {
+    exec(command, (error) => {
+      if (error) {
+        console.error(`❌ Error al ejecutar bloqueo de Firewall: ${error.message}. ¿Node tiene permisos de Admin?`);
+      } else {
+        sendAdminAlert("IP BLOQUEADA PERMANENTEMENTE", `La IP ${ip} ha sido baneada del servidor tras 50 intentos fallidos contra el usuario ${user}.`, "error");
+      }
+    });
+  } else {
+    console.warn(`⚠️ Intento de baneo en plataforma no Windows (${process.platform}). IP: ${ip}`);
+  }
 }
 
 if (!JWT_SECRET && IS_PRODUCTION) {
@@ -110,6 +137,13 @@ async function hashPassword(password) {
 router.post("/login", validate(schemas.login), async (req, res) => {
   const { user, pass } = req.body;
 
+  // Verificación temprana de IP baneada
+  const ban = await prisma.bannedIp.findUnique({ where: { ip: req.ip } });
+  if (ban && ban.expiresAt > new Date()) {
+    logger.error(`🛡️ Intento de acceso desde IP Baneada: ${req.ip}`);
+    return res.status(403).json({ error: "Tu dirección IP ha sido bloqueada permanentemente por razones de seguridad." });
+  }
+
   // 1. Buscar usuario en la DB
   const dbUser = await prisma.user.findFirst({
     where: {
@@ -131,11 +165,22 @@ router.post("/login", validate(schemas.login), async (req, res) => {
     console.log(`✅ Login exitoso para: ${dbUser.username}`);
     const token = jwt.sign(
       { userId: dbUser.id, user: dbUser.username, role: dbUser.role },
-      JWT_SECRET,
+      JWT_SECRET, // Use JWT_SECRET for signing the token
       {
         expiresIn: "7d",
       },
     );
+
+    // Crear registro de sesión activa para auditoría
+    await prisma.activeSession.create({
+      data: {
+        userId: dbUser.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        tokenHash: createHash('sha256').update(token).digest('hex'), // Store hash of token
+        isActive: true,
+      },
+    });
 
     // Detectar si estamos usando un túnel HTTPS (como ngrok) para permitir la cookie
     const isSecure =
@@ -208,13 +253,21 @@ router.patch("/auth/update-password", requireAuth, asyncHandler(async (req, res)
 }));
 
 router.post("/logout", asyncHandler(async (req, res) => {
-  const token = req.cookies.w_token || (req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization").slice(7) : null);
-  
-  if (token) {
-    // Añadir a la lista negra (Expira en 7 días para limpiar la DB automáticamente)
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-    await prisma.blacklistedToken.create({ data: { token, expiresAt } });
+  const authHeader = req.header("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : req.cookies.w_token;
+
+  if (token) { // If a token is present, blacklist it and mark session inactive
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    // Mark active session as inactive
+    await prisma.activeSession.updateMany({
+      where: { tokenHash: tokenHash, isActive: true },
+      data: { isActive: false },
+    });
+
+    // Add to blacklist (expires in 7 days for automatic DB cleanup)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    await prisma.blacklistedToken.create({ data: { token: tokenHash, expiresAt } }); // Store hash in blacklist
   }
 
   res.clearCookie("w_token");
