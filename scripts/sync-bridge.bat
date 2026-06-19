@@ -44,6 +44,18 @@ exit /b 1
 :: 3. Actualizar dependencias si hubo cambios en package.json
 echo [*] Refrescando modulos y motor Prisma...
 call npm install --silent
+
+:: 3.5. AUDITORIA DE SEGURIDAD DE DEPENDENCIAS
+echo [*] Auditando paquetes en busca de vulnerabilidades...
+call npm audit --audit-level=high
+if !errorlevel! equ 0 (
+    echo ✅ No se encontraron vulnerabilidades criticas.
+) else (
+    echo ❌ ALERTA: Se detecto una vulnerabilidad de alta criticidad. Despliegue abortado.
+    pause
+    exit /b 1
+)
+
 call npx prisma generate >nul
 
 :: 4. Sincronizar Base de Datos (Crucial para que no falle el otro equipo)
