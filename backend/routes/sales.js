@@ -5,7 +5,7 @@ const router = express.Router();
 const SalesService = require("../services/salesService");
 const { requireAuth } = require("../middlewares/auth");
 const validateRequest = require("../middlewares/validationMiddleware");
-const { createSaleSchema } = require("../validators/salesValidator");
+const { createSaleSchema } = require("../services/salesValidator");
 
 // GET /api/sales - Listar todas las ventas (protegido)
 router.get("/sales", requireAuth, async (req, res, next) => {

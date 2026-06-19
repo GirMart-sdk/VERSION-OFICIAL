@@ -362,6 +362,10 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await db.$disconnect(); 
-    await db.prisma.$disconnect(); // Usar la instancia real de PrismaClient
+    // Desconectar adecuadamente según la estructura de exports de database.js
+    if (db.$disconnect) {
+      await db.$disconnect();
+    } else if (db.prisma && db.prisma.$disconnect) {
+      await db.prisma.$disconnect();
+    }
   });

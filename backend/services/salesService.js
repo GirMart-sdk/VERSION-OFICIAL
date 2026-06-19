@@ -144,6 +144,27 @@ const SalesService = {
       return updatedSale;
     });
   },
+
+  /**
+   * Obtiene todas las ventas con filtros opcionales
+   * @param {Object} query - Objeto con parámetros de query (limit, offset, etc)
+   */
+  async getAllSales(query = {}) {
+    const { limit = 50, offset = 0 } = query;
+    
+    return await prisma.sale.findMany({
+      skip: parseInt(offset),
+      take: parseInt(limit),
+      include: {
+        saleItems: true,
+        salePayments: true,
+        orders: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+  }
 };
 
 module.exports = SalesService;
