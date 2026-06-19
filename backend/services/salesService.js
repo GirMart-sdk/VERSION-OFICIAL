@@ -156,7 +156,7 @@ const SalesService = {
       skip: parseInt(offset),
       take: parseInt(limit),
       include: {
-        saleItems: true,
+        items: true,
         salePayments: true,
         orders: true
       },
