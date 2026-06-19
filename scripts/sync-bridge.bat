@@ -45,13 +45,20 @@ exit /b 1
 echo [*] Refrescando modulos y motor Prisma...
 call npm install --silent
 
-:: 3.5. AUDITORIA DE SEGURIDAD DE DEPENDENCIAS
+:: 3.5. AUDITORIA Y CORRECCIÓN AUTOMÁTICA DE SEGURIDAD
 echo [*] Auditando paquetes en busca de vulnerabilidades...
+call npm audit --audit-level=high >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [!] Se detectaron vulnerabilidades. Intentando corrección automática...
+    call npm audit fix --force
+)
+
+echo [*] Verificando corrección...
 call npm audit --audit-level=high
 if !errorlevel! equ 0 (
-    echo ✅ No se encontraron vulnerabilidades criticas.
+    echo ✅ Auditoría de seguridad superada. No hay vulnerabilidades críticas.
 ) else (
-    echo ❌ ALERTA: Se detecto una vulnerabilidad de alta criticidad. Despliegue abortado.
+    echo ❌ ALERTA: La corrección automática falló. Persisten vulnerabilidades críticas. Despliegue abortado.
     pause
     exit /b 1
 )
@@ -61,6 +68,21 @@ call npx prisma generate >nul
 :: 4. Sincronizar Base de Datos (Crucial para que no falle el otro equipo)
 echo [*] Aplicando cambios en la estructura de datos...
 call npx prisma db push --skip-generate
+
+:: 5. CREAR ARCHIVO DE CONFIGURACIÓN PARA EL FRONTEND (Consistencia con INICIAR_WINNER.bat)
+echo [*] Creando archivo de configuracion para el frontend...
+set "DETECTED_IP_FOR_CONFIG="
+for /f "tokens=1,2 delims=:" %%a in ('ipconfig ^| find "IPv4"') do (
+    for /f "tokens=*" %%c in ("%%b") do (
+        if not defined DETECTED_IP_FOR_CONFIG set DETECTED_IP_FOR_CONFIG=%%c
+    )
+)
+if not defined DETECTED_IP_FOR_CONFIG set DETECTED_IP_FOR_CONFIG=127.0.0.1
+
+(echo window.SERVER_CONFIG = {) > config.js
+(echo     "NETWORK_IP": "%DETECTED_IP_FOR_CONFIG%"^) >> config.js
+(echo };) >> config.js
+echo ✅ Archivo de configuración 'config.js' actualizado con la IP: %DETECTED_IP_FOR_CONFIG%
 
 :START_SERVER
 echo.
@@ -85,8 +107,13 @@ echo 📱 [MODO ESCÁNER MÓVIL ACTIVADO]
 echo Para usar la cámara desde tu celular:
 echo 1. Entra a: http://%DETECTED_IP%:3000
 echo.
-
-start "WINNER_SRV" node backend/server.js
+:: Usamos PM2 para una ejecución robusta y persistente
+echo [*] Deteniendo instancia anterior de PM2 (si existe)...
+call npx --yes pm2 delete winner-backend >nul 2>&1
+echo [*] Lanzando servidor con PM2 en segundo plano...
+call npx --yes pm2 start backend/server.js --name winner-backend --env NETWORK_IP=%DETECTED_IP% >nul
+call npx --yes pm2 save >nul 2>&1
+echo ✅ Servidor lanzado con PM2.
 timeout /t 2 /nobreak > nul
 start http://localhost:3000/admin-panel.html
 exit

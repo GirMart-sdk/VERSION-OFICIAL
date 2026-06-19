@@ -13,9 +13,8 @@ const rateLimit = require("express-rate-limit");
 const logger = require("./utils/logger");
 const { prisma } = require("./database");
 const errorMiddleware = require("./middlewares/errorMiddleware");
-
-const { requireAdminIp } = require("./middlewares/securityMiddleware"); // Import new middleware
-const { requireAuth } = require("./middlewares/auth"); // Importar middleware de autenticación
+const { requireAdminIp } = require("./middlewares/securityMiddleware");
+const { requireAuth } = require("./middlewares/auth");
 // 1. Cargar configuración de entorno
 const isProdMode = process.env.NODE_ENV === "production";
 const envPath = path.resolve(__dirname, "..", isProdMode ? ".env.production" : ".env");
@@ -25,6 +24,15 @@ if (fs.existsSync(envPath)) {
   console.log(`📡 [Server] Entorno cargado desde: ${path.basename(envPath)}`);
 } else {
   require("dotenv").config();
+}
+
+// Validación de variables de entorno críticas
+const requiredEnvVars = ["JWT_SECRET", "ADMIN_API_KEY", "API_KEY", "DATABASE_URL"];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ [Error Crítico] Faltan variables de entorno esenciales: ${missingVars.join(", ")}`);
+  console.error("   El servidor no puede iniciar. Revisa tu archivo .env");
+  process.exit(1); // Detiene el servidor si faltan claves
 }
 
 // Validación de Mailer (Evita error: Missing credentials for "PLAIN")
@@ -141,24 +149,12 @@ app.get("/api/get-csrf", (req, res) => {
   res.json({ csrfToken: RUNTIME_CSRF_SECRET }); // Devolver el secreto dinámico
 });
 
-// Middleware de validación de API KEY Robusto
-app.use((req, res, next) => {
-  const apiKey = req.headers["x-api-key"];
-  const validKey = process.env.ADMIN_API_KEY || process.env.API_KEY;
-  
-  if (isProdMode && apiKey === "dev-api-key") {
-    return res.status(403).json({ error: "Seguridad: Llave de desarrollo denegada en producción" });
-  }
-  next();
-});
-
 // Authentication routes (login, logout, forgot-password)
 // These should not be IP whitelisted, as an admin might need to log in from a new IP
 app.use("/api", authRoutes);
-// Apply IP Whitelist to all other admin-specific routes
-// All routes mounted after this point will require an allowed IP
-// This includes products, sales, expenses, arqueo, webhooks, and sessions
-app.use("/api", requireAdminIp);
+
+// Apply security middleware to all subsequent /api routes
+app.use("/api", requireAuth, requireAdminIp);
 
 // Admin-specific routes
 app.use("/api", productsRoutes); // Montar productsRoutes directamente bajo /api

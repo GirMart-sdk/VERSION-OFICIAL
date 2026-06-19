@@ -2,37 +2,53 @@
 
 const logger = require("../utils/logger");
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
 /**
- * Middleware para restringir el acceso a IPs específicas para el panel administrativo.
- * Las IPs permitidas se configuran en la variable de entorno ALLOWED_ADMIN_IPS,
- * separadas por comas.
+ * Middleware to validate the API Key.
+ * It checks for 'x-api-key' in headers and validates against environment variables.
+ * Allows access if a valid JWT token is already present.
  */
-function requireAdminIp(req, res, next) {
-  const allowedIps = process.env.ALLOWED_ADMIN_IPS;
-  const clientIp = req.ip; // req.ip ya es la IP real gracias a app.set('trust proxy', 1)
-
-  if (!allowedIps) {
-    logger.warn("⚠️ [Seguridad] ALLOWED_ADMIN_IPS no configurado. Acceso al panel sin restricción de IP.");
-    return next(); // Permitir acceso si no hay IPs configuradas (solo en desarrollo, no recomendado en prod)
-  }
-
-  // Normalize IP addresses for comparison
-  const normalizeIp = (ip) => {
-    if (ip === '::1' || ip === '0:0:0:0:0:0:0:1') return '::1'; // IPv6 localhost
-    if (ip === '127.0.0.1') return '127.0.0.1'; // IPv4 localhost
-    return ip;
-  };
-
-  const normalizedClientIp = normalizeIp(clientIp);
-  const allowedIpList = allowedIps.split(',').map(ip => normalizeIp(ip.trim()));
-
-  logger.info(`🛡️ [Seguridad] Verificando IP: ${normalizedClientIp} contra lista: [${allowedIpList.join(', ')}]`);
-  if (allowedIpList.includes(normalizedClientIp)) {
+function requireApiKey(req, res, next) {
+  // If user is already authenticated via JWT, skip API key check
+  if (req.user) {
     return next();
   }
 
-  logger.warn(`🛡️ [Seguridad] Acceso denegado al panel desde IP no autorizada: ${clientIp}`);
-  res.status(403).json({ error: "Acceso denegado: IP no autorizada para el panel administrativo." });
+  const clientApiKey = req.headers["x-api-key"];
+  const adminApiKey = process.env.ADMIN_API_KEY;
+  const standardApiKey = process.env.API_KEY;
+
+  if (IS_PROD && clientApiKey === "dev-api-key") {
+    logger.warn(`🛡️ Bloqueo: Llave de desarrollo denegada en producción desde IP: ${req.ip}`);
+    return res.status(403).json({ error: "Seguridad: Llave de desarrollo denegada en producción" });
+  }
+
+  if (clientApiKey === adminApiKey || clientApiKey === standardApiKey) {
+    return next();
+  }
+
+  logger.error(`❌ API key inválida o ausente desde IP: ${req.ip}`);
+  return res.status(401).json({ error: "API key inválida" });
 }
 
-module.exports = { requireAdminIp };
+/**
+ * Middleware to restrict access to a whitelist of IPs.
+ * Skips check if the request is authenticated with the ADMIN_API_KEY.
+ */
+function requireAdminIp(req, res, next) {
+  // The ADMIN_API_KEY grants universal access, bypassing the IP check.
+  if (req.headers["x-api-key"] === process.env.ADMIN_API_KEY) {
+    return next();
+  }
+
+  const allowedIps = (process.env.ALLOWED_ADMIN_IPS || "127.0.0.1,::1").split(",");
+  if (allowedIps.includes(req.ip)) {
+    return next();
+  }
+
+  logger.warn(`🛡️ Bloqueo de IP no autorizada: ${req.ip}`);
+  return res.status(403).json({ error: "Seguridad: Acceso denegado desde esta dirección IP." });
+}
+
+module.exports = { requireApiKey, requireAdminIp };

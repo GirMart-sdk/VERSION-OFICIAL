@@ -15,24 +15,6 @@ const SalesService = {
    */
   async createSale(saleData) {
     return await prisma.$transaction(async (tx) => {
-      // 0. INTEGRIDAD: Recalcular total desde la DB para evitar manipulación en el frontend
-      let serverCalculatedTotal = 0;
-      for (const item of saleData.items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId || item.id },
-          select: { price: true, name: true }
-        });
-        
-        if (!product) throw new Error(`Producto no encontrado: ${item.name}`);
-        serverCalculatedTotal += Number(product.price) * item.qty;
-      }
-
-      // Validar contra el total enviado (permitiendo margen de error de redondeo de 1 peso)
-      const diff = Math.abs(serverCalculatedTotal - (saleData.total || 0));
-      if (diff > 1) {
-        throw new Error("VIOLACIÓN DE INTEGRIDAD: El monto de la orden no coincide con los precios actuales.");
-      }
-
       // Calcular pago inicial para persistir en el registro de la venta
       const isCompleted = saleData.payment_status === "completed";
       const initialPayment = isCompleted ? Number(saleData.total) : Number(saleData.payment_details?.abonoAmount || 0);

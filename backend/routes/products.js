@@ -2,7 +2,7 @@
 
 const express = require("express");
 const { prisma } = require("../database");
-const { requireApiKey, requireAuth } = require("../middlewares/auth");
+const { requireAuth } = require("../middlewares/auth");
 const { validate, schemas } = require("../middlewares/validation");
 const asyncHandler = require("../utils/asyncHandler");
 const StatsService = require("../services/statsService");
@@ -11,7 +11,7 @@ const AuditService = require("../services/auditService");
 const router = express.Router();
 
 // GET /api/products — todos los productos con stock
-router.get("/products", requireApiKey, asyncHandler(async (req, res) => {
+router.get("/products", requireAuth, asyncHandler(async (req, res) => {
   const { category, search } = req.query;
   
   // Punto Ciego: Evitar búsquedas costosas de un solo caracter
@@ -63,7 +63,7 @@ router.get("/products", requireApiKey, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/products/:id — un producto
-router.get("/products/:id", requireApiKey, asyncHandler(async (req, res) => {
+router.get("/products/:id", requireAuth, asyncHandler(async (req, res) => {
     const product = await prisma.product.findUnique({
       where: { id: req.params.id },
       include: { inventory: true },
@@ -74,7 +74,7 @@ router.get("/products/:id", requireApiKey, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/inventory/barcode/:code — Buscar talla específica
-router.get("/inventory/barcode/:code", requireApiKey, asyncHandler(async (req, res) => {
+router.get("/inventory/barcode/:code", requireAuth, asyncHandler(async (req, res) => {
     const item = await prisma.inventory.findUnique({
       where: { barcode: req.params.code },
       include: { product: true },
@@ -104,6 +104,13 @@ router.post(
       stock,
     } = req.body;
     let productId = id;
+
+    // --- INICIO: Lógica de Auditoría Detallada ---
+    let oldProduct = null;
+    if (id) { // Si es una actualización, buscamos el estado anterior
+      oldProduct = await prisma.product.findUnique({ where: { id } });
+    }
+    // --- FIN: Lógica de Auditoría Detallada ---
 
       if (sku) {
         const existing = await prisma.product.findFirst({ where: { sku } });
@@ -150,12 +157,30 @@ router.post(
         }
       });
       
+      // --- INICIO: Registro de Auditoría Mejorado ---
+      let auditDetails = { name, price, sku }; // Detalles básicos para la creación
+
+      if (oldProduct) { // Si fue una actualización, calculamos los cambios
+        const changes = {};
+        if (oldProduct.name !== name) changes.name = { from: oldProduct.name, to: name };
+        if (Number(oldProduct.price) !== price) changes.price = { from: Number(oldProduct.price), to: price };
+        if (oldProduct.cost !== cost) changes.cost = { from: Number(oldProduct.cost), to: cost };
+        if (oldProduct.category !== category) changes.category = { from: oldProduct.category, to: category };
+        if (oldProduct.sku !== sku) changes.sku = { from: oldProduct.sku, to: sku };
+        
+        // Solo registramos si hubo cambios reales
+        if (Object.keys(changes).length > 0) {
+          auditDetails = { changes };
+        }
+      }
+
       await AuditService.log(req, {
         action: id ? "UPDATE" : "CREATE",
         targetType: "PRODUCT",
         targetId: productId,
-        details: { name, price, sku }
+        details: auditDetails
       });
+      // --- FIN: Registro de Auditoría Mejorado ---
 
       res.json({ success: true, id: productId });
   }),

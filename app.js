@@ -160,6 +160,11 @@ async function loadDynamicConfig() {
     const res = await apiFetch(`${window.API_URL}/config`);
     const config = await res.json();
 
+    if (!config || !config.branding || !config.social) {
+      console.warn("⚠️ Configuración dinámica inválida o incompleta. Usando valores de respaldo.");
+      return;
+    }
+
     // 1. Hero Dinámico (Slider Simple)
     const heroImg = document.querySelector(".hero-img");
     if (heroImg && config.branding?.heroImages?.length > 0) {

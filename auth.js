@@ -102,7 +102,11 @@ document.addEventListener("DOMContentLoaded", () => {
           throw new Error(data.error || "Credenciales incorrectas");
         }
       } catch (err) {
-        if (loginError) {
+        // Network error vs. server error
+        if (err instanceof TypeError) { // Indica un error de red, ej: servidor caído
+          loginError.textContent = "❌ No se pudo conectar al servidor. ¿Está encendido?";
+          loginError.style.display = "block";
+        } else if (loginError) {
           loginError.textContent = "❌ " + err.message;
           loginError.style.display = "block";
         }

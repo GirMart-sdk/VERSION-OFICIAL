@@ -17,8 +17,36 @@ echo [!] El servidor no responde. Activando modo recuperación...
 :: Limpiar posibles procesos colgados que impiden el reinicio
 taskkill /f /im node.exe >nul 2>&1
 
-:: Iniciar/Reiniciar mediante PM2 para asegurar que el watchdog esté activo
-call pm2 start ecosystem.config.js --env production --only winner-store-backend
+:: Leer configuración del .env y detectar IP (lógica unificada)
+set "NETWORK_IP_FROM_ENV="
+set "ALLOWED_ADMIN_IPS_FROM_ENV="
+for /f "usebackq tokens=1* delims==" %%a in (".env") do (
+    if "%%a"=="NETWORK_IP" set "NETWORK_IP_FROM_ENV=%%b"
+    if "%%a"=="ALLOWED_ADMIN_IPS" set "ALLOWED_ADMIN_IPS_FROM_ENV=%%b"
+)
+
+set "DETECTED_IP="
+for /f "tokens=1,2 delims=:" %%a in ('ipconfig ^| find "IPv4"') do (
+    for /f "tokens=*" %%c in ("%%b") do (
+        if not defined DETECTED_IP set DETECTED_IP=%%c
+    )
+)
+if not defined DETECTED_IP set DETECTED_IP=%NETWORK_IP_FROM_ENV%
+if not defined ALLOWED_ADMIN_IPS_FROM_ENV set ALLOWED_ADMIN_IPS_FROM_ENV=%DETECTED_IP%,127.0.0.1,::1
+
+:: Iniciar/Reiniciar mediante PM2 pasando las variables de entorno correctas
+echo [*] Iniciando servidor con configuración de red...
+call npx --yes pm2 start backend/server.js --name winner-backend --node-args="-r dotenv/config" --env NETWORK_IP=%DETECTED_IP% --env ALLOWED_ADMIN_IPS=%ALLOWED_ADMIN_IPS_FROM_ENV%
+
+:: Crear archivo de configuración para el frontend (consistencia)
+echo [*] Creando archivo de configuracion para el frontend...
+(
+    echo window.SERVER_CONFIG = {
+    echo     "NETWORK_IP": "%DETECTED_IP%"
+    echo };
+) > config.js
+echo ✅ Archivo de configuración 'config.js' creado.
+
 call pm2 save >nul 2>&1
 
 :: 3. Espera dinámica con feedback visual mínimo
@@ -36,5 +64,5 @@ if %errorlevel% neq 0 (
 )
 
 :FINISH
-start http://localhost:3000
+start http://localhost:3000/admin-panel.html
 exit
