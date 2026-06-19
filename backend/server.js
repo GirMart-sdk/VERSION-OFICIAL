@@ -13,6 +13,7 @@ const rateLimit = require("express-rate-limit");
 const logger = require("./utils/logger");
 const { prisma } = require("./database");
 const errorMiddleware = require("./middlewares/errorMiddleware");
+
 const { requireAdminIp } = require("./middlewares/securityMiddleware");
 const { requireAuth } = require("./middlewares/auth");
 // 1. Cargar configuración de entorno
@@ -69,6 +70,7 @@ const expensesRoutes = require("./routes/expenses");
 const productsRoutes = require("./routes/products");
 const arqueoRoutes = require("./routes/arqueo");
 const webhookRoutes = require("./routes/webhooks");
+const statsRoutes = require("./routes/stats");
 
 // 3. Middlewares Globales
 app.use(helmet({
@@ -162,6 +164,7 @@ app.use("/api", salesRoutes);
 app.use("/api", expensesRoutes);
 app.use("/api", arqueoRoutes);
 app.use("/api", webhookRoutes);
+app.use("/api", statsRoutes);
 app.use("/api", require("./routes/sessions")); // New sessions routes
 
 // 4. Seguridad de archivos sensibles

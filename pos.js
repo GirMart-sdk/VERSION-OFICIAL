@@ -797,7 +797,7 @@ window.renderPaymentsTable = function () {
       .map((s) => ({
         ...s,
         ts: s.timestamp,
-        amount: s.total,
+        amount: Number(s.total) || 0,
         isSale: true,
       }))
       .filter((p) => {
@@ -805,7 +805,7 @@ window.renderPaymentsTable = function () {
         const status = p.payment_details?.shipping_status || "PENDIENTE";
         return status !== "CANCELADO";
       }),
-    ...pLog.map((p) => ({ ...p, isManual: true })),
+    ...pLog.map((p) => ({ ...p, isManual: true, amount: Number(p.amount) || 0 })),
   ];
 
   const dateFilter = $("payFilterDate")?.value;
@@ -854,10 +854,7 @@ window.renderPaymentsTable = function () {
       ),
   );
 
-  const totalAmount = payList.reduce(
-    (sum, p) => sum + (Number(p.amount) || 0),
-    0,
-  );
+  const totalAmount = payList.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   // Helper para renderizar las filas de cada sección
   const renderRows = (list) => {
@@ -878,7 +875,7 @@ window.renderPaymentsTable = function () {
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-weight:700; color:var(--accent); font-size:17px;">${fmt(p.amount)}</div>
+            <div style="font-weight:700; color:var(--accent); font-size:17px;">${fmt(Number(p.amount) || 0)}</div>
             <div style="margin-top:5px; display:flex; gap:5px; justify-content:flex-end;">
                <span class="status-badge s-ok" style="font-size:9px; padding:2px 6px;">${p.isSale ? "VENTA" : "COBRO"}</span>
                <button class="btn-ghost-sm" style="padding:2px 8px" onclick="${p.isSale ? `viewSaleDetails('${p.id}')` : `alert('Ref: ${esc(p.ref)}')`}">👁 VER</button>
@@ -915,7 +912,7 @@ window.renderPaymentsTable = function () {
             📦 PEDIDOS ONLINE & PASARELAS (${orders.length})
           </span>
           <div style="text-align:right">
-            <div style="font-size:14px; font-weight:800; color:white">${fmt(orders.reduce((s, p) => s + (Number(p.amount) || 0), 0))}</div>
+            <div style="font-size:14px; font-weight:800; color:white">${fmt(Number(orders.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
             <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
           </div>
         </div>
@@ -932,7 +929,7 @@ window.renderPaymentsTable = function () {
             🏪 VENTAS LOCALES & CAJA (${locals.length})
           </span>
           <div style="text-align:right">
-            <div style="font-size:14px; font-weight:800; color:var(--accent)">${fmt(locals.reduce((s, p) => s + (Number(p.amount) || 0), 0))}</div>
+            <div style="font-size:14px; font-weight:800; color:var(--accent)">${fmt(Number(locals.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
             <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
           </div>
         </div>

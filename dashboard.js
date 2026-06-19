@@ -21,46 +21,43 @@ async function renderDashboard() {
       // Sincronización con IDs reales de index.html y admin-panel.html
       const revEl = $("kpiTotalRevenue") || $("kpiRevenueToday");
       if (revEl)
-        revEl.textContent = fmt(stats.totalRevenue || stats.revenueToday || 0);
+        revEl.textContent = fmt(Number(stats.totalRevenue ?? stats.revenueToday ?? 0));
 
       const ordEl = $("kpiOrders") || $("kpiOrdersToday");
-      if (ordEl) ordEl.textContent = stats.totalSales || stats.salesToday || 0;
+      if (ordEl) ordEl.textContent = Number(stats.totalSales ?? stats.salesToday ?? 0);
 
       if ($("kpiAvgTicket"))
-        $("kpiAvgTicket").textContent = fmt(stats.avgTicket || 0);
+        $("kpiAvgTicket").textContent = fmt(Number(stats.avgTicket ?? 0));
 
-      if ($("kpiTotalDebt"))
-        $("kpiTotalDebt").textContent = fmt(stats.totalDebt || 0);
+      // KPI de deuda/conversión/netCash: NO vienen del endpoint /api/stats actual.
+      // Para evitar "$ NaN", limpiamos o mantenemos fallback 0.
+      if ($("kpiTotalDebt")) $("kpiTotalDebt").textContent = fmt(0);
 
       // Priorizar el saldo del Arqueo de Caja si hay una sesión abierta
       if ($("kpiNetCash")) {
-          const isActive = arqueo && arqueo.active;
-          const cashDisplay = isActive ? arqueo.calculations.theoreticalBalance : (stats.netCash || 0);
-          $("kpiNetCash").textContent = fmt(cashDisplay);
-          
-          const label = $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
-          if (label && isActive) {
-              label.innerHTML = "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>ACTIVA</span>";
-          }
+        const isActive = arqueo && arqueo.active;
+        const cashDisplay = isActive ? arqueo.calculations.theoreticalBalance : 0;
+        $("kpiNetCash").textContent = fmt(Number(cashDisplay ?? 0));
+
+        const label = $("kpiNetCash").parentElement.querySelector(".dash-label-impact");
+        if (label && isActive) {
+          label.innerHTML = "EFECTIVO EN CAJA <span style='color:var(--green); font-size:10px;'>ACTIVA</span>";
+        }
       }
 
-      if ($("kpiConversion")) {
-        const convVal = Number(stats.conversion) || 0;
-        $("kpiConversion").textContent = (stats.conversion || "0%") + (typeof stats.conversion === 'number' ? '%' : '');
-      }
-
+      // Conversión/deuda/netCash desde /api/stats: NO existen en statsService actual.
+      // Se mantienen en fallback para evitar NaN.
+      if ($("kpiConversion")) $("kpiConversion").textContent = "0%";
       if ($("kpiConversionTrend")) {
-        const trend = stats.conversion_trend || "estable";
-        $("kpiConversionTrend").textContent = trend;
-        // Sincronización con clases dk-trend para Glassmorphism
-        $("kpiConversionTrend").className = "dk-trend " + (trend.includes("↑") ? "up" : trend.includes("↓") ? "down" : "stable");
+        $("kpiConversionTrend").textContent = "estable";
+        $("kpiConversionTrend").className = "dk-trend stable";
       }
 
       // Actualizar Totales Históricos (Parte inferior)
       if ($("stVolTotal"))
-        $("stVolTotal").textContent = fmt(stats.totalRevenue || 0);
+        $("stVolTotal").textContent = fmt(Number(stats.totalRevenue ?? 0));
       if ($("stTransTotal"))
-        $("stTransTotal").textContent = stats.totalSales || 0;
+        $("stTransTotal").textContent = Number(stats.totalSales ?? 0);
     }
 
     // 1.2 Renderizar el Widget de Control de Caja
@@ -99,25 +96,15 @@ async function renderDashboard() {
       // Esto suma el saldo pendiente (Total - Pagado) de todas las ventas con estado 'partial' o 'pending'
       const totalDebtCalculated = window.salesLog.reduce((sum, s) => {
         const isUnpaid = s.payment_status === "partial" || s.payment_status === "pending";
-        return isUnpaid ? sum + (Number(s.total) - (Number(s.total_paid) || 0)) : sum;
+        return isUnpaid ? sum + (Number(s.total ?? 0) - (Number(s.total_paid ?? 0) || 0)) : sum;
       }, 0);
 
-      if ($("kpiTotalDebt") && (totalDebtCalculated > 0 || $("kpiTotalDebt").textContent === "$0")) {
-        $("kpiTotalDebt").textContent = fmt(totalDebtCalculated);
+      if ($("kpiTotalDebt") && (totalDebtCalculated > 0 || $("kpiTotalDebt").textContent === "$0" || $("kpiTotalDebt").textContent.includes("NaN"))) {
+        $("kpiTotalDebt").textContent = fmt(Number(totalDebtCalculated || 0));
       }
 
-      // --- CÁLCULO DE CONVERSIÓN EN VIVO (RENDIMIENTO DIARIO) ---
-      // Si el backend reporta visitas (tráfico), recalculamos la tasa real con las ventas de hoy
-      if ($("kpiConversion")) {
-        const visits = Number(stats.visits_today || stats.visitsToday || 0);
-        if (visits > 0) {
-          const liveConv = (todayOrders / visits) * 100;
-          $("kpiConversion").textContent = liveConv.toFixed(1) + "%";
-        } else if (todayOrders > 0) {
-          // Si hay ventas pero no hay sensor de visitas, mostramos un indicador de actividad
-          $("kpiConversion").textContent = "Activa"; 
-        }
-      }
+      // Conversión: NO se calcula en vivo (no hay visitas en /api/stats actual)
+      // Se deja en 0%/estable para evitar NaN.
     }
 
   } catch (e) {
