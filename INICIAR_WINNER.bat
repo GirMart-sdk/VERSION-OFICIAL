@@ -54,6 +54,21 @@ for /f "usebackq tokens=1* delims==" %%a in (".env") do (
 if not defined NETWORK_IP_FROM_ENV set NETWORK_IP_FROM_ENV=192.168.1.3
 if not defined ALLOWED_ADMIN_IPS_FROM_ENV set ALLOWED_ADMIN_IPS_FROM_ENV=192.168.1.3,127.0.0.1,::1
 
+:: 3. DETECCIÓN AUTOMÁTICA DE IP Y CONFIGURACIÓN DEL FRONTEND
+echo [*] Detectando IP de la red local...
+set "DETECTED_IP="
+for /f "tokens=1,2 delims=:" %%a in ('ipconfig ^| find "IPv4"') do (
+    for /f "tokens=*" %%c in ("%%b") do (
+        if not defined DETECTED_IP set DETECTED_IP=%%c
+    )
+)
+if not defined DETECTED_IP set DETECTED_IP=%NETWORK_IP_FROM_ENV%
+
+echo [*] Creando archivo de configuracion para el frontend...
+(echo window.SERVER_CONFIG = {;) > config.js
+(echo     "NETWORK_IP": "%DETECTED_IP%"^) >> config.js
+(echo };) >> config.js
+
 :: 3. Preparación de Base de Datos y Prisma
 echo [*] Sincronizando motor de datos...
 call npx prisma generate >nul
@@ -71,8 +86,8 @@ if %errorlevel% equ 0 (
 echo.
 echo ✅ CONFIGURACION DETECTADA:
 echo -------------------------------------------------------
-echo 💻 ACCESO LOCAL:  http://localhost:3000
-echo 📱 ACCESO MOVIL:  http://%NETWORK_IP_FROM_ENV%:3000
+echo 💻 ACCESO LOCAL:  http://localhost:3000/admin-panel.html
+echo 📱 ACCESO MOVIL:  http://%DETECTED_IP%:3000/admin-panel.html
 echo 🛡️ ADMIN IPs:     %ALLOWED_ADMIN_IPS_FROM_ENV%
 echo -------------------------------------------------------
 echo.
@@ -119,10 +134,14 @@ echo [*] Iniciando servicios en segundo plano...
 echo.
 
 :: Usamos PM2 para ejecución persistente y oculta
-call npx --yes pm2 delete winner-store >nul 2>&1
+call npx --yes pm2 delete winner-backend >nul 2>&1
 
-:: Lanzamos usando el archivo de ecosistema, que es más robusto para variables de entorno
-call npx --yes pm2 start ecosystem.config.js --env production
+:: Pasamos NGROK_URL como variable de entorno a PM2 si esta definida
+set "PM2_ENV_VARS=NETWORK_IP=%NETWORK_IP_FROM_ENV%,ALLOWED_ADMIN_IPS=%ALLOWED_ADMIN_IPS_FROM_ENV%"
+if defined NGROK_URL (
+    set "PM2_ENV_VARS=%PM2_ENV_VARS%,NGROK_URL=%NGROK_URL%"
+)
+call npx --yes pm2 start backend/server.js --name winner-backend --env %PM2_ENV_VARS% >nul
 
 :: Abrimos el panel y finalizamos el script
 timeout /t 2 /nobreak > nul

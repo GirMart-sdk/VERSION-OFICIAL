@@ -17,10 +17,12 @@ const FOOTWEAR_QUALITIES = [
 const API_URL = (() => {
   const origin = window.location.origin;
 
-  // Mejoramos la lógica para producción pública
-  // Si se abre el archivo localmente (doble click al .html)
+  // Lógica mejorada para acceso local (doble click al .html)
+  // Ahora lee la IP detectada por el script de inicio.
   if (origin.startsWith("file:")) {
-    const savedIp = localStorage.getItem("w_server_ip") || "192.168.1.3";
+    // Usar la IP del config.js o un fallback seguro
+    const detectedIp = window.SERVER_CONFIG?.NETWORK_IP || "127.0.0.1";
+    const savedIp = localStorage.getItem("w_server_ip") || detectedIp;
     return `http://${savedIp}:3000/api`;
   }
 

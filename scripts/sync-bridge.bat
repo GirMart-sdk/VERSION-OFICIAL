@@ -71,11 +71,19 @@ echo [*] Lanzando servidor en el equipo remoto...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %%a >nul 2>&1
 
 echo.
+
+:: Detección de IP para mensaje de ayuda
+set "DETECTED_IP="
+for /f "tokens=1,2 delims=:" %%a in ('ipconfig ^| find "IPv4"') do (
+    for /f "tokens=*" %%c in ("%%b") do (
+        if not defined DETECTED_IP set DETECTED_IP=%%c
+    )
+)
+if not defined DETECTED_IP set DETECTED_IP=127.0.0.1
+
 echo 📱 [MODO ESCÁNER MÓVIL ACTIVADO]
 echo Para usar la cámara desde tu celular:
-echo 1. Entra a: http://192.168.1.3:3000
-echo 2. Configura Chrome Flags: chrome://flags/#unsafely-treat-insecure-origin-as-secure
-echo 3. Agrega http://192.168.1.3:3000 y cambia a ENABLED.
+echo 1. Entra a: http://%DETECTED_IP%:3000
 echo.
 
 start "WINNER_SRV" node backend/server.js
