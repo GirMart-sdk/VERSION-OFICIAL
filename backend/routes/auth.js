@@ -13,6 +13,7 @@ const { validate, schemas } = require("../middlewares/validation");
 const { exec } = require("child_process");
 const asyncHandler = require("../utils/asyncHandler");
 const AuditService = require("../services/auditService");
+const logger = require("../utils/logger");
 
 const { prisma } = require("../database");
 const { requireAuth } = require("../middlewares/auth");

@@ -29,4 +29,29 @@ router.post("/sales", validateRequest(createSaleSchema), async (req, res, next) 
   }
 });
 
+// PATCH /api/sales/:saleId - Actualizar logística (separados)
+router.patch("/sales/:saleId", async (req, res, next) => {
+  try {
+    const { saleId } = req.params;
+    const { payment_details } = req.body || {};
+
+    if (!payment_details || typeof payment_details !== "object") {
+      return res.status(400).json({ error: "payment_details inválido" });
+    }
+
+    const { shipping_status, tracking_number } = payment_details;
+
+    const updated = await SalesService.updateSaleLogistics(saleId, {
+      shipping_status,
+      tracking_number,
+      // mantener el resto si viniera
+      ...payment_details,
+    });
+
+    return res.json({ success: true, saleId: updated.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

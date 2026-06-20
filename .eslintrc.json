@@ -2,11 +2,45 @@
   "$schema": "https://json.schemastore.org/eslintrc.json",
   "env": {
     "node": true,
-    "es2022": true
+    "es2022": true,
+    "browser": true
   },
   "extends": [
-    "eslint:recommended",
-    "plugin:security/recommended"
+    "eslint:recommended"
   ],
-  "plugins": ["security"]
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "globals": {
+    "$": "readonly",
+    "jQuery": "readonly",
+    "API_URL": "readonly",
+    "apiFetch": "readonly",
+    "toast": "readonly",
+    "showToast": "readonly",
+    "fmt": "readonly",
+    "esc": "readonly",
+    "Chart": "readonly",
+    "QRCode": "readonly",
+    "Html5Qrcode": "readonly",
+    "renderLayawaySales": "readonly",
+    "updateCashUI": "readonly",
+    "WinnerApp": "readonly",
+    "Cropper": "readonly",
+    "bootstrap": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "*.min.js",
+    "cropper.min.js",
+    "qrcode.min.js",
+    "backups/",
+    "uploads/",
+    "logs/"
+  ]
 }

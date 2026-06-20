@@ -29,6 +29,8 @@ const SalesService = {
           totalAmount: saleData.total,
           paymentMethod: saleData.payment_method,
           paymentStatus: saleData.payment_status || "completed",
+          referenceNumber: saleData.reference_number,
+
           shippingAddress: saleData.shipping_address,
           shippingCarrier: saleData.shipping_carrier,
           channel: saleData.channel || "online",
@@ -49,7 +51,15 @@ const SalesService = {
         });
       }
 
-      // 2. Procesar ítems y actualizar stock en tiempo real
+      // 2. Actualizar paymentStatus basado en pagos
+      const totalPayments = isCompleted ? initialPayment : initialPayment;
+      const newStatus = totalPayments >= Number(saleData.total) ? "completed" : "partial";
+      await tx.sale.update({
+        where: { id: sale.id },
+        data: { paymentStatus: newStatus }
+      });
+
+      // 3. Procesar ítems y actualizar stock en tiempo real
       for (const item of saleData.items) {
         // Validar existencia y stock suficiente antes de descontar
         const invEntry = await tx.inventory.findUnique({
@@ -146,13 +156,41 @@ const SalesService = {
   },
 
   /**
+   * Actualiza el estado de logística (detalles de envío) de una venta.
+   * @param {string} saleId - ID de la venta.
+   * @param {Object} payload - Datos de logística { shipping_status, tracking_number, ... }.
+   */
+  async updateSaleLogistics(saleId, payload) {
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+    });
+    if (!sale) throw new Error("Venta no encontrada");
+
+    const existingDetails = sale.payment_details && typeof sale.payment_details === "object"
+      ? { ...sale.payment_details }
+      : {};
+
+    const updatedDetails = {
+      ...existingDetails,
+      ...payload,
+    };
+
+    return await prisma.sale.update({
+      where: { id: saleId },
+      data: {
+        payment_details: updatedDetails,
+      },
+    });
+  },
+
+  /**
    * Obtiene todas las ventas con filtros opcionales
    * @param {Object} query - Objeto con parámetros de query (limit, offset, etc)
    */
   async getAllSales(query = {}) {
     const { limit = 50, offset = 0 } = query;
-    
-    return await prisma.sale.findMany({
+
+    const sales = await prisma.sale.findMany({
       skip: parseInt(offset),
       take: parseInt(limit),
       include: {
@@ -161,8 +199,31 @@ const SalesService = {
         orders: true
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
+    });
+
+    // Agregar campos calculados que usa el frontend (sales-logic.js)
+    // total_paid = suma de salePayments.amount
+    return sales.map((s) => {
+      const totalPaid = (s.salePayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      return {
+        ...s,
+        total: Number(s.totalAmount),
+        method: s.paymentMethod,
+        payment_method: s.paymentMethod,
+        client: s.customerName || "Mostrador",
+        payment_status: s.paymentStatus,
+        customer_email: s.customerEmail,
+        customer_phone: s.customerPhone,
+        shipping_address: s.shippingAddress,
+        shipping_carrier: s.shippingCarrier,
+        reference_number: s.referenceNumber,
+        total_paid: totalPaid,
+        // Alias para compatibilidad (algunos módulos usan payment_details)
+        payment_details: s.payment_details || null,
+      };
     });
   }
 };

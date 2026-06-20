@@ -4,9 +4,10 @@ const Joi = require("joi");
 
 const saleItemSchema = Joi.object({
   // POS envía `id` (SKU interno). Online también puede mandar `productId`.
-  id: Joi.string().required(),
-  // productId NO siempre viene desde POS; permitirlo opcional.
+  // Aceptamos ambos para evitar que el POS falle por variaciones.
+  id: Joi.string().optional(),
   productId: Joi.string().optional(),
+
   name: Joi.string().required(),
   qty: Joi.number().integer().min(1).required(),
   price: Joi.number().precision(2).min(0).required(),
@@ -14,42 +15,61 @@ const saleItemSchema = Joi.object({
 });
 
 const createSaleSchema = Joi.object({
-  // POS usa genId() (no necesariamente ON...)
   id: Joi.string().min(3).required(),
-  // Aceptar ISO o formatos alternativos (POS nowStr()).
   timestamp: Joi.alternatives().try(Joi.string().isoDate(), Joi.string().min(3)).required(),
 
-  vendor: Joi.string().required(),
-  client: Joi.string().required(),
+  // POS a veces no manda estos campos (o los manda vacíos). Backend aplica defaults.
+  vendor: Joi.string().optional(),
+  client: Joi.string().optional(),
 
-  // POS a veces envía vacío en factura (posPayEmail). No bloquear el flujo.
+  // POS puede enviar email/phone vacíos
   customer_email: Joi.string().email().allow("").optional(),
-  customer_phone: Joi.string().required(),
+  customer_phone: Joi.string().allow("", null).optional(),
 
-  shipping_address: Joi.string().required(),
-  shipping_carrier: Joi.string().required(),
+  // Acceptar el string "null" que algunos POS mandan
+  // (Joi lo trata como string y al no coincidir fallaría)
+
+
+  // POS puede no enviar dirección
+  shipping_address: Joi.string().allow("").optional(),
+  shipping_carrier: Joi.string().allow("").optional(),
 
   method: Joi.string().required(),
   payment_method: Joi.string().required(),
-  payment_status: Joi.string().valid("pending", "completed", "partial").required(),
 
-  reference_number: Joi.string().required(),
+  // Si no viene, el backend setea completed
+  payment_status: Joi.string().valid("pending", "completed", "partial").optional().default("completed"),
+
+  // POS puede omitir o mandar vacío
+  reference_number: Joi.alternatives().try(Joi.string().allow("", null), Joi.valid(null, "")).optional(),
+
+
   channel: Joi.string().valid("online", "fisica").required(),
 
-  subtotal: Joi.number().min(0).required(),
-  discount: Joi.number().min(0).required(),
-  total: Joi.number().min(0).required(),
+  // En POS a veces mandan strings o valores vacíos; permitir conversión y defaults en backend.
+  subtotal: Joi.number().min(0).optional().default(0),
+  // POS puede venir con discount vacío/omitido
+  discount: Joi.number().min(0).optional().default(0),
+  // Si no viene total, se calcula (backend puede manejarlo; aquí lo hacemos opcional)
+  total: Joi.number().min(0).optional().default(0),
+
+
+
 
   items: Joi.array().items(saleItemSchema).min(1).required().messages({
-    'array.min': 'La venta debe contener al menos un artículo.'
+    "array.min": "La venta debe contener al menos un artículo.",
   }),
 
-  // payment_details es opcional
   payment_details: Joi.object({
-    abonoAmount: Joi.number().min(0)
-  }).optional()
+    abonoAmount: Joi.number().min(0).optional(),
+    shipping_status: Joi.string().optional(),
+    isLayaway: Joi.boolean().optional(),
+    received: Joi.number().optional(),
+    tracking_number: Joi.string().optional(),
+  }).optional(),
 });
 
 module.exports = {
   createSaleSchema,
 };
+

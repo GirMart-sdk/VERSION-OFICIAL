@@ -24,11 +24,16 @@ async function requireAuth(req, res, next) {
 
   if (token) {
     // SEGURIDAD: Verificar si el token está en la lista negra
-    const isBlacklisted = await prisma.blacklistedToken.findUnique({
-      where: { token }
+    const crypto = require("crypto");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const isBlacklisted = await prisma.blacklistedToken.findFirst({
+      where: { token: tokenHash }
     });
     if (isBlacklisted) {
-      return res.status(401).json({ error: "Sesión invalidada por seguridad" });
+      if (isBlacklisted.expiresAt > new Date()) {
+        return res.status(401).json({ error: "Sesión invalidada por seguridad" });
+      }
+      await prisma.blacklistedToken.delete({ where: { id: isBlacklisted.id } });
     }
 
     try {

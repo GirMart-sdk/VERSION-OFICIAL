@@ -123,26 +123,31 @@ app.use("/api/", limiter);
 app.use("/api/login", loginLimiter);
 app.use("/api/auth/forgot-password", loginLimiter);
 
-// 3.5. Middleware de Verificación CSRF Dinámico (Enforcement)
-const RUNTIME_CSRF_SECRET = crypto.randomBytes(32).toString('hex'); // Generar un secreto dinámico por cada inicio del servidor
-app.use((req, res, next) => {
-  const method = req.method.toUpperCase();
-  const origin = req.get('origin');
-  
-  // Solo verificamos métodos que alteran datos
-  if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
-    // Validar que el origen coincida con nuestras IPs o Ngrok si es producción
-    if (isProdMode && origin && !origin.includes("ngrok") && !origin.includes(process.env.NETWORK_IP || "192.168.1.3") && !origin.includes("localhost") && !origin.includes("127.0.0.1") && !origin.includes("::1")) {
-      return res.status(403).json({ error: "Origen de petición no confiable" });
+// 3.5. Middleware de Verificación CSRF (Enforcement)
+// IMPORTANTE: usar un secreto estable para que el token CSRF no se desincronice entre requests.
+const CSRF_ENFORCEMENT = process.env.CSRF_ENFORCEMENT !== "false";
+const RUNTIME_CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
+
+if (CSRF_ENFORCEMENT) {
+  app.use((req, res, next) => {
+    const method = req.method.toUpperCase();
+    const origin = req.get('origin');
+    
+    // Solo verificamos métodos que alteran datos
+    if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+      // Validar que el origen coincida con nuestras IPs o Ngrok si es producción
+      if (isProdMode && origin && !origin.includes("ngrok") && !origin.includes(process.env.NETWORK_IP || "192.168.1.3") && !origin.includes("localhost") && !origin.includes("127.0.0.1") && !origin.includes("::1")) {
+        return res.status(403).json({ error: "Origen de petición no confiable" });
+      }
+      const clientToken = req.headers["x-csrf-token"];
+      if (clientToken !== RUNTIME_CSRF_SECRET) {
+        logger.warn(`🛡️ Bloqueo CSRF: Intento sin token válido desde ${req.ip}`);
+        return res.status(403).json({ error: "Sesión inválida o petición no autorizada (CSRF)" });
+      }
     }
-    const clientToken = req.headers["x-csrf-token"];
-    if (clientToken !== RUNTIME_CSRF_SECRET) { // Usar el secreto dinámico
-      logger.warn(`🛡️ Bloqueo CSRF: Intento sin token válido desde ${req.ip}`);
-      return res.status(403).json({ error: "Sesión inválida o petición no autorizada (CSRF)" });
-    }
-  }
-  next();
-});
+    next();
+  });
+}
 
 // Endpoint para obtener el token dinámico de esta sesión
 app.get("/api/get-csrf", (req, res) => {
@@ -150,6 +155,7 @@ app.get("/api/get-csrf", (req, res) => {
   logger.info(`🔑 CSRF Token solicitado desde: ${origin}`);
   res.json({ csrfToken: RUNTIME_CSRF_SECRET }); // Devolver el secreto dinámico
 });
+
 
 // Authentication routes (login, logout, forgot-password)
 // These should not be IP whitelisted, as an admin might need to log in from a new IP

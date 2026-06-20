@@ -506,8 +506,30 @@ async function confirmPOSPaymentWithDetails() {
 
     toast("⌛ Procesando...");
 
+    // Asegurar CSRF token antes de escribir (backend exige header x-csrf-token)
+    if (!window.csrfToken) {
+      try {
+        // Usar apiFetch para que respete credentials y manejo global
+        const r = await apiFetch(`${window.API_URL}/get-csrf`, { method: "GET" });
+        const d = await r.json();
+        window.csrfToken = d?.csrfToken;
+      } catch (e) {
+        console.warn("❌ No se pudo obtener CSRF token:", e?.message || e);
+      }
+    }
+
+    if (!window.csrfToken) {
+      console.warn("⚠️ CSRF token sigue vacío antes de POST /sales");
+    }
+
     const res = await apiFetch(`${window.API_URL}/sales`, {
       method: "POST",
+      headers: {
+        // Backend valida x-api-key
+        "x-api-key": window.API_KEY,
+        // Backend valida x-csrf-token
+        "x-csrf-token": window.csrfToken,
+      },
       body: JSON.stringify(sale),
     });
     if (res.ok) {

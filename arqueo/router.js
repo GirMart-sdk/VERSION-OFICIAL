@@ -5,12 +5,9 @@
 
 const express = require("express");
 const router = express.Router();
-const prisma = require("../backend/database");
-<<<<<<< HEAD
-=======
+const { prisma } = require("../backend/database");
 const ReportService = require("../backend/services/reportService");
 const mailer = require("../emails/mailer");
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
 const { requireAuth } = require("../backend/middlewares/auth");
 
 /**
@@ -134,8 +131,6 @@ router.post("/close", requireAuth, async (req, res) => {
       },
     });
 
-<<<<<<< HEAD
-=======
     // --- ENVÍO DE REPORTE AUTOMÁTICO AL GMAIL ---
     try {
       // Obtener ventas y gastos del turno para el PDF
@@ -154,7 +149,6 @@ router.post("/close", requireAuth, async (req, res) => {
       console.error("⚠️ [Arqueo] Error al enviar correo de cierre:", mailErr.message);
     }
 
->>>>>>> d324bcbcdb6793670891877f1dc99ee64a25c733
     res.json({ success: true, session: closed });
   } catch (err) {
     res.status(500).json({ error: err.message });

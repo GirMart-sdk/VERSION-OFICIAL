@@ -303,7 +303,8 @@ function renderSalesTable() {
                     </td>
                     <td style="font-size:11px; color:var(--gray-text);">${s.method}</td>
                     <td>
-                      <span class="status-badge ${s.payment_status === "completed" ? "s-ok" : "s-low"}" style="font-size:9px;">${s.payment_status.toUpperCase()}</span>
+                      <span class="status-badge ${s.payment_status === "completed" ? "s-ok" : "s-low"}" style="font-size:9px;">${(s.payment_status || "pending").toUpperCase()}</span>
+
                     </td>
                     <td style="color:var(--accent); font-weight:700;">${fmt(s.total)}</td>
                     <td style="text-align:right;">
