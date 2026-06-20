@@ -14,8 +14,8 @@ async function fetchSalesLog() {
 
     window.allSalesData = data.map((s) => ({
       ...s,
-      total: Number(s.total), // Asegurar que sea número
-      total_paid: Number(s.total_paid || 0), // Forzar conversión a número para evitar errores de visualización
+      total: Number(s.total) || 0, // Evitar NaN
+      total_paid: Number(s.total_paid) || 0, // Evitar NaN
       channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
     }));
 
@@ -67,10 +67,16 @@ function renderSalesCharts() {
   const to = $("filterDateTo")?.value;
   let filtered = applyDateFilter(window.allSalesData, from, to);
 
-  // 1. Gráfico de Línea de Tiempo
+  // 1. Gráfico de Línea de Tiempo (tolerar timestamp faltante)
   const timelineData = {};
   filtered.forEach((s) => {
-    const d = s.timestamp.split("T")[0];
+    const ts =
+      (typeof s.timestamp === "string" && s.timestamp) ||
+      (typeof s.createdAt === "string" && s.createdAt) ||
+      "";
+    if (!ts) return;
+
+    const d = ts.split("T")[0];
     timelineData[d] = (timelineData[d] || 0) + s.total;
   });
 
@@ -156,11 +162,26 @@ function updateChart(id, type, data) {
 function applyDateFilter(data, from, to) {
   if (!from && !to) return data;
   return data.filter((s) => {
-    const day = s.timestamp.split("T")[0];
+    const ts =
+      (typeof s.timestamp === "string" && s.timestamp) ||
+      (typeof s.createdAt === "string" && s.createdAt) ||
+      "";
+    if (!ts) return false;
+
+    const day = ts.split("T")[0];
     if (from && day < from) return false;
     if (to && day > to) return false;
     return true;
   });
+}
+
+function getSaleTimestamp(s) {
+  const ts =
+    (typeof s?.timestamp === "string" && s.timestamp && s.timestamp) ||
+    (typeof s?.createdAt === "string" && s.createdAt && s.createdAt) ||
+    (s?.timestamp instanceof Date ? s.timestamp.toISOString() : "") ||
+    "";
+  return ts || "";
 }
 
 function renderSalesTable() {
@@ -201,13 +222,16 @@ function renderSalesTable() {
     return;
   }
 
+  // Excluir ventas sin timestamp (evita crash)
+  filtered = filtered.filter((s) => !!getSaleTimestamp(s));
+
   // Ordenar por fecha descendente
-  filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  filtered.sort((a, b) => new Date(getSaleTimestamp(b)) - new Date(getSaleTimestamp(a)));
 
   // Agrupar por fecha
   const groups = {};
   filtered.forEach((s) => {
-    const date = s.timestamp.split("T")[0];
+    const date = getSaleTimestamp(s).split("T")[0];
     if (!groups[date]) groups[date] = { total: 0, items: [] };
     groups[date].items.push(s);
     groups[date].total += s.total;
@@ -256,10 +280,13 @@ function renderSalesTable() {
                       details = {};
                     }
                   const shipStatus = details.shipping_status || "PENDIENTE";
-                  const time = new Date(s.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
+                  const ts = getSaleTimestamp(s);
+                  const time = ts
+                    ? new Date(ts).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "--";
 
                   return `
                   <tr class="activity-item">

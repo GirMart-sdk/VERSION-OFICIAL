@@ -176,10 +176,16 @@ function renderGroupedTransactions(data) {
     return;
   }
 
-  // Agrupar
+  // Agrupar (tolerar timestamp faltante)
   const groups = {};
   data.forEach((s) => {
-    const date = s.timestamp.split("T")[0];
+    const ts =
+      (typeof s?.timestamp === "string" && s.timestamp && s.timestamp) ||
+      (typeof s?.createdAt === "string" && s.createdAt && s.createdAt) ||
+      "";
+    if (!ts) return;
+
+    const date = ts.split("T")[0];
     if (!groups[date]) groups[date] = { total: 0, items: [] };
     groups[date].items.push(s);
     groups[date].total += s.total;
