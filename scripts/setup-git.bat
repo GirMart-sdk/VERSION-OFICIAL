@@ -14,11 +14,9 @@ if %errorlevel% neq 0 (
 echo [*] Inicializando repositorio Git local...
 git init
 
-echo [*] Configurando repositorio remoto...
-git remote add origin https://github.com/GirMart-sdk/VERSION-OFICIAL.git 2>nul
-if %errorlevel% neq 0 (
-    git remote set-url origin https://github.com/GirMart-sdk/VERSION-OFICIAL.git
-)
+echo [*] Configurando repositorio remoto 'origin'...
+git remote remove origin >nul 2>&1
+git remote add origin https://github.com/GirMart-sdk/VERSION-OFICIAL.git
 
 echo [*] Sincronizando todos los archivos...
 :: El parametro -f fuerza la inclusion de los 11 .bat aunque esten en el .gitignore
@@ -31,13 +29,11 @@ git commit -m "Sincronización inicial: Winner Store v3.5"
 echo [*] Cambiando a rama principal (main)...
 git branch -M main
 
-echo [*] Sincronizando con archivos existentes en el servidor...
-:: Esto descarga lo que haya en GitHub (como el README) y lo une a tu proyecto
-:: Si hay conflictos, Git intentara mezclarlos automaticamente.
-git pull origin main --allow-unrelated-histories --no-edit
-
 echo [*] Subiendo archivos a GitHub...
 echo (Es posible que se te pida autenticacion en una ventana emergente)
-git push -u origin main
+:: El parametro -u establece la rama remota para futuros 'pull' y 'push'.
+:: El parametro --force sobreescribe el historial en el servidor. Usar con cuidado.
+:: Es util en un script de configuracion inicial para asegurar que el estado local sea el definitivo.
+git push -u origin main --force
 
 pause
