@@ -31,9 +31,18 @@ git branch -M main
 
 echo [*] Subiendo archivos a GitHub...
 echo (Es posible que se te pida autenticacion en una ventana emergente)
-:: El parametro -u establece la rama remota para futuros 'pull' y 'push'.
-:: El parametro --force sobreescribe el historial en el servidor. Usar con cuidado.
-:: Es util en un script de configuracion inicial para asegurar que el estado local sea el definitivo.
+
+echo.
+echo [!] ADVERTENCIA: Esta a punto de FORZAR la subida a GitHub.
+echo     Esto sobreescribira el historial del repositorio remoto.
+echo     Use esta opcion solo para la configuracion inicial.
+echo.
+set /p "confirm=    -> Escriba 'subir' para confirmar y continuar: "
+if /i not "%confirm%"=="subir" (
+    echo [!] Operacion cancelada por el usuario.
+    goto :eof
+)
+
 git push -u origin main --force
 
 pause
