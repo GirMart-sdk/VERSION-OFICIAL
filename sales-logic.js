@@ -570,8 +570,13 @@ window.openLayawayPayment = async (saleId) => {
   
   if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
   try {
-    // The backend endpoint for `.../payments` does not exist, causing a 404.
-    // Corrected: Use PATCH to update the existing sale record with the new payment amount.
+    // The backend expects a more complete payload for PATCH requests.
+    // We'll merge the new payment with existing payment_details.
+    const existingDetails =
+      typeof sale.payment_details === "string"
+        ? JSON.parse(sale.payment_details || "{}")
+        : sale.payment_details || {};
+
     const res = await apiFetch(`${API_URL}/sales/${saleId}`, {
       method: "PATCH",
       headers: {
@@ -579,9 +584,12 @@ window.openLayawayPayment = async (saleId) => {
         "x-csrf-token": window.csrfToken,
       },
       body: JSON.stringify({
-        // The backend expects an update to the total_paid field.
-        // We calculate and send the new total paid amount.
         total_paid: (sale.total_paid || 0) + Number(amount),
+        payment_details: {
+          ...existingDetails,
+          last_abono: Number(amount),
+          last_abono_date: new Date().toISOString(),
+        },
       }),
     });
     if (res.ok) {
