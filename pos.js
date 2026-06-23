@@ -32,7 +32,7 @@ function renderPOSProducts() {
 
     const items = window.inventory.filter(
       (p) =>
-        totalStock(p) > 0 &&
+        window.totalStock(p) > 0 &&
         (p.name.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
           !q) &&
@@ -47,8 +47,7 @@ function renderPOSProducts() {
 
     list.innerHTML = items
       .map((p) => {
-        const ts = totalStock(p);
-        const stat = stockStatus(ts);
+        const ts = window.totalStock(p);
 
         return `
         <div class="pos-product-card" data-product-id="${p.id}" id="prod-card-${p.id}">
@@ -56,7 +55,7 @@ function renderPOSProducts() {
           <div class="pos-product-card-info">
             <div class="ppc-sku">${p.sku}</div>
             <div class="ppc-name">${p.name}</div>
-            <div class="ppc-price">${fmt(p.price)}</div>
+            <div class="ppc-price">${window.fmt(p.price)}</div>
           </div>
         </div>`;
       })
@@ -86,9 +85,9 @@ function setPOSCategory(cat) {
 window.posSearchProducts = renderPOSProducts;
 
 function openQRScannerPOS() {
-  if (typeof setScanMode === "function") setScanMode("pos");
-  navigateTo("qrscan");
-  if (typeof startProductQRScanner === "function") startProductQRScanner();
+  if (typeof window.setScanMode === "function") window.setScanMode("pos");
+  window.navigateTo("qrscan");
+  if (typeof window.startProductQRScanner === "function") window.startProductQRScanner();
 }
 
 function printReceipt(sale) {
@@ -113,18 +112,18 @@ function printReceipt(sale) {
     <h2 style="margin-bottom:0">WINNER</h2><p style="text-align:center;font-size:10px;margin-top:5px;letter-spacing:1px">STREETWEAR COLOMBIA</p>
     ${isLayaway ? '<h3 style="text-align:center; border:1px solid #000; padding:5px; margin-top:10px; font-size:14px;">TICKET DE SEPARADO</h3>' : ""}
     <div class="line"></div>
-    <p>Fecha: ${fmtDate(sale.timestamp)}</p>
+    <p>Fecha: ${window.fmtDate(sale.timestamp)}</p>
     <p>Ticket: ${sale.id.slice(-8).toUpperCase()}</p>
     <p>Cliente: ${sale.client || "Mostrador"}</p>
     <div class="line"></div>
-    ${sale.items.map((i) => `<div class="row"><span>${i.name} ×${i.qty}</span><span>${fmt(i.price * i.qty)}</span></div>`).join("")}
+    ${sale.items.map((i) => `<div class="row"><span>${i.name} ×${i.qty}</span><span>${window.fmt(i.price * i.qty)}</span></div>`).join("")}
     <div class="line"></div>
-    <div class="row total"><span>TOTAL</span><span>${fmt(sale.total)}</span></div>
+    <div class="row total"><span>TOTAL</span><span>${window.fmt(sale.total)}</span></div>
     ${
       isLayaway
         ? `
-      <div class="row"><span>Abono Inicial:</span><span>${fmt(abono)}</span></div>
-      <div class="row" style="font-weight:700; font-size:15px; margin-top:5px;"><span>SALDO PENDIENTE:</span><span>${fmt(saldo)}</span></div>
+      <div class="row"><span>Abono Inicial:</span><span>${window.fmt(abono)}</span></div>
+      <div class="row" style="font-weight:700; font-size:15px; margin-top:5px;"><span>SALDO PENDIENTE:</span><span>${window.fmt(saldo)}</span></div>
       <div class="line"></div>
     `
         : ""
@@ -172,23 +171,23 @@ function openPOSSizeSelector(product) {
     return addToPOSCart(product, "U");
   }
 
-  if (!hasSizes(product.cat)) {
+  if (!window.hasSizes(product.cat)) {
     addToPOSCart(product, "U");
     return;
   }
-  const sizes = getSizesForCategory(product.cat);
+  const sizes = window.getSizesForCategory(product.cat);
   const isShoes =
     product.cat.toLowerCase().includes("calzado") ||
     product.cat.toLowerCase().includes("tenis");
 
   grid.innerHTML = sizes
-    .map((sz, index) => {
+    .map((sz) => {
       const qty = product.stock[sz] || 0;
       const isDisabled = qty <= 0;
 
       let label = sz;
       if (isShoes) {
-        const corr = getFootwearCorrespondence(sz);
+        const corr = window.getFootwearCorrespondence(sz);
         label = `
           <div style="line-height:1.1">
             <span style="font-size:16px; color:var(--white)">${sz} <small>EU</small></span><br>
@@ -308,14 +307,14 @@ function renderPOSCart() {
     <div class="pos-item-row" style="padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
       <div style="flex:1">
         <div style="font-size: 13px; font-weight: 600;">${it.name}</div>
-        <div style="font-size: 11px; color: var(--gray-text);">Talla: ${it.size} | ${fmt(it.price)}</div>
+        <div style="font-size: 11px; color: var(--gray-text);">Talla: ${it.size} | ${window.fmt(it.price)}</div>
       </div>
       <div class="pos-qty-ctrl">
         <button onclick="updatePOSQty(${idx}, -1)">-</button>
         <span>${it.qty}</span>
         <button onclick="updatePOSQty(${idx}, 1)">+</button>
       </div>
-      <div style="font-weight:700; color:var(--accent); min-width:80px; text-align:right">${fmt(it.price * it.qty)}</div>
+      <div style="font-weight:700; color:var(--accent); min-width:80px; text-align:right">${window.fmt(it.price * it.qty)}</div>
       <button class="action-btn del" onclick="removeFromPOS(${idx})">✕</button>
     </div>`,
     )
@@ -335,8 +334,8 @@ function updatePOSTotals() {
   );
   const disc = parseFloat($("posDiscount")?.value || 0);
   const total = sub * (1 - disc / 100);
-  if ($("posSubtotal")) $("posSubtotal").textContent = fmt(sub);
-  if ($("posTotal")) $("posTotal").textContent = fmt(Math.round(total));
+  if ($("posSubtotal")) $("posSubtotal").textContent = window.fmt(sub);
+  if ($("posTotal")) $("posTotal").textContent = window.fmt(Math.round(total));
 }
 
 function openPOSPaymentModal(isLayawayInitially = false) {
@@ -432,7 +431,7 @@ window.calcCashChange = () => {
   const received = parseFloat($("posPayCashReceived").value) || 0;
   const abono = parseFloat($("posPayAbonoAmount").value) || 0;
   const target = isLayaway ? abono : total;
-  $("posPayCashChange").textContent = fmt(Math.max(0, received - target));
+  $("posPayCashChange").textContent = window.fmt(Math.max(0, received - target));
 };
 
 window.toggleLayawayFields = () => {
@@ -480,8 +479,8 @@ async function confirmPOSPaymentWithDetails() {
 
   try {
     const sale = {
-      id: genId(),
-      timestamp: nowStr(),
+      id: window.genId(),
+      timestamp: window.nowStr(),
       items: window.WinnerApp.pos.cart,
       total: total,
       method: posCurrentPaymentMethod.name,
@@ -539,8 +538,8 @@ async function confirmPOSPaymentWithDetails() {
       window.WinnerApp.pos.cart = []; // Limpiar carrito global
       renderPOSCart();
       closePOSPaymentModal();
-      refreshAll();
-      if (typeof renderDashboard === "function") renderDashboard();
+      window.refreshAll();
+      if (typeof window.renderDashboard === "function") window.renderDashboard();
     } else {
       const err = await res.json().catch(() => ({}));
       toast("❌ Error: " + (err.error || "No se pudo registrar"));
@@ -661,7 +660,7 @@ window.startProductQRScanner = function () {
           console.error("Error Scanner:", err);
         }
       },
-      (errorMessage) => {
+      (_errorMessage) => {
         /* Ignorar errores de frame */
       },
     )
@@ -760,8 +759,8 @@ window.registerPayment = () => {
   const amount = parseFloat($("payRegAmount").value);
   if (!method || !amount) return toast("⚠️ Datos incompletos");
   const entry = {
-    id: genId(),
-    ts: nowStr(),
+    id: window.genId(),
+    ts: window.nowStr(),
     // Buscar el nombre del método para el registro, ya que 'method' ahora almacena el ID
     method: (
       [
@@ -775,7 +774,7 @@ window.registerPayment = () => {
     ref: $("payRegRef").value,
   };
   window.payLog.unshift(entry);
-  LS.set("payLog", window.payLog);
+  window.LS.set("payLog", window.payLog);
   window.renderPaymentsTable();
   toast("✅ Cobro registrado");
 };
@@ -836,17 +835,17 @@ window.renderPaymentsTable = function () {
   if (dateFilter) {
     payList = payList.filter((p) => p.ts.startsWith(dateFilter));
   } else if (_payTimeRange !== "all") {
-    const todayStr = getTodayStr();
+    const todayStr = window.getTodayStr();
     if (_payTimeRange === "today") {
       payList = payList.filter((p) => p.ts.startsWith(todayStr));
     } else if (_payTimeRange === "yesterday") {
-      const yestStr = getPastDate(1);
+      const yestStr = window.getPastDate(1);
       payList = payList.filter((p) => p.ts.startsWith(yestStr));
     } else if (_payTimeRange === "week") {
-      const weekAgoStr = getPastDate(7);
+      const weekAgoStr = window.getPastDate(7);
       payList = payList.filter((p) => p.ts >= weekAgoStr);
     } else if (_payTimeRange === "month") {
-      const monthAgoStr = getPastDate(30);
+      const monthAgoStr = window.getPastDate(30);
       payList = payList.filter((p) => p.ts >= monthAgoStr);
     }
   }
@@ -891,13 +890,13 @@ window.renderPaymentsTable = function () {
             <div>
               <div style="font-weight:600; font-size:14px; color:white;">${esc(p.client || "Mostrador")}</div>
               <div style="font-size:11px; color:var(--gray-text); margin-top:2px;">
-                ${fmtDate(p.ts)} • <span style="color:var(--accent)">${esc(p.method || "Efectivo")}</span>
+                ${window.fmtDate(p.ts)} • <span style="color:var(--accent)">${esc(p.method || "Efectivo")}</span>
               </div>
               <div style="font-size:10px; color:var(--gray3); font-family:monospace; margin-top:2px;">REF: ${esc(p.ref || p.id.slice(-6))}</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-weight:700; color:var(--accent); font-size:17px;">${fmt(Number(p.amount) || 0)}</div>
+            <div style="font-weight:700; color:var(--accent); font-size:17px;">${window.fmt(Number(p.amount) || 0)}</div>
             <div style="margin-top:5px; display:flex; gap:5px; justify-content:flex-end;">
                <span class="status-badge s-ok" style="font-size:9px; padding:2px 6px;">${p.isSale ? "VENTA" : "COBRO"}</span>
                <button class="btn-ghost-sm" style="padding:2px 8px" onclick="${p.isSale ? `viewSaleDetails('${p.id}')` : `alert('Ref: ${esc(p.ref)}')`}">👁 VER</button>
@@ -917,11 +916,11 @@ window.renderPaymentsTable = function () {
         <div class="dash-neon-box" style="padding:15px 25px; flex-direction:row; justify-content:space-between; align-items:center;">
            <div style="text-align:left">
              <span class="dash-label-impact" style="margin-bottom:2px">TOTAL RECAUDADO</span>
-             <span class="dash-val-large" style="font-size:32px; color:var(--white)">${fmt(totalAmount)}</span>
+             <span class="dash-val-large" style="font-size:32px; color:var(--white)">${window.fmt(totalAmount)}</span>
            </div>
            <div style="text-align:right">
              <span class="dash-label-impact" style="margin-bottom:2px">OPERACIONES</span>
-             <span class="dash-val-large" style="font-size:32px; color:var(--accent)">${payList.length}</span>
+             <span class="dash-val-large" style="font-size:32px; color:var(--accent)">${window.payList.length}</span>
            </div>
         </div>
       </div>
@@ -934,7 +933,7 @@ window.renderPaymentsTable = function () {
             📦 PEDIDOS ONLINE & PASARELAS (${orders.length})
           </span>
           <div style="text-align:right">
-            <div style="font-size:14px; font-weight:800; color:white">${fmt(Number(orders.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
+            <div style="font-size:14px; font-weight:800; color:white">${window.fmt(Number(orders.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
             <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
           </div>
         </div>
@@ -951,7 +950,7 @@ window.renderPaymentsTable = function () {
             🏪 VENTAS LOCALES & CAJA (${locals.length})
           </span>
           <div style="text-align:right">
-            <div style="font-size:14px; font-weight:800; color:var(--accent)">${fmt(Number(locals.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
+            <div style="font-size:14px; font-weight:800; color:var(--accent)">${window.fmt(Number(locals.reduce((s, p) => s + (Number(p.amount) || 0), 0)) || 0)}</div>
             <div style="font-size:9px; color:var(--gray-text); letter-spacing:1px;">CLICK PARA VER ▾</div>
           </div>
         </div>
@@ -963,8 +962,8 @@ window.renderPaymentsTable = function () {
     </div>
   `;
 
-  if ($("phSummaryTotal")) $("phSummaryTotal").textContent = fmt(totalAmount);
-  if ($("phSummaryCount")) $("phSummaryCount").textContent = payList.length;
+  if ($("phSummaryTotal")) $("phSummaryTotal").textContent = window.fmt(totalAmount);
+  if ($("phSummaryCount")) $("phSummaryCount").textContent = window.payList.length;
 };
 
 window.exportPaymentsCSV = () => {

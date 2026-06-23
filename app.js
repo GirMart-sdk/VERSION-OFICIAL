@@ -137,24 +137,14 @@ window.SHIPPING_OPTIONS = [
 // ═══════════════════════════════════════════════════════
 // CONFIGURACIÓN DE PASARELAS DE PAGO
 // ═══════════════════════════════════════════════════════
+// eslint-disable-next-line no-unused-vars
 const PAYMENT_GATEWAYS = {
-  WOMPI: {
-    name: "Wompi (PSE/Tarjetas/Nequi)",
-    icon: "💎",
-    color: "#e8ff47",
-    instructions: "Procesado de forma segura por Bancolombia.",
-  },
-  COD: {
-    name: "Contra Entrega",
-    icon: "🚚",
-    color: "#ffffff",
-    instructions: "Paga en efectivo al recibir tu pedido",
-  },
 };
 
 /**
  * Carga la configuración dinámica de marca (Hero, Redes, Info)
  */
+// eslint-disable-next-line no-unused-vars
 async function loadDynamicConfig() {
   try {
     const res = await apiFetch(`${window.API_URL}/config`);
@@ -312,7 +302,9 @@ window.DOM = {
 function saveCart() {
   try {
     localStorage.setItem("winner_cart", JSON.stringify(cart));
-  } catch {}
+  } catch (e) {
+    // Ignore potential errors in private browsing mode
+  }
 }
 
 function loadCart() {
@@ -330,19 +322,11 @@ function loadCart() {
 /* ══════════════════════════════════════════════════════════
    MOBILE MENU
 ══════════════════════════════════════════════════════════ */
-function toggleMobileMenu() {
-  DOM.navLinks.classList.toggle("mobile-open");
-  DOM.menuBtn.classList.toggle("active");
-  document.body.style.overflow = DOM.navLinks.classList.contains("mobile-open")
-    ? "hidden"
-    : "";
-}
-
 // Close mobile menu on navigation
-DOM.navLinks.querySelectorAll("a").forEach((link) => {
+window.DOM.navLinks.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => {
-    DOM.navLinks.classList.remove("mobile-open");
-    DOM.menuBtn.classList.remove("active");
+    window.DOM.navLinks.classList.remove("mobile-open");
+    window.DOM.menuBtn.classList.remove("active");
     document.body.style.overflow = "";
   });
 });
@@ -353,7 +337,7 @@ DOM.navLinks.querySelectorAll("a").forEach((link) => {
 window.addEventListener(
   "scroll",
   () => {
-    DOM.navbar.classList.toggle("scrolled", window.scrollY > 60);
+    window.DOM.navbar.classList.toggle("scrolled", window.scrollY > 60);
   },
   { passive: true },
 );
@@ -364,38 +348,38 @@ window.addEventListener(
 let toastTimer = null;
 
 function showToast(msg) {
-  DOM.toastMsg.textContent = msg;
-  DOM.toast.classList.add("show");
+  window.DOM.toastMsg.textContent = msg;
+  window.DOM.toast.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => DOM.toast.classList.remove("show"), 2800);
+  toastTimer = setTimeout(() => window.DOM.toast.classList.remove("show"), 2800);
 }
 
 /* ══════════════════════════════════════════════════════════
    CART
 ══════════════════════════════════════════════════════════ */
 function openCart() {
-  DOM.cartOverlay.classList.add("open");
-  DOM.cartDrawer.classList.add("open");
+  window.DOM.cartOverlay.classList.add("open");
+  window.DOM.cartDrawer.classList.add("open");
   document.body.style.overflow = "hidden";
 }
 
 function closeCart() {
-  DOM.cartOverlay.classList.remove("open");
-  DOM.cartDrawer.classList.remove("open");
+  window.DOM.cartOverlay.classList.remove("open");
+  window.DOM.cartDrawer.classList.remove("open");
   document.body.style.overflow = "";
 }
 
-DOM.cartToggle.addEventListener("click", openCart);
-DOM.cartClose.addEventListener("click", closeCart);
-DOM.cartOverlay.addEventListener("click", closeCart);
+window.DOM.cartToggle.addEventListener("click", openCart);
+window.DOM.cartClose.addEventListener("click", closeCart);
+window.DOM.cartOverlay.addEventListener("click", closeCart);
 
 // Close with Escape key
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeCart();
     // Also close mobile menu
-    DOM.navLinks.classList.remove("mobile-open");
-    DOM.menuBtn.classList.remove("active");
+    window.DOM.navLinks.classList.remove("mobile-open");
+    window.DOM.menuBtn.classList.remove("active");
     document.body.style.overflow = "";
   }
 });
@@ -475,26 +459,20 @@ function addToCart(productId, sizeId) {
 }
 window.addToCart = addToCart;
 
-function removeFromCart(cartId) {
-  cart = cart.filter((i) => i.cartId !== cartId);
-  saveCart();
-  renderCart();
-}
-
 function bumpCartCount() {
-  DOM.cartCount.classList.add("bump");
-  setTimeout(() => DOM.cartCount.classList.remove("bump"), 300);
+  window.DOM.cartCount.classList.add("bump");
+  setTimeout(() => window.DOM.cartCount.classList.remove("bump"), 300);
 }
 
 function renderCart() {
   const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const count = cart.reduce((sum, i) => sum + i.qty, 0);
 
-  DOM.cartCount.textContent = count;
-  DOM.cartTotal.textContent = formatPrice(total);
+  window.DOM.cartCount.textContent = count;
+  window.DOM.cartTotal.textContent = window.formatPrice(total);
 
   if (cart.length === 0) {
-    DOM.cartItems.innerHTML = `
+    window.DOM.cartItems.innerHTML = `
       <div class="cart-empty">
         <div class="empty-icon">🛒</div>
         <p>Tu carrito está vacío</p>
@@ -502,7 +480,7 @@ function renderCart() {
     return;
   }
 
-  DOM.cartItems.innerHTML = cart
+  window.DOM.cartItems.innerHTML = cart
     .map(
       (item) => `
     <div class="cart-item">
@@ -515,7 +493,7 @@ function renderCart() {
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(item.name)}${item.qty > 1 ? ` <span style="color:var(--accent)">×${item.qty}</span>` : ""}</div>
         <div class="cart-item-size">Talla: ${item.size}</div>
-        <div class="cart-item-price">${formatPrice(item.price * item.qty)}</div>
+        <div class="cart-item-price">${window.formatPrice(item.price * item.qty)}</div>
       </div>
       <button
         class="cart-item-remove"
@@ -563,11 +541,6 @@ function openPaymentModal() {
   modal.classList.add("open");
 }
 
-function closePaymentModal() {
-  document.getElementById("paymentModalOverlay").classList.remove("open");
-  document.getElementById("paymentModal").classList.remove("open");
-}
-
 function showPaymentStep(stepId) {
   document
     .querySelectorAll(".payment-step")
@@ -576,103 +549,6 @@ function showPaymentStep(stepId) {
   if (element) {
     element.style.display = "block";
   }
-}
-
-function continueToPaymentMethod() {
-  // Validate customer form
-  const name = document.getElementById("customerName").value.trim();
-  const email = document.getElementById("customerEmail").value.trim();
-  const phone = document.getElementById("customerPhone").value.trim();
-  const address = document.getElementById("customerAddress").value.trim();
-  const city = document.getElementById("customerCity").value.trim();
-
-  if (!name || !email || !phone || !address || !city) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-
-  // Validate email format
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showToast("⚠️ Email inválido");
-    return;
-  }
-
-  // Store customer data
-  paymentData.customer = { name, email, phone, address, city };
-
-  // Persistencia de seguridad: Si se cae el internet, guardamos el progreso
-  localStorage.setItem(
-    "pending_checkout_customer",
-    JSON.stringify(paymentData.customer),
-  );
-
-  // Show shipping options (step 2)
-  showPaymentStep("2");
-  renderShippingOptions();
-}
-
-function renderShippingOptions() {
-  const container = document.getElementById("shippingOptionsContainer");
-  if (!container) {
-    // Create container if doesn't exist
-    const step2 = document.getElementById("paymentStep2");
-    const html = `<div id="shippingOptionsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>`;
-    step2.insertAdjacentHTML("beforeend", html);
-  }
-
-  const shippingContainer = document.getElementById("shippingOptionsContainer");
-
-  const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-  // Regla: Envío gratis por compras superiores a $199.900
-  const isFreeShippingEligible = subtotal >= 100000; // Por ejemplo, bajar a 100k
-
-  shippingContainer.innerHTML = SHIPPING_OPTIONS.map((option) => {
-    const finalCost =
-      isFreeShippingEligible && option.cost > 0 ? 0 : option.cost;
-    const isSelected = paymentData.shipping.carrier === option.carrier;
-
-    return `
-    <div class="shipping-card ${isSelected ? "selected" : ""}" 
-         onclick="selectShippingMethod('${option.id}', ${finalCost})" 
-         style="padding: 16px; border: 2px solid ${isSelected ? "var(--accent)" : "var(--border)"}; 
-                border-radius: 6px; cursor: pointer; transition: all 0.3s; 
-                background: ${isSelected ? "rgba(232, 255, 71, 0.05)" : "var(--dark)"}; 
-                margin-bottom: 8px; position: relative;">
-      ${isSelected ? '<div style="position:absolute; top:10px; right:10px; color:var(--accent);">✓</div>' : ""}
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-        <div style="font-size: 32px; min-width: 40px;">${option.icon}</div>
-        <div style="flex: 1;">
-          <div style="font-weight: 600; color: white; font-size: 14px;">${option.name}</div>
-          <div style="color: var(--gray-text); font-size: 12px; margin-top: 4px;">${option.carrier} • ${option.days}</div>
-          ${isFreeShippingEligible && option.cost > 0 ? '<div style="color:var(--accent); font-size: 11px; margin-top:4px; font-weight:700;">¡APLICA ENVÍO GRATIS!</div>' : ""}
-        </div>
-        <div style="text-align: right; min-width: 120px;">
-          <div style="font-weight: bold; color: ${finalCost === 0 ? "var(--accent)" : "white"}; font-size: 16px;">
-            ${finalCost === 0 ? "GRATIS" : formatPrice(finalCost)}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  }).join("");
-}
-
-function selectShippingMethod(methodId, cost) {
-  const option = SHIPPING_OPTIONS.find((o) => o.id === methodId);
-  if (!option) return;
-
-  // Store shipping data
-  paymentData.shipping = {
-    method: option.name,
-    carrier: option.carrier,
-    cost: cost,
-  };
-
-  // Update summary and move to payment methods
-  updatePaymentSummary();
-  renderShippingOptions(); // Re-render para mostrar el estado seleccionado
-  showPaymentStep("2Payment");
-  renderPaymentMethods();
 }
 
 /**
@@ -699,6 +575,7 @@ function initCheckoutPersistence() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function updatePaymentSummary() {
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const shipping = paymentData.shipping.cost || 0;
@@ -708,21 +585,21 @@ function updatePaymentSummary() {
     <div style="background: var(--gray); padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px;">
       <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
         <span>Subtotal:</span>
-        <span>${formatPrice(subtotal)}</span>
+        <span>${window.formatPrice(subtotal)}</span>
       </div>
       ${
         shipping > 0
           ? `
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span>Envío (${paymentData.shipping.method}):</span>
-          <span>${formatPrice(shipping)}</span>
+          <span>${window.formatPrice(shipping)}</span>
         </div>
       `
           : ""
       }
       <div style="border-top: 1px solid var(--border); padding-top: 6px; display: flex; justify-content: space-between; font-weight: bold;">
         <span>Total:</span>
-        <span style="color: var(--accent);">${formatPrice(total)}</span>
+        <span style="color: var(--accent);">${window.formatPrice(total)}</span>
       </div>
     </div>
   `;
@@ -733,6 +610,7 @@ function updatePaymentSummary() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function renderPaymentMethods() {
   const container = document.getElementById("checkoutPayMethods");
   const methods = [
@@ -793,18 +671,7 @@ function renderPaymentMethods() {
     .join("");
 }
 
-function setPaymentMethod(methodName) {
-  selectedMethodForFinalize = methodName; // Usamos el ID (WOMPI_CARD, etc)
-  paymentData.payment.method = methodName;
-
-  // Actualizar visualmente la selección
-  renderPaymentMethods();
-
-  // Mostrar el botón de confirmación final
-  const container = document.getElementById("finalizeActionContainer");
-  if (container) container.style.display = "block";
-}
-
+// eslint-disable-next-line no-unused-vars
 async function finalizePurchase() {
   if (!selectedMethodForFinalize)
     return showToast("⚠️ Por favor selecciona un método de pago");
@@ -957,7 +824,7 @@ async function finalizePurchase() {
 function handleManualWhatsAppPayment(saleId, total, customer, isCOD = false) {
   const orderRef = saleId.slice(-8).toUpperCase();
   const type = isCOD ? "CONTRA ENTREGA" : "PAGO ELECTRÓNICO";
-  const message = `¡Hola Winner Store! 👋 Acabo de generar el pedido *#${orderRef}* (${type}) por valor de *${formatPrice(total)}*.\n\nMis datos: ${customer.name} - ${customer.phone}.\n\nQuedo atento a la confirmación. ¡Gracias!`;
+  const message = `¡Hola Winner Store! 👋 Acabo de generar el pedido *#${orderRef}* (${type}) por valor de *${window.formatPrice(total)}*.\n\nMis datos: ${customer.name} - ${customer.phone}.\n\nQuedo atento a la confirmación. ¡Gracias!`;
 
   const waUrl = `https://wa.me/${window.WHATSAPP_PHONE || "573135642283"}?text=${encodeURIComponent(message)}`;
 
@@ -965,14 +832,6 @@ function handleManualWhatsAppPayment(saleId, total, customer, isCOD = false) {
   setTimeout(() => {
     window.location.href = waUrl;
   }, 1500);
-}
-
-function simulateNotifications(customer) {
-  console.log(`Enviando SMS a ${customer.phone}...`);
-  console.log(`Enviando Email a ${customer.email}...`);
-  setTimeout(() => {
-    showToast("📩 Notificaciones enviadas al cliente");
-  }, 1000);
 }
 
 function showOrderConfirmation(params, gatewayKey) {
@@ -1025,7 +884,7 @@ function showOrderConfirmation(params, gatewayKey) {
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 13px;">
           <span style="color: var(--gray-text);">Total a pagar:</span>
-          <span style="color: var(--accent); font-weight: bold; font-size: 16px;">${formatPrice(params.amount)}</span>
+          <span style="color: var(--accent); font-weight: bold; font-size: 16px;">${window.formatPrice(params.amount)}</span>
         </div>
       </div>
 
@@ -1105,97 +964,6 @@ window.printInvoice = function (params) {
   win.document.close();
 };
 
-function formatCardNumber(input) {
-  let value = input.value.replace(/\s/g, "");
-  let formatted = value.replace(/(\d{4})(?=\d)/g, "$1 ");
-  input.value = formatted;
-}
-
-function formatExpiry(input) {
-  let value = input.value.replace(/\D/g, "");
-  if (value.length >= 2) {
-    value = value.slice(0, 2) + "/" + value.slice(2, 4);
-  }
-  input.value = value;
-}
-
-function formatCVV(input) {
-  input.value = input.value.replace(/\D/g, "").slice(0, 4);
-}
-
-function formatPhone(input) {
-  let value = input.value.replace(/\D/g, "");
-  if (value.length > 0) {
-    value =
-      "+57 " + value.slice(-10).replace(/(\d{3})(\d{3})(\d{4})/, "$1 $2 $3");
-  }
-  input.value = value;
-}
-
-function backToPaymentMethod() {
-  showPaymentStep("2Payment");
-}
-
-function processPayment() {
-  const form = document.getElementById("cardForm");
-  if (!form.checkValidity()) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-  finalizePurchase();
-}
-
-function processPaymentPSE() {
-  const form = document.getElementById("pseForm");
-  if (!form.checkValidity()) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-  finalizePurchase();
-}
-
-function processPaymentNequi() {
-  const form = document.getElementById("nequiForm");
-  if (!form.checkValidity()) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-  finalizePurchase();
-}
-
-function processPaymentDaviplata() {
-  const form = document.getElementById("daviplataForm");
-  if (!form.checkValidity()) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-  finalizePurchase();
-}
-
-function processPaymentCash() {
-  const form = document.getElementById("cashForm");
-  if (!form.checkValidity()) {
-    showToast("⚠️ Por favor completa todos los campos");
-    return;
-  }
-  finalizePurchase();
-}
-
-function updateCashFields() {
-  const option = document.getElementById("cashDeliveryOption").value;
-  const info = document.getElementById("cashDeliveryInfo");
-
-  if (option === "delivery") {
-    info.innerHTML =
-      "ℹ️ Pagarás contra entrega, el repartidor llegará a tu domicilio";
-  } else if (option === "pickup") {
-    info.innerHTML =
-      "ℹ️ Retira tu pedido en nuestro local y verifica antes de pagar";
-  } else {
-    info.innerHTML = "ℹ️ Selecciona una opción para continuar";
-  }
-}
-
 // Global hook for the button in HTML
 window.checkoutWhatsApp = openPaymentModal;
 
@@ -1211,14 +979,14 @@ function renderProducts(filter) {
         : window.PRODUCTS.filter((p) => (p.cat || p.category) === filter);
 
   if (list.length === 0) {
-    DOM.productsGrid.innerHTML = `
+    window.DOM.productsGrid.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--gray-text);font-size:14px;letter-spacing:1px;">
         No hay productos en esta categoría.
       </div>`;
     return;
   }
 
-  DOM.productsGrid.innerHTML = list
+  window.DOM.productsGrid.innerHTML = list
     .map(
       (p, i) => `
     <div class="product-card reveal" style="transition-delay:${i * 0.07}s">
@@ -1259,8 +1027,8 @@ function renderProducts(filter) {
       <div class="product-cat">${esc(p.cat)}</div>
       <div class="product-name">${esc(p.name)}</div>
       <div class="product-pricing">
-        <span class="product-price">${formatPrice(p.price)}</span>
-        ${p.oldPrice ? `<span class="product-price-old">${formatPrice(p.oldPrice)}</span>` : ""}
+        <span class="product-price">${window.formatPrice(p.price)}</span>
+        ${p.oldPrice ? `<span class="product-price-old">${window.formatPrice(p.oldPrice)}</span>` : ""}
       </div>
     </div>
   `,
@@ -1275,7 +1043,7 @@ function renderProducts(filter) {
 function buildProductUrl(productId) {
   const url = new URL(window.location.origin);
   url.pathname = "/";
-  url.searchParams.set("product", productId);
+  url.searchParams.set("product", productId.replace(/\//g, "-"));
   url.hash = "productos";
   return url.href;
 }
@@ -1288,7 +1056,7 @@ function buildProductSchema(products) {
     const color =
       metadata.color &&
       metadata.color
-        .split(/[\/,]/)
+        .split(/[/,]/)
         .map((c) => c.trim())
         .filter(Boolean)[0];
     const sizes =
@@ -1356,12 +1124,12 @@ function injectProductJsonLd(products) {
 }
 
 /* ── FILTER BUTTONS ─────────────────────────────────────── */
-DOM.filterBar.addEventListener("click", (e) => {
+window.DOM.filterBar.addEventListener("click", (e) => {
   const btn = e.target.closest(".filter-btn");
   if (!btn) return;
 
   window.activeFilter = btn.dataset.filter;
-  DOM.filterBar
+  window.DOM.filterBar
     .querySelectorAll(".filter-btn")
     .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
@@ -1398,16 +1166,6 @@ document.body.addEventListener("click", (e) => {
 /* ══════════════════════════════════════════════════════════
    PROMO CODE COPY
 ══════════════════════════════════════════════════════════ */
-function copyCode() {
-  const el = document.getElementById("promoCode");
-  if (!el) return;
-  const code = el.textContent.trim();
-  navigator.clipboard
-    .writeText(code)
-    .then(() => showToast(`📋 Código "${code}" copiado`))
-    .catch(() => showToast(`Código: ${code}`));
-}
-
 /* ══════════════════════════════════════════════════════════
    SCROLL REVEAL (IntersectionObserver)
 ══════════════════════════════════════════════════════════ */
