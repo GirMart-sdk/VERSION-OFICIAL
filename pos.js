@@ -47,6 +47,7 @@ function renderPOSProducts() {
 
     list.innerHTML = items
       .map((p) => {
+        // eslint-disable-next-line no-unused-vars
         const ts = window.totalStock(p);
 
         return `

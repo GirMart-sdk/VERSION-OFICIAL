@@ -570,12 +570,18 @@ window.openLayawayPayment = async (saleId) => {
   
   if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
   try {
-    const res = await apiFetch(`${API_URL}/sales/${saleId}/payments`, {
-      method: "POST",
+    // The backend endpoint for `.../payments` does not exist, causing a 404.
+    // Corrected: Use PATCH to update the existing sale record with the new payment amount.
+    const res = await apiFetch(`${API_URL}/sales/${saleId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-token": window.csrfToken,
+      },
       body: JSON.stringify({
-        amount: Number(amount),
-        method: "Efectivo",
-        notes: "Abono desde panel",
+        // The backend expects an update to the total_paid field.
+        // We calculate and send the new total paid amount.
+        total_paid: (sale.total_paid || 0) + Number(amount),
       }),
     });
     if (res.ok) {
