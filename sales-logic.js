@@ -595,6 +595,7 @@ window.openLayawayPayment = async (saleId) => {
     if (res.ok) {
       toast("✅ Abono registrado");
       fetchSalesLog(); // Refresca toda la data
+      if (typeof window.renderDashboard === "function") window.renderDashboard(); // ¡NUEVO! Refresca el dashboard
     } else {
       toast("❌ Error al registrar abono");
     }

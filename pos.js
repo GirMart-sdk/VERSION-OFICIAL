@@ -448,7 +448,9 @@ async function confirmPOSPaymentWithDetails() {
   if (!posCurrentPaymentMethod) return toast("⚠ Selecciona método de pago");
 
   const isLayaway = $("posPayIsLayaway").checked;
-  const abono = parseFloat($("posPayAbonoAmount").value) || 0;
+  const abonoRaw = $("posPayAbonoAmount").value || "0";
+  // Limpiar el valor de puntos o comas para asegurar que sea un número válido
+  const abono = parseFloat(abonoRaw.replace(/[.,]/g, "")) || 0;
   if (isLayaway && abono <= 0) return toast("⚠️ Ingresa el abono");
 
   const needsShipping = $("posPayNeedsShipping").checked;
@@ -499,7 +501,7 @@ async function confirmPOSPaymentWithDetails() {
       payment_details: {
         shipping_status: shippingStatus,
         isLayaway,
-        abonoAmount: abono,
+        abonoAmount: abono, // Corregido: Se elimina la multiplicación por 100
         received: parseFloat($("posPayCashReceived")?.value) || 0,
       },
     };
