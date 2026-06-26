@@ -1,5 +1,6 @@
 @echo off
 cls
+chcp 65001 >nul
 echo.
 echo  =================================================================
 echo   CONFIGURADOR DE REPOSITORIO GIT PARA WINNER STORE (VERSION J7)
@@ -47,14 +48,14 @@ if errorlevel 1 (
 ) else (
     echo [INFO] No hay nuevos cambios que guardar. Todo está al día.
 )
+
+REM --- 6. Subir los cambios al repositorio remoto ---
+echo [INFO] Subiendo la versión definitiva a GitHub...
+git push -u origin main
+
 echo.
-echo [OK] ¡Éxito! Tu proyecto está configurado y listo para ser subido.
+echo [OK] ¡Éxito! Tu proyecto ha sido configurado y subido a GitHub.
 echo.
 echo    URL Remota: %REPO_URL%
-echo.
-echo --- PASOS A SEGUIR ---
-echo 1. Abre una terminal (Git Bash, CMD o PowerShell) en este directorio.
-echo 2. Ejecuta el siguiente comando para subir todo a GitHub:
-echo    git push -u origin main
 echo.
 pause
