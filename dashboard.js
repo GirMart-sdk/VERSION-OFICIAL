@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════
    WINNER — dashboard.js (Gráficas y KPIs)
    ═══════════════════════════════════════════════════════ */
-
+// eslint-disable-next-line no-redeclare
+/* global getTodayStr, fetchSalesLog, ApexCharts, esc, apiFetch, toast, fmt */
+ 
 let charts = {}; // Para guardar instancias de ApexCharts
 
 async function renderDashboard() {
-  // KPIs para el periodo actual (ej. última semana)
-  const today = getTodayStr();
 
   try {
     // 1. Obtener estadísticas principales (Hoy y Totales)
@@ -31,7 +31,7 @@ async function renderDashboard() {
 
       // KPI de deuda/conversión/netCash: NO vienen del endpoint /api/stats actual.
       // Para evitar "$ NaN", limpiamos o mantenemos fallback 0.
-      if ($("kpiTotalDebt")) $("kpiTotalDebt").textContent = fmt(0);
+      if ($("kpiTotalDebt")) $("kpiTotalDebt").textContent = fmt(Number(stats.totalDebt ?? 0));
 
       // Priorizar el saldo del Arqueo de Caja si hay una sesión abierta
       if ($("kpiNetCash")) {
@@ -94,13 +94,14 @@ async function renderDashboard() {
 
       // --- CÁLCULO DE DEUDA TOTAL (CLIENT-SIDE) ---
       // Esto suma el saldo pendiente (Total - Pagado) de todas las ventas con estado 'partial' o 'pending'
-      const totalDebtCalculated = window.salesLog.reduce((sum, s) => {
-        const isUnpaid = s.payment_status === "partial" || s.payment_status === "pending";
-        return isUnpaid ? sum + (Number(s.total ?? 0) - (Number(s.total_paid ?? 0) || 0)) : sum;
-      }, 0);
-
-      if ($("kpiTotalDebt") && (totalDebtCalculated > 0 || $("kpiTotalDebt").textContent === "$0" || $("kpiTotalDebt").textContent.includes("NaN"))) {
-        $("kpiTotalDebt").textContent = fmt(Number(totalDebtCalculated || 0));
+      // AHORA SE USA EL VALOR DEL BACKEND, pero mantenemos este cálculo como fallback si el backend no lo envía.
+      if (!stats.totalDebt) {
+        const totalDebtCalculated = window.salesLog.reduce((sum, s) => {
+          const isUnpaid = s.payment_status === "partial" || s.payment_status === "pending";
+          return isUnpaid ? sum + (Number(s.total ?? 0) - (Number(s.total_paid ?? 0) || 0)) : sum;
+        }, 0);
+        if ($("kpiTotalDebt"))
+          $("kpiTotalDebt").textContent = fmt(Number(totalDebtCalculated || 0));
       }
 
       // Conversión: NO se calcula en vivo (no hay visitas en /api/stats actual)
@@ -407,16 +408,6 @@ function renderHeatmap() {
   };
 
   new ApexCharts($("salesHeatmap"), options).render();
-}
-
-function generateHeatmapData(count) {
-  let i = 0;
-  let series = [];
-  while (i < count) {
-    series.push({ x: i.toString(), y: Math.floor(Math.random() * 100) });
-    i++;
-  }
-  return series;
 }
 
 function renderLiveActivity() {

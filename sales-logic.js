@@ -378,7 +378,7 @@ window.viewSaleDetails = (id) => {
         <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px; color:var(--green)">
           <span>Total Abonado:</span> <span style="font-weight:700">${fmt(paid)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); pt:8px; margin-top:8px; color:var(--orange)">
+        <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top: 8px; margin-top:8px; color:var(--orange)">
           <span style="font-size:12px; align-self:center;">Saldo Pendiente:</span> 
           <div style="text-align:right">
             <span style="font-weight:800; font-size:18px;">${fmt(balance)}</span>
@@ -477,14 +477,13 @@ window.renderLayawaySales = () => {
   const sort = $("layawaySortSelect")?.value || "newest";
 
   let filtered = window.allSalesData.filter((s) => {
-    // Consideramos como separado cualquier venta física que no esté pagada totalmente (partial/pending)
-    const isPending =
-      s.channel === "fisica" &&
-      (s.payment_status === "partial" || s.payment_status === "pending");
-    const isCompleted =
-      s.channel === "fisica" &&
-      s.payment_status === "completed" &&
-      s.total_paid >= s.total;
+    // Un "separado" es cualquier venta con la marca 'isLayaway' en sus detalles.
+    const details = typeof s.payment_details === 'string' ? JSON.parse(s.payment_details || '{}') : (s.payment_details || {});
+    if (!details.isLayaway) return false;
+
+    // Filtrar por estado pendiente o completado
+    const isPending = s.payment_status === "partial" || s.payment_status === "pending";
+    const isCompleted = s.payment_status === "completed";
 
     if (window.layawayFilter === "pending") return isPending;
     if (window.layawayFilter === "completed") return isCompleted;
@@ -584,7 +583,7 @@ window.openLayawayPayment = async (saleId) => {
         "x-csrf-token": window.csrfToken,
       },
       body: JSON.stringify({
-        total_paid: (sale.total_paid || 0) + Number(amount),
+        total_paid: (Number(sale.total_paid) || 0) + Number(amount),
         payment_details: {
           ...existingDetails,
           last_abono: Number(amount),
@@ -595,7 +594,7 @@ window.openLayawayPayment = async (saleId) => {
     if (res.ok) {
       toast("✅ Abono registrado");
       fetchSalesLog(); // Refresca toda la data
-      if (typeof window.renderDashboard === "function") window.renderDashboard(); // ¡NUEVO! Refresca el dashboard
+      if (typeof window.renderDashboard === "function") window.renderDashboard();
     } else {
       toast("❌ Error al registrar abono");
     }
