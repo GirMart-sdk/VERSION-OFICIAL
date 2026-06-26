@@ -560,12 +560,64 @@ function updateLayawayKPIs(data) {
   if ($("sepTotalPending")) $("sepTotalPending").innerText = fmt(totalPending);
 }
 
-window.openLayawayPayment = async (saleId) => {
+window.openLayawayPayment = (saleId) => {
   const sale = window.allSalesData.find(x => x.id === saleId);
   if (!sale) return;
 
   const currentBalance = sale.total - (sale.total_paid || 0);
-  const amount = prompt(`💸 REGISTRAR ABONO - Orden #${saleId.slice(-6).toUpperCase()}\nSaldo Pendiente: ${fmt(currentBalance)}\n\nIngrese el monto del abono (COP):`, currentBalance);
+
+  // Crear un modal personalizado en lugar de usar prompt()
+  let overlay = document.getElementById("paymentModalOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "paymentModalOverlay";
+    overlay.className = "modal-overlay";
+    document.body.appendChild(overlay);
+  }
+
+  let modal = document.getElementById("paymentModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "paymentModal";
+    modal.className = "modal";
+    modal.style.maxWidth = "400px";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>💸 Registrar Abono</h3>
+      <button class="modal-close" onclick="closeLayawayPaymentModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px; color:var(--gray-text)">Venta #${sale.id.slice(-6).toUpperCase()}</p>
+      <p>Saldo pendiente: <strong style="color:var(--orange)">${fmt(currentBalance)}</strong></p>
+      <div class="form-group">
+        <label for="abonoAmountInput">Monto del Abono (COP)</label>
+        <input type="number" id="abonoAmountInput" value="${currentBalance}" style="width:100%; font-size:18px; text-align:center;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeLayawayPaymentModal()">Cancelar</button>
+      <button class="btn-accent" onclick="submitLayawayPayment('${sale.id}')">CONFIRMAR ABONO</button>
+    </div>
+  `;
+
+  overlay.classList.add("open");
+  modal.classList.add("open");
+  document.getElementById("abonoAmountInput").focus();
+};
+
+window.closeLayawayPaymentModal = () => {
+  document.getElementById("paymentModalOverlay")?.classList.remove("open");
+  document.getElementById("paymentModal")?.classList.remove("open");
+};
+
+window.submitLayawayPayment = async (saleId) => {
+  const sale = window.allSalesData.find(x => x.id === saleId);
+  if (!sale) return;
+
+  const amount = document.getElementById("abonoAmountInput").value;
   
   if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
   try {
@@ -593,10 +645,11 @@ window.openLayawayPayment = async (saleId) => {
     });
     if (res.ok) {
       toast("✅ Abono registrado");
+      window.closeLayawayPaymentModal();
       fetchSalesLog(); // Refresca toda la data
       if (typeof window.renderDashboard === "function") window.renderDashboard();
     } else {
-      toast("❌ Error al registrar abono");
+      toast("❌ Error al registrar abono. Revisa la conexión.");
     }
   } catch (e) {
     toast("❌ Error de red");

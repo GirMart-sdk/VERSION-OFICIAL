@@ -1,48 +1,54 @@
 @echo off
-title WINNER STORE - CONFIGURACION GITHUB
-cd /d "%~dp0.."
+cls
+echo.
+echo  =================================================================
+echo   CONFIGURADOR DE REPOSITORIO GIT PARA WINNER STORE (VERSION J7)
+echo  =================================================================
+echo.
 
-where git >nul 2>&1
+set REPO_URL=https://github.com/GirMart-sdk/VERSION-J7.git
+
+REM --- 1. Verificar si Git esta instalado ---
+git --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [!] ERROR: Git NO detectado.
-    echo 1. Descargalo e instalalo desde: https://git-scm.com/download/win
-    echo 2. Cierra y vuelve a abrir esta ventana.
+    echo [ERROR] Git no esta instalado o no se encuentra en el PATH.
+    echo Por favor, instala Git y asegurate de que este accesible.
     pause
-    exit /b
+    exit /b 1
 )
 
-echo [*] Inicializando repositorio Git local...
-git init
+REM --- 2. Inicializar repositorio si no existe ---
+if not exist ".git" (
+    echo [INFO] Inicializando nuevo repositorio Git en este directorio...
+    git init
+    echo [OK] Repositorio local creado.
+) else (
+    echo [INFO] El directorio ya es un repositorio Git.
+)
 
-echo [*] Configurando repositorio remoto 'origin'...
-git remote remove origin >nul 2>&1
-git remote add origin https://github.com/GirMart-sdk/VERSION-OFICIAL.git
-
-echo [*] Sincronizando todos los archivos...
-:: El parametro -f fuerza la inclusion de los 11 .bat aunque esten en el .gitignore
-git add -f scripts/*.bat
-git add .
-
-echo [*] Creando commit inicial...
-git commit -m "Sincronización inicial: Winner Store v3.5"
-
-echo [*] Cambiando a rama principal (main)...
+REM --- 3. Renombrar rama a 'main' (estándar moderno) ---
+echo [INFO] Asegurando que la rama principal sea 'main'...
 git branch -M main
 
-echo [*] Subiendo archivos a GitHub...
-echo (Es posible que se te pida autenticacion en una ventana emergente)
+REM --- 4. Eliminar remoto 'origin' si existe y añadir el nuevo ---
+echo [INFO] Configurando el repositorio remoto definitivo...
+git remote remove origin >nul 2>&1
+git remote add origin %REPO_URL%
+
+REM --- 5. Preparar y guardar la primera versión del proyecto ---
+echo [INFO] Añadiendo todos los archivos del proyecto al repositorio...
+git add .
+echo [INFO] Creando el commit inicial con la versión definitiva...
+git commit -m "Initial commit: Carga de la versión definitiva del proyecto" >nul 2>&1
 
 echo.
-echo [!] ADVERTENCIA: Esta a punto de FORZAR la subida a GitHub.
-echo     Esto sobreescribira el historial del repositorio remoto.
-echo     Use esta opcion solo para la configuracion inicial.
+echo [OK] ¡Éxito! Tu proyecto está configurado y listo para ser subido.
 echo.
-set /p "confirm=    -> Escriba 'subir' para confirmar y continuar: "
-if /i not "%confirm%"=="subir" (
-    echo [!] Operacion cancelada por el usuario.
-    goto :eof
-)
-
-git push -u origin main --force
-
+echo    URL Remota: %REPO_URL%
+echo.
+echo --- PASOS A SEGUIR ---
+echo 1. Abre una terminal (Git Bash, CMD o PowerShell) en este directorio.
+echo 2. Ejecuta el siguiente comando para subir todo a GitHub:
+echo    git push -u origin main
+echo.
 pause
