@@ -37,10 +37,16 @@ git remote add origin %REPO_URL%
 
 REM --- 5. Preparar y guardar la primera versión del proyecto ---
 echo [INFO] Añadiendo todos los archivos del proyecto al repositorio...
-git add .
-echo [INFO] Creando el commit inicial con la versión definitiva...
-git commit -m "Initial commit: Carga de la versión definitiva del proyecto" >nul 2>&1
+git add . >nul 2>&1
 
+REM Verificar si hay cambios para evitar un error de commit vacío
+git diff --staged --quiet
+if errorlevel 1 (
+    echo [INFO] Creando commit con los cambios detectados...
+    git commit -m "Initial commit: Carga de la versión definitiva del proyecto"
+) else (
+    echo [INFO] No hay nuevos cambios que guardar. Todo está al día.
+)
 echo.
 echo [OK] ¡Éxito! Tu proyecto está configurado y listo para ser subido.
 echo.
