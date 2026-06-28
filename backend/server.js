@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
+// eslint-disable-next-line no-unused-vars
 const sharp = require("sharp");
 const rateLimit = require("express-rate-limit");
 const logger = require("./utils/logger");
