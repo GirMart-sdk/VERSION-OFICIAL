@@ -31,13 +31,32 @@
    ```
 2. Configura tu `.env` (usa como base la documentación en `docs/README.md`).
 3. Sincroniza la base de datos:
-   ```bash
-   npx prisma db push
-   ```
+    ```bash
+    npx prisma db push
+    ```
 4. Inicia el sistema:
-   ```bash
-   .\start-local.bat
-   ```
+    ```bash
+    .\INICIAR_TIENDA.bat
+    ```
+
+---
+
+## 📦 Despliegue en Producción
+
+Sigue estos pasos para desplegar **Winner Store** en un servidor de producción (ej. VPS con Windows Server o Linux).
+
+1.  **Clonar el Repositorio:**
+    `git clone https://github.com/GirMart-sdk/VERSION-OFICIAL.git`
+2.  **Instalar Dependencias de Producción:**
+    `npm install --production`
+3.  **Configurar la Base de Datos:**
+    `npm run db:setup` (Este asistente te ayudará a crear el archivo `.env.production`).
+4.  **Inicializar la Base de Datos:**
+    `npm run setup` (Aplica el esquema y los datos iniciales).
+5.  **Configurar Persistencia con PM2:**
+    `pm2 startup` (Sigue las instrucciones que te dé) y luego `pm2 save`.
+6.  **Iniciar la Aplicación:**
+    `pm2 start ecosystem.config.js --env production`
 
 ---
 
