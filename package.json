@@ -15,7 +15,7 @@
     "prestart": "prisma generate",
     "start": "node backend/server.js",
     "dev": "pm2 startOrRestart ecosystem.config.js --name winner-store --no-daemon",
-    "dev:stop": "pm2 delete winner-store || exit 0 && pm2 delete winner-store-backup-task || exit 0",
+    "dev:stop": "(pm2 delete winner-store 2>nul || exit 0) && (pm2 delete winner-store-backup-task 2>nul || exit 0)",
     "start:prod": "npm run setup && node backend/server.js",
     "start:local": ".\\INICIAR_TIENDA.bat",
     "setup": "npx prisma generate && npx prisma db push && node backend/seed.js",
@@ -36,7 +36,7 @@
     "db:studio": "prisma studio",
     "db:check": "prisma db pull && echo '✅ Conexión con PostgreSQL establecida'",
     "db:setup": "node scripts/db/setup.js",
-    "clean": "node scripts/utils/clean.js",
+    "clean": "npm run dev:stop && node scripts/utils/clean.js",
     "reinstall": "npm run clean && del package-lock.json && npm install",
     "reset": "npm run clean && npm run db:generate && npm run seed && echo '✅ Proyecto reseteado'",
     "logs": "type .env | findstr DB || echo 'Revisa backend/server.js para logs'",
@@ -78,9 +78,12 @@
   },
   "devDependencies": {
     "@prisma/config": "^6.19.3",
+    "esbuild": "^0.28.1",
     "eslint": "^8.57.0",
     "eslint-plugin-security": "^2.1.1",
+    "glob": "^10.4.5",
     "prisma": "^6.19.3",
+    "rimraf": "^5.0.10",
     "watch": "^0.13.0"
   },
   "repository": {

@@ -456,6 +456,12 @@ async function confirmPOSPaymentWithDetails() {
   const needsShipping = $("posPayNeedsShipping").checked;
   const confirmBtn = $("posPayConfirmBtn");
   let shippingAddress = "";
+
+  // Lógica para Venta a Crédito
+  if (posCurrentPaymentMethod.id === "credit") {
+    shippingStatus = "CRÉDITO";
+  }
+
   let customerPhone = "";
   let shippingCarrier = "";
   // Acceso seguro al email con fallback
@@ -489,7 +495,9 @@ async function confirmPOSPaymentWithDetails() {
       method: posCurrentPaymentMethod.name,
       payment_method: posCurrentPaymentMethod.name,
       channel: "fisica",
-      vendor: $("posVendor")?.value || "Admin",
+      vendor:
+        $("posVendor")?.value ||
+        (window.session ? window.session.user : "Admin"),
       client: $("posClient")?.value || "Mostrador",
       customer_email: customerEmail,
       customer_phone: customerPhone || $("posCustomerPhone")?.value.trim() || "", // Aseguramos que se tome de posCustomerPhone si no se llenó en el modal

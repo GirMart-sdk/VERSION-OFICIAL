@@ -33,20 +33,26 @@ router.post("/sales", validateRequest(createSaleSchema), async (req, res, next) 
 router.patch("/sales/:saleId", async (req, res, next) => {
   try {
     const { saleId } = req.params;
-    const { payment_details } = req.body || {};
+    const { payment_details, amount, method, notes } = req.body || {};
 
-    if (!payment_details || typeof payment_details !== "object") {
-      return res.status(400).json({ error: "payment_details inválido" });
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: "Cuerpo de la petición vacío" });
     }
 
-    const { shipping_status, tracking_number } = payment_details;
+    let updated;
 
-    const updated = await SalesService.updateSaleLogistics(saleId, {
-      shipping_status,
-      tracking_number,
-      // mantener el resto si viniera
-      ...payment_details,
-    });
+    // Si viene 'amount', es un abono. Usamos el servicio de pagos.
+    if (amount !== undefined) {
+      updated = await SalesService.addPayment(saleId, { amount, method, notes });
+    } 
+    // Si viene 'payment_details', es una actualización de logística.
+    else if (payment_details) {
+      updated = await SalesService.updateSaleLogistics(saleId, payment_details);
+    } 
+    // Si no es ninguno de los dos, es una petición inválida.
+    else {
+      return res.status(400).json({ error: "No se especificó una acción válida (pago o logística)." });
+    }
 
     return res.json({ success: true, saleId: updated.id });
   } catch (err) {

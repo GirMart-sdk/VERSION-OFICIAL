@@ -2,7 +2,7 @@
 setlocal
 title WINNER - CENTINELA AUTÓNOMO
 
-cd /d "%~dp0.."
+cd /d "%~dp0"
 chcp 65001 >nul
 
 :: 1. Verificar si el puerto 3000 está activo (Salud del Backend)

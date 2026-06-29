@@ -510,7 +510,8 @@ window.renderLayawaySales = () => {
     .map((s) => {
       const paid = s.total_paid || 0;
       const balance = Math.max(0, s.total - paid);
-      const date = new Date(s.timestamp);
+      const timestamp = getSaleTimestamp(s); // Use the robust helper
+      const date = new Date(timestamp);
       const days = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
       const isDone = balance <= 0;
 
@@ -622,25 +623,16 @@ window.submitLayawayPayment = async (saleId) => {
   if (amount === null || isNaN(amount) || Number(amount) <= 0) return;
   try {
     // The backend expects a more complete payload for PATCH requests.
-    // We'll merge the new payment with existing payment_details.
-    const existingDetails =
-      typeof sale.payment_details === "string"
-        ? JSON.parse(sale.payment_details || "{}")
-        : sale.payment_details || {};
 
     const res = await apiFetch(`${API_URL}/sales/${saleId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-csrf-token": window.csrfToken,
       },
       body: JSON.stringify({
-        total_paid: (Number(sale.total_paid) || 0) + Number(amount),
-        payment_details: {
-          ...existingDetails,
-          last_abono: Number(amount),
-          last_abono_date: new Date().toISOString(),
-        },
+        amount: Number(amount),
+        method: "Abono Panel", // O un método de pago específico si lo tienes
+        notes: `Abono de ${fmt(Number(amount))} registrado por el administrador.`,
       }),
     });
     if (res.ok) {

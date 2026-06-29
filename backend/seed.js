@@ -173,6 +173,7 @@ async function main() {
   for (const pData of initialProducts) {
     // 1. Limpieza de datos: Extraemos solo lo que el modelo Product de Prisma/Postgres reconoce.
     // Eliminamos 'stockStatus' y cualquier otro campo extra.
+    // eslint-disable-next-line no-unused-vars
     const { stockStatus, ...cleanData } = pData;
 
     const product = await db.product.upsert({

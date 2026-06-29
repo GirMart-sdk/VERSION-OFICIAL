@@ -1,46 +1,28 @@
 /**
  * WINNER STORE - Robust Cleanup Script
  *
- * This script forcefully terminates all Node.js processes and then reliably
- * deletes specified directories using rimraf. This is more stable than
- * complex shell commands in package.json, especially on Windows.
+ * This script reliably deletes specified directories using rimraf. This is more
+ * stable than complex shell commands in package.json, especially on Windows.
  */
 "use strict";
 
-const { exec } = require("child_process");
 const { rimraf } = require("rimraf");
-const path = require("path");
 
 async function runCleanup() {
-  const projectRoot = path.resolve(__dirname, "..");
-
-  console.log("[*] Terminating all running Node.js processes...");
-
-  const killCommand =
-    process.platform === "win32"
-      ? "taskkill /f /im node.exe"
-      : "pkill -f node";
-
-  // Use a promise to wrap exec and ensure it resolves even if the command fails
-  await new Promise((resolve) => {
-    exec(killCommand, (error) => {
-      if (error && !error.message.includes("no process found")) {
-        console.warn(`[!] Warning during taskkill: ${error.message}`);
-      }
-      // Always resolve to continue the script
-      resolve();
-    });
-  });
-
   const pathsToDelete = [
-    path.join(projectRoot, "node_modules", ".prisma", "client"),
-    path.join(projectRoot, "node_modules", "@prisma", "client"),
-    path.join(projectRoot, "backend", "*.db"),
+    "node_modules/.prisma/client",
+    "node_modules/@prisma/client",
+    "backend/*.db", // rimraf handles glob patterns
   ];
 
-  console.log("[*] Deleting temporary and client files...");
-  await rimraf(pathsToDelete, { force: true });
-  console.log("✅ Cleanup complete.");
+  console.log("[*] Eliminando archivos temporales y del cliente Prisma...");
+
+  try {
+    await rimraf(pathsToDelete, { glob: true });
+    console.log("✅ Cleanup complete.");
+  } catch (error) {
+    console.error("❌ Error durante la limpieza:", error.message);
+  }
 }
 
 runCleanup();

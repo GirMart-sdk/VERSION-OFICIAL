@@ -1,48 +1,23 @@
 "use strict";
 
-const path = require("path");
-const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
+// eslint-disable-next-line no-unused-vars
 const crypto = require("crypto");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
+const path = require("path");
 // eslint-disable-next-line no-unused-vars
 const sharp = require("sharp");
 const rateLimit = require("express-rate-limit");
 const logger = require("./utils/logger");
 const { prisma } = require("./database");
+const config = require("./config"); // Importar configuración centralizada
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const { requireAdminIp } = require("./middlewares/securityMiddleware");
 const { requireAuth } = require("./middlewares/auth");
-// 1. Cargar configuración de entorno
-const isProdMode = process.env.NODE_ENV === "production";
-const envPath = path.resolve(__dirname, "..", isProdMode ? ".env.production" : ".env");
-
-if (fs.existsSync(envPath)) {
-  require("dotenv").config({ path: envPath });
-  console.log(`📡 [Server] Entorno cargado desde: ${path.basename(envPath)}`);
-} else {
-  require("dotenv").config();
-}
-
-// Validación de variables de entorno críticas
-const requiredEnvVars = ["JWT_SECRET", "ADMIN_API_KEY", "API_KEY", "DATABASE_URL"];
-const missingVars = requiredEnvVars.filter(v => !process.env[v]);
-if (missingVars.length > 0) {
-  console.error(`❌ [Error Crítico] Faltan variables de entorno esenciales: ${missingVars.join(", ")}`);
-  console.error("   El servidor no puede iniciar. Revisa tu archivo .env");
-  process.exit(1); // Detiene el servidor si faltan claves
-}
-
-// Validación de Mailer (Evita error: Missing credentials for "PLAIN")
-const requiredMailVars = ["SMTP_USER", "SMTP_PASS"];
-const missingMailVars = requiredMailVars.filter(v => !process.env[v]);
-if (missingMailVars.length > 0) {
-  console.warn(`⚠️  [Mailer] Advertencia: Faltan credenciales (${missingMailVars.join(", ")}). El envío de correos no funcionará.`);
-}
 
 // 2. Configuración de seguridad (Rate Limit)
 const rateLimitConfig = {
@@ -82,7 +57,7 @@ app.use(helmet({
       scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://wa.me", "blob:"], // Explicitamente para scripts en elementos (como <script> tags)
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://wompi.com", "*"],
+      imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://wompi.com", "*", "http://localhost:3001"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'", `http://localhost:${process.env.PORT || 3000}`, `http://${process.env.NETWORK_IP || "192.168.1.3"}:${process.env.PORT || 3000}`, "https://api.wompi.co", "https://cdn.jsdelivr.net", "*.jsdelivr.net", process.env.NGROK_URL].filter(Boolean).flat(),
       frameSrc: ["'self'", "https://checkout.wompi.co"],
@@ -103,13 +78,13 @@ app.get("/api/config", (req, res) => {
 });
 
 app.use(cors({
-  origin: isProdMode
+  origin: config.isProduction
     ? [
         process.env.FRONTEND_URL,
-        `http://${process.env.NETWORK_IP || "192.168.1.3"}:${process.env.PORT || 3000}`,
-        `http://localhost:${process.env.PORT || 3000}`,
-        `http://127.0.0.1:${process.env.PORT || 3000}`,
-        `http://[::1]:${process.env.PORT || 3000}`, // IPv6 localhost
+        `http://${config.networkIp || "192.168.1.3"}:${config.port}`,
+        `http://localhost:${config.port}`,
+        `http://127.0.0.1:${config.port}`,
+        `http://[::1]:${config.port}`, // IPv6 localhost
         process.env.NGROK_URL
       ].filter(Boolean)
     : true,
@@ -126,22 +101,19 @@ app.use("/api/auth/forgot-password", loginLimiter);
 
 // 3.5. Middleware de Verificación CSRF (Enforcement)
 // IMPORTANTE: usar un secreto estable para que el token CSRF no se desincronice entre requests.
-const CSRF_ENFORCEMENT = process.env.CSRF_ENFORCEMENT !== "false";
-const RUNTIME_CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
-
-if (CSRF_ENFORCEMENT) {
+if (config.csrfEnforcement) {
   app.use((req, res, next) => {
     const method = req.method.toUpperCase();
     const origin = req.get('origin');
     
     // Solo verificamos métodos que alteran datos
     if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
-      // Validar que el origen coincida con nuestras IPs o Ngrok si es producción
-      if (isProdMode && origin && !origin.includes("ngrok") && !origin.includes(process.env.NETWORK_IP || "192.168.1.3") && !origin.includes("localhost") && !origin.includes("127.0.0.1") && !origin.includes("::1")) {
+      // Validar que el origen coincida con nuestras IPs o Ngrok si es producción (usando config)
+      if (config.isProduction && origin && !origin.includes("ngrok") && !origin.includes(config.networkIp || "192.168.1.3") && !origin.includes("localhost") && !origin.includes("127.0.0.1") && !origin.includes("::1")) {
         return res.status(403).json({ error: "Origen de petición no confiable" });
       }
       const clientToken = req.headers["x-csrf-token"];
-      if (clientToken !== RUNTIME_CSRF_SECRET) {
+      if (clientToken !== config.csrfSecret) {
         logger.warn(`🛡️ Bloqueo CSRF: Intento sin token válido desde ${req.ip}`);
         return res.status(403).json({ error: "Sesión inválida o petición no autorizada (CSRF)" });
       }
@@ -154,7 +126,7 @@ if (CSRF_ENFORCEMENT) {
 app.get("/api/get-csrf", (req, res) => {
   const origin = req.get('origin') || req.get('referer');
   logger.info(`🔑 CSRF Token solicitado desde: ${origin}`);
-  res.json({ csrfToken: RUNTIME_CSRF_SECRET }); // Devolver el secreto dinámico
+  res.json({ csrfToken: config.csrfSecret }); // Devolver el secreto desde la config
 });
 
 
@@ -202,7 +174,7 @@ app.use((req, res, next) => {
 });
 
 // 5. Archivos estáticos
-const rootPath = path.join(__dirname, "..");
+const rootPath = path.resolve(__dirname, "..");
 app.use(express.static(rootPath));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
@@ -229,9 +201,9 @@ app.use(errorMiddleware);
 const startServer = (portToTry) => {
   const server = app.listen(portToTry, () => {
     const localUrl = `http://localhost:${portToTry}`;
-    const networkIp = process.env.NETWORK_IP; // Now guaranteed to be set by INICIAR_WINNER.bat
+    const networkIp = config.networkIp;
     const networkUrl = `http://${networkIp}:${portToTry}`;
-    const ngrokUrl = process.env.NGROK_URL;
+    const ngrokUrl = config.ngrokUrl;
     logger.info(`🚀 WINNER STORE Corriendo en: ${localUrl}`);
     if (ngrokUrl) logger.info(`🌐 Acceso Público (Ngrok): ${ngrokUrl}`);
     logger.info(`📱 Acceso Red Local (Escáner Móvil): ${networkUrl}`); // Mantener para acceso directo
@@ -249,8 +221,7 @@ const startServer = (portToTry) => {
 };
 
 // Iniciar en el puerto configurado o 3000 por defecto
-const PORT = parseInt(process.env.PORT || "3000");
-startServer(PORT);
+startServer(config.port);
 
 // Manejadores para evitar que el servidor muera por errores no capturados
 process.on("unhandledRejection", (reason) => {

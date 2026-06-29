@@ -23,7 +23,7 @@ module.exports = {
     },
     {
       name: "winner-store-backup-task",
-      script: "./scripts/backup-db.bat",
+      script: "./scripts/db/backup.js",
       cwd: "./",
       cron_restart: "0 3 * * *", // Se ejecuta todos los días a las 3:00 AM
       autorestart: false, // No reiniciar al terminar, esperar al siguiente cron
