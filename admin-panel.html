@@ -421,6 +421,13 @@
               <div class="dash-sub-impact">DINERO REAL DISPONIBLE</div>
             </div>
           </div>
+          <div class="kpi-grid-bars" style="margin-top: -5px;">
+            <div class="dash-neon-box horizontal">
+                <label class="dash-label-impact">Ganancia Neta (Hoy)</label>
+                <span class="dash-val-large" id="kpiNetProfitToday" style="color: var(--green);">$0</span>
+                <div class="dash-sub-impact">UTILIDAD NETA DE VENTAS DE HOY</div>
+            </div>
+          </div>
 
           <!-- El bloque de Distribución de Pagos ahora es una consulta flotante -->
 
@@ -2801,7 +2808,8 @@
     <!-- WINNER ADMIN MODULES (RAÍZ) -->
     <!-- Carga de configuración dinámica (DEBE IR PRIMERO) -->
     <script src="config.js"></script>
-    <script src="core.js"></script>
+    <script src="core.js"></script> <!-- Funciones base como $, fmt, apiFetch -->
+    <script src="store.js"></script> <!-- Gestor de estado, debe ir antes que los módulos que lo usan -->
     <script src="auth.js"></script>
     <script src="storage-core.js"></script>
     <script src="inventory.js"></script>

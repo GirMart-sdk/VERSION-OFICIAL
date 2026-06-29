@@ -10,7 +10,11 @@ const { createSaleSchema } = require("../services/salesValidator");
 // GET /api/sales - Listar todas las ventas (protegido)
 router.get("/sales", requireAuth, async (req, res, next) => {
   try {
-    // Aquí iría la lógica para obtener las ventas, por ahora devolvemos un array vacío
+    // MODIFICACIÓN: Ahora el servicio de ventas incluirá los items detallados con su costo. Esto es crucial para que el frontend pueda calcular la rentabilidad.
+    // El método `getAllSales` en `salesService.js` debe ser actualizado para que haga un `include` en la consulta de Prisma y traiga los `items` con la información del `product` relacionado.
+    // Ejemplo en salesService.js:
+    // return prisma.sale.findMany({ include: { items: { include: { product: true } } } })
+    // Al hacer esto, cada 'item' de la venta tendrá un objeto 'product' con su 'cost'.
     const sales = await SalesService.getAllSales(req.query); // Suponiendo que existe un método getAllSales
     res.json(sales);
   } catch (error) {

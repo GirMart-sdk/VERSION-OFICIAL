@@ -2,8 +2,6 @@
    WINNER — sales-logic.js (Módulo de Analítica)
    ═══════════════════════════════════════════════════════ */
 "use strict";
-
-window.allSalesData = [];
 window.salesCharts = {};
 
 async function fetchSalesLog() {
@@ -12,15 +10,13 @@ async function fetchSalesLog() {
     const data = await res.json();
     if (!Array.isArray(data)) return;
 
-    window.allSalesData = data.map((s) => ({
+    const salesData = data.map((s) => ({
       ...s,
       total: Number(s.total) || 0, // Evitar NaN
       total_paid: Number(s.total_paid) || 0, // Evitar NaN
       channel: s.channel || (s.id.startsWith("ON") ? "online" : "fisica"),
     }));
-
-    // Sincronizar con la variable global que usan otros módulos (WhatsApp Center)
-    window.salesLog = [...window.allSalesData];
+    window.AppStore.commit('SET_SALES_LOG', salesData);
 
     renderSalesKPIs();
     renderSalesCharts();
@@ -38,7 +34,7 @@ async function fetchSalesLog() {
 function renderSalesKPIs() {
   const from = $("filterDateFrom")?.value;
   const to = $("filterDateTo")?.value;
-  let filtered = applyDateFilter(window.allSalesData, from, to);
+  let filtered = applyDateFilter(window.AppStore.state.allSalesData, from, to);
 
   const totalAmount = filtered.reduce((sum, s) => sum + s.total, 0);
   const onlineSales = filtered.filter((s) => s.channel === "online");
@@ -65,7 +61,7 @@ function renderSalesKPIs() {
 function renderSalesCharts() {
   const from = $("filterDateFrom")?.value;
   const to = $("filterDateTo")?.value;
-  let filtered = applyDateFilter(window.allSalesData, from, to);
+  let filtered = applyDateFilter(window.AppStore.state.allSalesData, from, to);
 
   // 1. Gráfico de Línea de Tiempo (tolerar timestamp faltante)
   const timelineData = {};
@@ -128,7 +124,7 @@ function renderSalesCharts() {
   // Actualizar métodos en el filtro
   const methodSelect = $("filterMethod");
   if (methodSelect && methodSelect.options.length <= 1) {
-    const methods = [...new Set(window.allSalesData.map((s) => s.method))];
+    const methods = [...new Set(window.AppStore.state.allSalesData.map((s) => s.method))];
     methods.forEach((m) => {
       const opt = document.createElement("option");
       opt.value = m;
@@ -192,7 +188,7 @@ function renderSalesTable() {
   const from = $("filterDateFrom")?.value;
   const to = $("filterDateTo")?.value;
 
-  let filtered = applyDateFilter(window.allSalesData, from, to);
+  let filtered = applyDateFilter(window.AppStore.state.allSalesData, from, to);
   if (channel) filtered = filtered.filter((s) => s.channel === channel);
   if (method) filtered = filtered.filter((s) => s.method === method);
 
@@ -322,7 +318,7 @@ function renderSalesTable() {
 }
 
 window.viewSaleDetails = (id) => {
-  const sale = window.allSalesData.find((x) => x.id === id);
+  const sale = window.AppStore.state.allSalesData.find((x) => x.id === id);
   if (!sale) return;
 
   let details = sale.payment_details || {};
@@ -382,7 +378,7 @@ window.viewSaleDetails = (id) => {
           <span style="font-size:12px; align-self:center;">Saldo Pendiente:</span> 
           <div style="text-align:right">
             <span style="font-weight:800; font-size:18px;">${fmt(balance)}</span>
-            ${!isDone ? `<br><button class="btn-accent" style="font-size:9px; padding:2px 8px; margin-top:5px;" onclick="window.openLayawayPayment('${sale.id}'); window.closeSaleDetails();">➕ REGISTRAR ABONO</button>` : ""}
+            ${!isDone ? `<br><button class="btn-accent" style="font-size:9px; padding:2px 8px; margin-top:5px;" onclick="window.openLayawayPayment('${sale.id}')">➕ REGISTRAR ABONO</button>` : ""}
           </div>
         </div>
       </div>
@@ -474,7 +470,7 @@ window.renderLayawaySales = () => {
   const container = $("layawayTableBody");
   if (!container) return;
 
-  const sort = $("layawaySortSelect")?.value || "newest";
+  const sort = ($("layawaySortSelect")?.value || "newest");
 
   let filtered = window.allSalesData.filter((s) => {
     // Un "separado" es cualquier venta con la marca 'isLayaway' en sus detalles.
@@ -562,8 +558,11 @@ function updateLayawayKPIs(data) {
 }
 
 window.openLayawayPayment = (saleId) => {
-  const sale = window.allSalesData.find(x => x.id === saleId);
+  const sale = window.AppStore.state.allSalesData.find(x => x.id === saleId);
   if (!sale) return;
+
+  // Si el modal de detalles está abierto, lo cerramos para abrir el de pago.
+  if (document.getElementById("saleDetailsModal")?.classList.contains("open")) window.closeSaleDetails();
 
   const currentBalance = sale.total - (sale.total_paid || 0);
 
@@ -615,7 +614,7 @@ window.closeLayawayPaymentModal = () => {
 };
 
 window.submitLayawayPayment = async (saleId) => {
-  const sale = window.allSalesData.find(x => x.id === saleId);
+  const sale = window.AppStore.state.allSalesData.find(x => x.id === saleId);
   if (!sale) return;
 
   const amount = document.getElementById("abonoAmountInput").value;

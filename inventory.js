@@ -1,7 +1,13 @@
 /* ═══════════════════════════════════════════════════════
    WINNER — inventory.js (Inventario & Gestión)
    ═══════════════════════════════════════════════════════ */
+// eslint-disable-next-line no-redeclare
+/* global JsBarcode, totalStock, stockStatus, getSizesForCategory, genId, renderPOSProducts, toast, fmt, $, apiFetch */
+"use strict";
+
 let _invStockFilter = "all"; // 'all', 'low', 'out'
+let _invActiveCat = "all";
+
 let cropperInstance = null;
 let currentCropFile = null;
 let videoStream = null;
@@ -9,8 +15,9 @@ let videoStream = null;
 async function fetchInventory() {
   try {
     const res = await apiFetch(`${API_URL}/products`);
-    window.inventory = await res.json();
-    renderInventory();
+    const inventoryData = await res.json();
+    // En lugar de usar una variable global, guardamos los datos en el store
+    window.AppStore.commit("SET_INVENTORY", inventoryData);
     if (typeof renderPOSProducts === "function") renderPOSProducts();
   } catch (error) {
     toast(`⚠️ Error al cargar productos: ${error.message || error}`);
@@ -43,7 +50,8 @@ function renderInventory() {
 
   if (!container) return;
 
-  let filtered = window.inventory;
+  // Leemos el inventario desde la fuente única de verdad: el store.
+  let filtered = window.AppStore.state.inventory;
 
   // Aplicar filtro de stock primero
   if (stockFilter === "low") {
@@ -73,9 +81,9 @@ function renderInventory() {
           <div class="inv-card-name">${p.name}</div>
           <div class="inv-card-price">${fmt(p.price)}</div>
           <div class="inv-card-footer">
-            <button class="btn-ghost" onclick="showProductQR('${p.id}')">📊 Barras</button>
-            <button onclick="editProduct('${p.id}')">✎ Editar</button>
-            <button class="btn-ghost" style="color:var(--red)" onclick="deleteProduct('${p.id}')">✕</button>
+            <button class="btn-ghost" onclick="window.showProductQR('${p.id}')">📊 Barras</button>
+            <button onclick="window.editProduct('${p.id}')">✎ Editar</button>
+            <button class="btn-ghost" style="color:var(--red)" onclick="window.deleteProduct('${p.id}')">✕</button>
           </div>
         </div>
       </div>`;
@@ -83,17 +91,17 @@ function renderInventory() {
     .join("");
 
   let totalInventoryValue = 0;
-  window.inventory.forEach((p) => {
+  window.AppStore.state.inventory.forEach((p) => {
     totalInventoryValue += (p.price || 0) * totalStock(p);
   });
 
-  if ($("is1")) $("is1").textContent = window.inventory.length;
+  if ($("is1")) $("is1").textContent = window.AppStore.state.inventory.length;
   if ($("is2"))
-    $("is2").textContent = window.inventory.filter(
+    $("is2").textContent = window.AppStore.state.inventory.filter(
       (p) => totalStock(p) <= 5 && totalStock(p) > 0,
     ).length;
   if ($("is3"))
-    $("is3").textContent = window.inventory.filter(
+    $("is3").textContent = window.AppStore.state.inventory.filter(
       (p) => totalStock(p) === 0,
     ).length;
   if ($("is4")) $("is4").textContent = fmt(totalInventoryValue);
@@ -105,7 +113,7 @@ window.renderAdminInventory = renderInventory;
 window.openProductModal = (id = null) => {
   $("editProductId").value = id || "";
   if (id) {
-    const p = window.inventory.find((x) => String(x.id) === String(id));
+    const p = window.AppStore.state.inventory.find((x) => String(x.id) === String(id));
     if (p) {
       $("pName").value = p.name;
       const category = p.cat || p.category; // Aseguramos que la categoría se cargue
@@ -113,11 +121,12 @@ window.openProductModal = (id = null) => {
       if ($("pCatDisplay")) $("pCatDisplay").textContent = category; // Actualizamos el texto del botón
       $("pPrice").value = p.price;
       $("pSku").value = p.sku || "";
+      $("pCost").value = p.cost || ""; // Cargar el costo
       $("pImg").value = p.img || p.image || "";
       renderStockGrid(p.cat || p.category, p.stock);
     }
   } else {
-    ["pName", "pPrice", "pSku", "pImg"].forEach((f) => {
+    ["pName", "pPrice", "pSku", "pImg", "pCost"].forEach((f) => {
       if ($(f)) $(f).value = "";
     });
     if ($("pCat")) $("pCat").value = "";
@@ -168,7 +177,7 @@ window.selectCategory = (val) => {
 
   // Disparar la lógica inteligente de tallas
   handleCategoryChange(); // Llamada directa a la función local
-  closeCategoryPicker();
+  window.closeCategoryPicker();
   toast(`📂 Categoría: ${val}`);
 };
 
@@ -197,7 +206,7 @@ function renderStockGrid(category, stock = {}) {
   const isShoes =
     category.toLowerCase().includes("calzado") ||
     category.toLowerCase().includes("tenis");
-
+  
   if (sizes.length === 0) {
     gridEl.innerHTML = `<div class="size-cell" style="grid-column:1/-1"><label>Cantidad (Talla Única)</label><input type="number" id="ps-U" min="0" value="${stock.U || stock.qty || 0}" oninput="updateStockTotal()"/></div>`;
   } else {
@@ -205,7 +214,7 @@ function renderStockGrid(category, stock = {}) {
       .map((s) => {
         const label = isShoes ? `${s} (EU)` : s;
         return `<div class="size-cell"><label>${label}</label><input type="number" id="ps-${s}" min="0" value="${stock[s] || 0}" oninput="updateStockTotal()"/></div>`;
-      })
+      }) 
       .join("");
   }
 }
@@ -244,6 +253,7 @@ async function saveProduct() {
     id: id || genId(),
     name: name,
     price: price,
+    cost: parseFloat($("pCost").value) || 0, // Guardar el costo
     category: cat || "Otros",
     sku: $("pSku").value,
     stock: stock,
@@ -257,7 +267,7 @@ async function saveProduct() {
     });
     if (res.ok) {
       toast("✅ Producto guardado correctamente");
-      closeProductModal();
+      window.closeProductModal();
       fetchInventory();
     } else {
       const result = await res.json().catch(() => ({}));
@@ -268,10 +278,11 @@ async function saveProduct() {
   }
 }
 
+window.saveProduct = saveProduct;
 window.editProduct = (id) => window.openProductModal(id);
 
 window.showProductQR = (id) => {
-  const p = window.inventory.find((x) => String(x.id) === String(id));
+  const p = window.AppStore.state.inventory.find((x) => String(x.id) === String(id));
   if (!p) return;
   window._qrCurrentProduct = p;
 
@@ -495,8 +506,8 @@ window.confirmCrop = async () => {
               toast(
                 "✅ Imagen subida localmente (Se recomienda usar URLs externas para mayor velocidad)",
               );
-              closeCropperModal();
-            } else {
+              window.closeCropperModal();
+            } else { 
               throw new Error(data.error);
             }
           };
@@ -589,11 +600,11 @@ window.downloadSingleQR = () => {
 window.downloadProductQR = window.downloadSingleQR;
 
 window.printAllQRs = () => {
-  if (!window.inventory || !window.inventory.length)
+  if (!window.AppStore.state.inventory || !window.AppStore.state.inventory.length)
     return toast("No hay productos");
 
   const win = window.open("", "_blank", "width=600,height=800");
-  const itemsHtml = window.inventory
+  const itemsHtml = window.AppStore.state.inventory
     .map(
       (p) => `
     <div class="label-item">
@@ -633,8 +644,8 @@ window.printAllQRs = () => {
       <body>
         ${itemsHtml}
         <script>
-          window.onload = () => {
-            const inv = ${JSON.stringify(window.inventory.map((p) => ({ id: p.id, sku: p.sku })))};
+          window.onload = () => {;
+            const inv = ${JSON.stringify(window.AppStore.state.inventory.map((p) => ({ id: p.id, sku: p.sku })))};
             inv.forEach(p => {
               JsBarcode("#barcode-" + p.id, p.sku || p.id, {
                 format: "CODE128", width: 2, height: 40,
@@ -750,16 +761,15 @@ async function handleStockUpload(event) {
   }
 }
 
-window.setInvCategory = setInvCategory;
-window.fetchInventory = fetchInventory;
-window.saveProduct = saveProduct;
-window.editProduct = editProduct;
-window.deleteProduct = deleteProduct;
-window.showProductQR = showProductQR;
-window.triggerStockUpload = triggerStockUpload;
-window.handleStockUpload = handleStockUpload;
-window.triggerImageUpload = triggerImageUpload;
-window.handleImageUpload = handleImageUpload;
-window.handleCategoryChange = handleCategoryChange;
-window.renderInventory = renderInventory;
-window.setInvStockFilter = setInvStockFilter;
+window.setInvCategory = setInvCategory; // Usado en HTML
+window.fetchInventory = fetchInventory; // Usado globalmente por otros módulos
+window.editProduct = (id) => window.openProductModal(id); // Ya estaba definido, pero lo dejamos explícito
+// eslint-disable-next-line no-undef
+window.deleteProduct = deleteProduct; // Usado en HTML (definido arriba)
+// eslint-disable-next-line no-undef
+window.showProductQR = showProductQR; // Usado en HTML
+window.triggerStockUpload = triggerStockUpload; // Usado en HTML
+window.handleStockUpload = handleStockUpload; // Usado en HTML
+window.handleCategoryChange = handleCategoryChange; // Usado en HTML
+window.renderInventory = renderInventory; // Usado globalmente por otros módulos
+window.setInvStockFilter = setInvStockFilter; // Usado en HTML

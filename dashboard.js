@@ -64,18 +64,28 @@ async function renderDashboard() {
     renderArqueoWidget(arqueo);
 
     // 2. Asegurar que las ventas recientes estén cargadas para la actividad en vivo
-    if (!window.salesLog || window.salesLog.length === 0) {
+    if (!window.AppStore.state.salesLog || window.AppStore.state.salesLog.length === 0) {
       await fetchSalesLog();
     }
 
     // --- CÁLCULO DE MÉTRICAS EN VIVO (CLIENT-SIDE) ---
     // Esto asegura que si el backend reporta 0, el frontend sume las ventas cargadas
-    if (window.salesLog && window.salesLog.length > 0) {
+    if (window.AppStore.state.salesLog && window.AppStore.state.salesLog.length > 0) {
       const todayStr = getTodayStr();
-      const todaySales = window.salesLog.filter(s => s.timestamp && s.timestamp.startsWith(todayStr));
+      // CORRECCIÓN: Se debe leer desde AppStore.state.salesLog, no de window.salesLog
+      const todaySales = window.AppStore.state.salesLog.filter(s => s.timestamp && s.timestamp.startsWith(todayStr));
       
       const todayRevenue = todaySales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
       const todayOrders = todaySales.length;
+
+      // --- CÁLCULO DE GANANCIA NETA (CLIENT-SIDE) ---
+      // Este cálculo ahora funcionará porque el backend enviará el costo en cada item.
+      const todayTotalCost = todaySales.reduce((sum, sale) => {
+        const saleCost = (sale.items || []).reduce((itemSum, item) => itemSum + ((item.cost || 0) * item.qty), 0);
+        return sum + saleCost;
+      }, 0);
+      const todayNetProfit = todayRevenue - todayTotalCost;
+      if ($("kpiNetProfitToday")) $("kpiNetProfitToday").textContent = fmt(todayNetProfit);
 
       // Priorizar datos calculados en vivo para los KPIs principales
       const revEl = $("kpiTotalRevenue") || $("kpiRevenueToday");
@@ -96,7 +106,7 @@ async function renderDashboard() {
       // Esto suma el saldo pendiente (Total - Pagado) de todas las ventas con estado 'partial' o 'pending'
       // AHORA SE USA EL VALOR DEL BACKEND, pero mantenemos este cálculo como fallback si el backend no lo envía.
       if (!stats.totalDebt) {
-        const totalDebtCalculated = window.salesLog.reduce((sum, s) => {
+        const totalDebtCalculated = window.AppStore.state.salesLog.reduce((sum, s) => {
           const isUnpaid = s.payment_status === "partial" || s.payment_status === "pending";
           return isUnpaid ? sum + (Number(s.total ?? 0) - (Number(s.total_paid ?? 0) || 0)) : sum;
         }, 0);
@@ -377,7 +387,7 @@ function renderHeatmap() {
   if (!$("salesHeatmap")) return;
 
   // Procesar datos reales de salesLog para el Heatmap
-  const sLog = window.salesLog || [];
+  const sLog = window.AppStore.state.salesLog || [];
   const hoursData = new Array(24).fill(0);
 
   sLog.forEach((s) => {
@@ -414,7 +424,7 @@ function renderLiveActivity() {
   const container = $("dashRecentSales") || $("dashLiveActivity");
   if (!container) return;
 
-  const sLog = window.salesLog || [];
+  const sLog = window.AppStore.state.salesLog || [];
   if (sLog.length === 0) {
     container.innerHTML =
       '<div class="ls-empty">Esperando transacciones...</div>';

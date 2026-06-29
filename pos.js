@@ -2,6 +2,14 @@
    WINNER — pos.js (Punto de Venta)
    ═══════════════════════════════════════════════════════ */
 
+// Suscribimos las funciones de renderizado para que se ejecuten automáticamente
+// cada vez que el estado del store cambie. Esto hace la UI "reactiva".
+// eslint-disable-next-line no-unused-vars
+window.AppStore.subscribe(state => {
+  renderPOSCart();
+  updatePOSTotals();
+});
+
 let posCurrentPaymentMethod = null;
 let _payTimeRange = "all";
 
@@ -24,13 +32,14 @@ function renderPOSProducts() {
         : window.WinnerApp.pos.activeCategory;
 
     if (!list) return;
-    if (!window.inventory || window.inventory.length === 0) {
+    const inventory = window.AppStore.state.inventory;
+    if (!inventory || inventory.length === 0) {
       list.innerHTML =
         '<div style="padding:20px;text-align:center;color:var(--gray-text)">Cargando productos...</div>';
       return;
     }
 
-    const items = window.inventory.filter(
+    const items = inventory.filter(
       (p) =>
         window.totalStock(p) > 0 &&
         (p.name.toLowerCase().includes(q) ||
@@ -65,7 +74,7 @@ function renderPOSProducts() {
     list.querySelectorAll(".pos-product-card").forEach((card) => {
       card.addEventListener("click", () => {
         const id = card.dataset.productId;
-        const product = window.inventory.find(
+        const product = inventory.find(
           (p) => String(p.id) === String(id),
         );
         if (product) openPOSSizeSelector(product);
@@ -139,10 +148,8 @@ function printReceipt(sale) {
 }
 
 function updatePOSQty(idx, delta) {
-  window.WinnerApp.pos.cart[idx].qty += delta;
-  if (window.WinnerApp.pos.cart[idx].qty <= 0)
-    window.WinnerApp.pos.cart.splice(idx, 1);
-  renderPOSCart();
+  // En lugar de modificar el array, cometemos una mutación
+  window.AppStore.commit('UPDATE_POS_CART_QTY', { index: idx, delta });
 }
 
 function clearPOS() {
@@ -150,7 +157,8 @@ function clearPOS() {
     return;
   window.WinnerApp.pos.cart = [];
   if ($("posSearch")) $("posSearch").value = "";
-  if ($("posVendor")) $("posVendor").value = "";
+  // Mantenemos el vendedor para agilizar ventas consecutivas
+  // if ($("posVendor")) $("posVendor").value = "";
   if ($("posClient")) $("posClient").value = "";
   if ($("posDiscount")) $("posDiscount").value = "0";
   renderPOSCart();
@@ -228,41 +236,20 @@ window.togglePOSShippingFields = () => {
 };
 
 window.addToPOSCartById = (id, sz) => {
-  const p = window.inventory.find((x) => String(x.id) === String(id));
+  const inventory = window.AppStore.state.inventory;
+  const p = inventory.find((x) => String(x.id) === String(id));
   if (p) addToPOSCart(p, sz);
 };
 
 function addToPOSCart(product, size) {
-  if (!window.WinnerApp.pos.cart) window.WinnerApp.pos.cart = [];
-
-  // Validar stock real antes de agregar
-  const availableStock = product.stock[size] || product.stock.qty || 0;
-  const currentInCart = window.WinnerApp.pos.cart
-    .filter((i) => String(i.id) === String(product.id) && i.size === size)
-    .reduce((a, b) => a + b.qty, 0);
-
-  if (currentInCart + 1 > availableStock) {
-    return toast(`❌ Stock insuficiente para ${product.name} (${size})`);
-  }
-
-  const existing = window.WinnerApp.pos.cart.find(
-    (i) => String(i.id) === String(product.id) && i.size === size,
-  );
-  if (existing) existing.qty++;
-  else
-    window.WinnerApp.pos.cart.push({
-      id: product.id,
-      sku: product.sku || "",
-      name: product.name,
-      price: product.price,
-      size,
-      qty: 1,
-    });
+  // Ahora, en lugar de manipular el array directamente, "cometemos" una mutación.
+  // La lógica de validación de stock y agregado está dentro de la mutación.
+  window.AppStore.commit('ADD_TO_POS_CART', { product, size });
 
   // Disparar animación visual
   animateAddToCart(product.id);
-  renderPOSCart();
-  toast(`✓ ${product.name} (${size}) agregado`);
+  // Ya no es necesario llamar a renderPOSCart() manualmente,
+  // porque se suscribirá a los cambios del store.
 }
 
 function animateAddToCart(productId) {
@@ -295,14 +282,16 @@ function animateAddToCart(productId) {
 
 function renderPOSCart() {
   const container = $("posItems");
+  const cart = window.AppStore.state.pos.cart; // Leemos el estado desde el store
+
   if (!container) return;
-  if (!window.WinnerApp.pos.cart || window.WinnerApp.pos.cart.length === 0) {
+  if (!cart || cart.length === 0) {
     container.innerHTML =
       '<div class="pos-empty">Sin productos agregados</div>';
     if (typeof updatePOSTotals === "function") updatePOSTotals();
     return;
   }
-  container.innerHTML = window.WinnerApp.pos.cart
+  container.innerHTML = cart
     .map(
       (it, idx) => `
     <div class="pos-item-row" style="padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
@@ -324,15 +313,13 @@ function renderPOSCart() {
 }
 
 function removeFromPOS(index) {
-  window.WinnerApp.pos.cart.splice(index, 1);
-  renderPOSCart();
+  // Usamos una mutación para eliminar el item de forma controlada
+  window.AppStore.commit('REMOVE_FROM_POS_CART', index);
 }
 
 function updatePOSTotals() {
-  const sub = window.WinnerApp.pos.cart.reduce(
-    (s, i) => s + i.price * i.qty,
-    0,
-  );
+  const cart = window.AppStore.state.pos.cart; // Leemos el estado desde el store
+  const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const disc = parseFloat($("posDiscount")?.value || 0);
   const total = sub * (1 - disc / 100);
   if ($("posSubtotal")) $("posSubtotal").textContent = window.fmt(sub);

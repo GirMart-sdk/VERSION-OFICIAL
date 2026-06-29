@@ -170,12 +170,13 @@ async function confirmCloseCash() {
 }
 
 function calculateSalesInSession(session) {
-    if (!session || !window.salesLog || !Array.isArray(window.salesLog)) return { cash: 0, card: 0, other: 0 };
+    const salesLog = window.AppStore.state.salesLog;
+    if (!session || !salesLog || !Array.isArray(salesLog)) return { cash: 0, card: 0, other: 0 };
     
     const start = new Date(session.startTime).getTime();
     const end = session.endTime ? new Date(session.endTime).getTime() : Date.now();
 
-    return window.salesLog.reduce((acc, sale) => {
+    return salesLog.reduce((acc, sale) => {
         const saleTime = new Date(sale.timestamp || sale.createdAt).getTime();
         if (isNaN(saleTime)) return acc;
         
@@ -219,3 +220,21 @@ function renderCashHistory() {
 function formatMoney(n) {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
 }
+
+/**
+ * Placeholder para la futura implementación del envío de reportes por correo.
+ */
+async function handleSendDailyReport() {
+    // TODO: Implementar la lógica de generación de PDF y envío por correo.
+    // Por ahora, solo mostramos una notificación.
+    if (typeof toast === 'function') {
+        toast("⚙️ Función de envío de reporte por email en desarrollo.");
+    }
+    console.log("Intento de envío de reporte diario.");
+    return Promise.resolve();
+}
+
+window.openCashModal = openCashModal;
+window.confirmOpenCash = confirmOpenCash;
+window.closeCashArqueo = closeCashArqueo;
+window.confirmCloseCash = confirmCloseCash;
