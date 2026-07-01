@@ -1,8 +1,8 @@
 const request = require('supertest');
-const app = require('../server'); // Ajustado para la nueva ubicación
+const app = require('../server');
 const { describe, beforeAll, afterAll, it, expect } = require('@jest/globals');
-const { prisma } = require('../database'); // Ajustado para la nueva ubicación
-const { scryptSync } = require('node:crypto');
+const { prisma } = require('../database');
+const { scryptSync } = require('crypto');
 
 const HASH_SALT = process.env.HASH_SALT || "winner_secure_salt_2026";
 
