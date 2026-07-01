@@ -1,54 +1,48 @@
+/* ═══════════════════════════════════════════════════════
+   WINNER — securityMiddleware.js
+   Middlewares de seguridad para IP y autenticación.
+   ═══════════════════════════════════════════════════════ */
 "use strict";
 
-const logger = require("../utils/logger");
-
-const IS_PROD = process.env.NODE_ENV === "production";
-
-/**
- * Middleware to validate the API Key.
- * It checks for 'x-api-key' in headers and validates against environment variables.
- * Allows access if a valid JWT token is already present.
- */
-function requireApiKey(req, res, next) {
-  // If user is already authenticated via JWT, skip API key check
-  if (req.user) {
-    return next();
-  }
-
-  const clientApiKey = req.headers["x-api-key"];
-  const adminApiKey = process.env.ADMIN_API_KEY;
-  const standardApiKey = process.env.API_KEY;
-
-  if (IS_PROD && clientApiKey === "dev-api-key") {
-    logger.warn(`🛡️ Bloqueo: Llave de desarrollo denegada en producción desde IP: ${req.ip}`);
-    return res.status(403).json({ error: "Seguridad: Llave de desarrollo denegada en producción" });
-  }
-
-  if (clientApiKey === adminApiKey || clientApiKey === standardApiKey) {
-    return next();
-  }
-
-  logger.error(`❌ API key inválida o ausente desde IP: ${req.ip}`);
-  return res.status(401).json({ error: "API key inválida" });
-}
+const { prisma } = require('../database');
+const logger = require('../utils/logger');
+const config = require('../config');
 
 /**
- * Middleware to restrict access to a whitelist of IPs.
- * Skips check if the request is authenticated with the ADMIN_API_KEY.
+ * Middleware para bloquear IPs que han sido baneadas y registradas en la BD.
  */
-function requireAdminIp(req, res, next) {
-  // The ADMIN_API_KEY grants universal access, bypassing the IP check.
-  if (req.headers["x-api-key"] === process.env.ADMIN_API_KEY) {
-    return next();
+const checkBannedIp = async (req, res, next) => {
+  try {
+    const requestIp = req.ip;
+    const isBanned = await prisma.bannedIp.findUnique({
+      where: { ip: requestIp },
+    });
+
+    if (isBanned) {
+      logger.warn(`🛡️ [IP BANEADA] Bloqueado intento de acceso desde: ${requestIp}`);
+      return res.status(403).json({ error: "Acceso denegado permanentemente desde esta dirección IP." });
+    }
+
+    next();
+  } catch (error) {
+    // Si hay un error de BD, por seguridad, dejamos pasar pero lo registramos.
+    logger.error(`❌ Error en middleware checkBannedIp: ${error.message}`);
+    next();
   }
+};
 
-  const allowedIps = (process.env.ALLOWED_ADMIN_IPS || "127.0.0.1,::1").split(",");
-  if (allowedIps.includes(req.ip)) {
-    return next();
+/**
+ * Middleware para requerir que la IP sea de un administrador (definida en .env).
+ */
+const requireAdminIp = (req, res, next) => {
+  const adminIPs = (process.env.ADMIN_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
+  const requestIp = req.ip;
+
+  if (config.isProduction && adminIPs.length > 0 && !adminIPs.includes(requestIp)) {
+    logger.warn(`🛡️ [IP NO ADMIN] Acceso denegado a ruta admin desde IP no autorizada: ${requestIp}`);
+    return res.status(403).json({ error: 'Acceso prohibido desde esta IP' });
   }
+  next();
+};
 
-  logger.warn(`🛡️ Bloqueo de IP no autorizada: ${req.ip}`);
-  return res.status(403).json({ error: "Seguridad: Acceso denegado desde esta dirección IP." });
-}
-
-module.exports = { requireApiKey, requireAdminIp };
+module.exports = { checkBannedIp, requireAdminIp };

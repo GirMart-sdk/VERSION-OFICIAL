@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="google-site-verification"
+      content="O1MwdJv9gIZ2Y70C5XlF22To1v0zNuQcX7mhtSnv47o"
+    />
+    <meta
+      name="description"
+      content="Winner — Ropa urbana de alto impacto. Diseños exclusivos streetwear para hombre y mujer. Envíos a toda Colombia."
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta property="og:title" content="WINNER — Estilo Ganador para Todos" />
+    <meta
+      property="og:description"
+      content="Ropa urbana de alto impacto. Diseños exclusivos streetwear. Nueva colección 2026."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content="https://i.pinimg.com/736x/1e/43/a1/1e43a1e73d33e25f6e2dc9c0e7ecde3e.jpg"
+    />
+    <title>WINNER — Estilo Ganador para Todos</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <!-- Wompi Checkout Widget -->
+    <script
+      type="text/javascript"
+      src="https://checkout.wompi.co/widget.js"
+    ></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <!-- ══ TOAST ══ -->
+    <div class="toast" id="toast">
+      <span class="toast-icon">✓</span>
+      <span id="toastMsg">Agregado al carrito</span>
+    </div>
+
+    <!-- ══ CART DRAWER ══ -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <aside class="cart-drawer" id="cartDrawer" aria-label="Carrito de compras">
+      <div class="cart-header">
+        <h3>Tu Carrito</h3>
+        <button class="cart-close" id="cartClose" aria-label="Cerrar carrito">
+          ✕
+        </button>
+      </div>
+      <div class="cart-items" id="cartItems">
+        <div class="cart-empty">
+          <div class="empty-icon">🛒</div>
+          <p>Tu carrito está vacío</p>
+        </div>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total">
+          <span>Total</span>
+          <span id="cartTotal">$0</span>
+        </div>
+        <button class="checkout-btn" onclick="checkoutWhatsApp()">
+          PROCEDER AL PAGO →
+        </button>
+      </div>
+    </aside>
+
+    <!-- ══ NAVBAR ══ -->
+    <nav id="navbar">
+      <div class="container">
+        <a href="#" class="nav-logo">WINNER</a>
+        <ul class="nav-links">
+          <li><a href="#productos">Colección</a></li>
+          <li><a href="#categorias">Categorías</a></li>
+          <li><a href="#destacados">Destacados</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+        <div class="nav-actions">
+          <button class="cart-btn" id="cartToggle" aria-label="Abrir carrito">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 01-8 0" />
+            </svg>
+            Carrito
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+          <button
+            class="menu-btn"
+            id="menuBtn"
+            aria-label="Menú"
+            onclick="toggleMobileMenu()"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ══ HERO ══ -->
+    <section class="hero" id="inicio">
+      <div class="hero-bg"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-left">
+        <div class="hero-tag fade-up">
+          <span class="tag-dot"></span>
+          Nueva Colección 2026
+        </div>
+        <h1 class="hero-title fade-up delay-1">
+          <span class="line-accent">VISTE</span><br />
+          <span class="line-outline">COMO UN</span><br />
+          <span class="neon-winner">GANADOR</span>
+        </h1>
+        <p class="hero-sub fade-up delay-2">
+          Ropa urbana de alto impacto. Diseños exclusivos para quienes no siguen
+          tendencias — las crean.
+        </p>
+        <div class="hero-actions fade-up delay-3">
+          <button
+            class="btn-primary"
+            onclick="
+              document
+                .getElementById('productos')
+                .scrollIntoView({ behavior: 'smooth' })
+            "
+          >
+            VER COLECCIÓN
+          </button>
+          <a href="#destacados" class="btn-secondary">
+            Destacados <span class="btn-arrow">→</span>
+          </a>
+        </div>
+        <div class="hero-stats fade-up delay-4">
+          <div class="stat-item">
+            <div class="stat-num">2K+</div>
+            <div class="stat-label">Clientes</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">150+</div>
+            <div class="stat-label">Prendas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">4.9★</div>
+            <div class="stat-label">Rating</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <img
+          src="https://modagroup.com/_nuxt/image/304965.jpg"
+          alt="Winner Streetwear Hero"
+          class="hero-img"
+        />
+        <div class="hero-badge">
+          <div class="hero-badge-inner">NEW<br />DROP<br />2026</div>
+        </div>
+        <div class="hero-price-tag">
+          <div class="price-tag-label">Desde</div>
+          <div class="price-tag-val">$49.990</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ MARQUEE ══ -->
+    <div class="marquee-section">
+      <div class="marquee-track">
+        <div class="marquee-inner" id="marqueeInner">
+          <span>WINNER</span><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span> <span>WINNER</span
+          ><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span>
+        </div>
+        <div class="marquee-inner" aria-hidden="true">
+          <span>WINNER</span><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span> <span>WINNER</span
+          ><span class="mdot">✦</span> <span>STREETWEAR</span
+          ><span class="mdot">✦</span> <span>URBAN STYLE</span
+          ><span class="mdot">✦</span> <span>NEW COLLECTION</span
+          ><span class="mdot">✦</span> <span>ENVÍO GRATIS</span
+          ><span class="mdot">✦</span> <span>COLOMBIA</span
+          ><span class="mdot">✦</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CATEGORIES ══ -->
+    <section class="categories" id="categorias">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <div class="section-label">Explorar</div>
+            <h2 class="section-title">CATEGORÍAS</h2>
+          </div>
+          <a href="#productos" class="section-link">Ver todo <span>→</span></a>
+        </div>
+        <div class="cat-grid" id="categoriesGrid"></div>
+      </div>
+    </section>
+
+    <!-- ══ PRODUCTS ══ -->
+    <section class="products" id="productos">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <div class="section-label">Colección 2026</div>
+            <h2 class="section-title">LO MÁS NUEVO</h2>
+          </div>
+        </div>
+        <div class="filter-bar" id="filterBar">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="mujer">Mujer</button>
+          <button class="filter-btn" data-filter="hombre">Hombre</button>
+          <button class="filter-btn" data-filter="accesorios">Accesorios</button>
+          <button class="filter-btn" data-filter="sale">Ofertas</button>
+        </div>
+        <div class="products-grid" id="productsGrid"></div>
+      </div>
+    </section>
+
+    <!-- ══ PROMO BANNER (DINÁMICO) ══ -->
+    <div id="promoBannerContainer">
+      <!-- Se puebla desde modules/promo.js -->
+    </div>
+
+    <!-- ══ FEATURED ══ -->
+    <section class="featured" id="destacados">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <div class="section-label">Edición Limitada</div>
+            <h2 class="section-title">DESTACADOS</h2>
+          </div>
+        </div>
+        <div class="featured-grid" id="featuredGrid"></div>
+      </div>
+    </section>
+
+    <!-- ══ TESTIMONIALS ══ -->
+    <section class="testimonials">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <div class="section-label">Reviews</div>
+            <h2 class="section-title">LO QUE DICEN</h2>
+          </div>
+          <button class="btn-secondary" onclick="openReviewModal()">
+            DEJAR RESEÑA <span style="margin-left:5px">+</span>
+          </button>
+        </div>
+        <div class="test-grid" id="testimonialsGrid"></div>
+      </div>
+    </section>
+
+    <!-- ══ NEWSLETTER ══ -->
+    <section class="newsletter" id="contacto">
+      <div class="container">
+        <div class="section-label">Comunidad Winner</div>
+        <h2 class="newsletter-title">ÚNETE A LOS<br /><span>WINNERS</span></h2>
+        <p class="newsletter-sub">
+          Suscríbete y recibe lanzamientos exclusivos + 15% de descuento en tu
+          primera compra.
+        </p>
+        <form class="newsletter-form" id="newsletterForm">
+          <input
+            class="newsletter-input"
+            type="email"
+            placeholder="tu@email.com"
+            required
+          />
+          <button class="newsletter-submit" type="submit">SUSCRIBIR →</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ══ FOOTER ══ -->
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="#" class="nav-logo footer-logo">WINNER</a>
+            <p class="footer-desc">
+              Ropa urbana para quienes se atreven a destacar. Diseños exclusivos,
+              calidad premium, envíos a toda Colombia.
+            </p>
+            <div class="footer-socials">
+              <a
+                id="link-instagram"
+                href="https://instagram.com/winnerstore"
+                target="_blank"
+                rel="noopener"
+                class="social-link sl-instagram"
+                aria-label="Instagram"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <circle cx="12" cy="12" r="5" />
+                  <circle
+                    cx="17.5"
+                    cy="6.5"
+                    r="1"
+                    fill="currentColor"
+                    stroke="none"
+                  />
+                </svg>
+              </a>
+              <a
+                id="link-tiktok"
+                href="https://tiktok.com/@winnerstore"
+                target="_blank"
+                rel="noopener"
+                class="social-link sl-tiktok"
+                aria-label="TikTok"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="16"
+                  height="16"
+                >
+                  <path
+                    d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V9.15a8.16 8.16 0 004.77 1.52V7.22a4.85 4.85 0 01-1-.53z"
+                  />
+                </svg>
+              </a>
+              <a
+                id="link-facebook"
+                href="https://facebook.com/winnerstore"
+                target="_blank"
+                rel="noopener"
+                class="social-link sl-facebook"
+                aria-label="Facebook"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="16"
+                  height="16"
+                >
+                  <path
+                    d="M12 2.04c-5.5 0-9.96 4.47-9.96 9.96 0 5.01 3.6 9.18 8.41 9.94v-7.03H7.9V12h2.55V9.75c0-2.5 1.5-3.89 3.77-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v7.03c4.8-.76 8.41-4.93 8.41-9.94 0-5.49-4.46-9.96-9.96-9.96z"
+                  />
+                </svg>
+              </a>
+              <a
+                id="link-whatsapp"
+                href="https://wa.me/573166019030"
+                target="_blank"
+                rel="noopener"
+                class="social-link sl-whatsapp"
+                aria-label="WhatsApp"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="16"
+                  height="16"
+                >
+                  <path
+                    d="M17.47 14.39c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07a9.03 9.03 0 01-2.39-1.35 9.1 9.1 0 01-1.65-2.06c-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.67-1.62-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.7.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2.01-1.42.25-.7.25-1.29.17-1.42-.08-.13-.27-.2-.57-.35zM12.01 21.8c-1.8 0-3.57-.48-5.12-1.4l-.37-.22-3.8.99 1.01-3.7-.24-.38a9.88 9.88 0 01-1.52-5.21 9.9 9.9 0 019.89-9.88 9.9 9.9 0 019.89 9.88 9.9 9.9 0 01-9.74 9.92zM12.01 0a11.95 11.95 0 00-11.95 11.95c0 2.1.55 4.15 1.59 5.95L0 24l6.19-1.62c1.74.95 3.69 1.45 5.66 1.45h.01c6.6 0 11.95-5.35 11.95-11.95A11.95 11.95 0 0012.01 0z"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+          <div class="footer-col">
+            <h4>Tienda</h4>
+            <ul class="footer-links">
+              <li>
+                <a href="javascript:void(0)" onclick="filterByCategory('all')"
+                  >Nueva Colección</a
+                >
+              </li>
+              <li>
+                <a href="javascript:void(0)" onclick="filterByCategory('mujer')"
+                  >Mujer</a
+                >
+              </li>
+              <li>
+                <a href="javascript:void(0)" onclick="filterByCategory('hombre')"
+                  >Hombre</a
+                >
+              </li>
+              <li>
+                <a
+                  href="javascript:void(0)"
+                  onclick="filterByCategory('accesorios')"
+                  >Accesorios</a
+                >
+              </li>
+              <li>
+                <a href="javascript:void(0)" onclick="filterByCategory('sale')"
+                  >Ofertas</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Ayuda</h4>
+            <ul class="footer-links">
+              <li><a href="javascript:void(0)" onclick="openReturnsModal()">Devoluciones</a></li>
+              <li><a href="javascript:void(0)" onclick="openSizeGuideModal()">Guía de Tallas</a></li>
+              <li><a href="javascript:void(0)" onclick="openShippingModal()">Envíos</a></li>
+              <li><a href="#contacto">Contacto</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Info</h4>
+            <ul class="footer-links">
+              <li><a href="javascript:void(0)" onclick="openAboutModal()">Sobre Winner</a></li>
+              <li><a href="javascript:void(0)" onclick="openPrivacyModal()">Privacidad</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span class="footer-copy"
+            >© 2026 Winner. Todos los derechos reservados.</span
+          >
+          <div class="payment-icons">
+            <span class="pay-icon pi-pse" title="PSE / Transferencia">PSE</span>
+            <span class="pay-icon pi-nequi" title="Nequi">NEQUI</span>
+            <span class="pay-icon pi-visa" title="Visa">VISA</span>
+            <span class="pay-icon pi-mc" title="Mastercard">MASTERCARD</span>
+            <span class="pay-icon pi-cod" title="Pago Contra Entrega"
+              >CONTRA ENTREGA</span
+            >
+            <span
+              class="pay-icon"
+              style="border-color: var(--accent); color: var(--accent)"
+              title="Procesado por Wompi"
+              >BY WOMPI</span
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <button
+      class="admin-fab"
+      id="adminFab"
+      onclick="window.location.href = 'admin-panel.html'"
+      aria-label="Panel administrativo"
+    >
+      <span style="font-size: 20px; margin-right: 5px">⚙️</span>
+      Admin
+    </button>
+
+    <!-- ══ MODAL OPCIONES DE PAGO ══ -->
+    <div
+      class="modal-overlay"
+      id="paymentModalOverlay"
+      onclick="closePaymentModal()"
+    ></div>
+    <div
+      class="adm-modal"
+      id="paymentModal"
+      style="max-width: 560px"
+    >
+      <div class="modal-header">
+        <h3 id="paymentTitle">Selecciona tu método de pago</h3>
+        <button class="modal-close" onclick="closePaymentModal()">✕</button>
+      </div>
+      <div class="modal-body modal-body-scrollable">
+        <!-- PASO 1: Datos del Cliente -->
+        <div id="paymentStep1" class="payment-step active">
+          <p class="form-label" style="margin-bottom: 20px;">
+            📋 Completa tus datos para procesar el pago
+          </p>
+          <form id="customerForm">
+            <div class="form-group">
+              <label class="form-label">Nombre Completo *</label>
+              <input type="text" id="customerName" placeholder="Juan Pérez" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Electrónico *</label>
+              <input type="email" id="customerEmail" placeholder="juan@example.com" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Teléfono / WhatsApp *</label>
+              <input type="tel" id="customerPhone" placeholder="+57 3XX XXX XXXX" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dirección de Entrega *</label>
+              <input type="text" id="customerAddress" placeholder="Calle 123 #45-67, Apto 8, Bogotá" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ciudad / Departamento *</label>
+              <input type="text" id="customerCity" placeholder="Bogotá, D.C." required class="form-input" />
+            </div>
+            <button
+              type="button"
+              class="adm-btn"
+              onclick="continueToPaymentMethod()"
+              style="margin-top: 10px"
+            >
+              CONTINUAR AL ENVÍO →
+            </button>
+          </form>
+        </div>
+
+        <!-- PASO 2: Selección de Envío -->
+        <div id="paymentStep2" class="payment-step" style="display: none">
+          <p class="form-label" style="margin-bottom: 16px;">
+            📦 Selecciona tu método de envío
+          </p>
+          <div id="shippingOptionsContainer" style="display: flex; flex-direction: column; gap: 12px">
+            <!-- Se renderizan dinámicamente desde JS -->
+          </div>
+        </div>
+
+        <!-- PASO 2B: Método de Pago -->
+        <div id="paymentStep2Payment" class="payment-step" style="display: none">
+          <div id="paymentSummary"></div>
+          <p class="form-label" style="margin-bottom: 20px;">
+            💳 Elige cómo deseas pagar
+          </p>
+          <div class="pay-methods-grid" id="checkoutPayMethods">
+            <!-- Se renderizan dinámicamente desde JS -->
+          </div>
+          <div id="finalizeActionContainer" style="margin-top: 25px; display: none; padding-top: 15px; border-top: 1px solid var(--border);">
+            <button class="btn-primary-large" onclick="finalizePurchase()">
+              CONFIRMAR COMPRA Y FINALIZAR →
+            </button>
+          </div>
+        </div>
+          <p class="form-label" style="margin-bottom: 20px;">
+            💵 Información para Pago en Efectivo
+          </p>
+          <form id="cashForm">
+            <div class="form-group">
+              <label class="form-label">¿Prefieres pagar en efectivo? *</label>
+              <select id="cashDeliveryOption" required class="form-select" onchange="updateCashFields()">
+                <option value="">Selecciona opción...</option>
+                <option value="delivery">Pago contra entrega</option>
+                <option value="pickup">Recogida en tienda</option>
+              </select>
+            </div>
+            <div id="cashDeliveryInfo" class="success-box">
+              ℹ️ Selecciona una opción para continuar
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--gray-text)"
+                >Referencia Adicional (Apto, Piso, etc.)</label
+              >
+              <input
+                type="text" id="cashDeliveryRef" class="form-input"
+                placeholder="Apto 305, Portería 2..."
+              />
+            </div>
+            <div class="info-box">
+              👤 Te contactaremos al número de WhatsApp registrado para
+              coordinar la entrega o recogida.
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <button
+                type="button"
+                class="adm-btn-ghost"
+                onclick="backToPaymentMethod()"
+              >
+                ← ATRÁS
+              </button>
+              <button
+                type="button"
+                class="adm-btn"
+                onclick="processPaymentCash()"
+                style="background: #2ecc71"
+              >
+                ✓ CONFIRMAR
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer" id="paymentFooter">
+        <button class="adm-btn-ghost" onclick="closePaymentModal()">
+          CANCELAR
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL OPCIONES DE LOGÍSTICA ══ -->
+    <div
+      class="modal-overlay"
+      id="shippingModalOverlay"
+      onclick="closeShippingModal()"
+    ></div>
+    <div class="adm-modal" id="shippingModal" style="max-width: 520px">
+      <div class="modal-header" >
+        <h3>Selecciona tu método de envío</h3>
+        <button class="adm-close" onclick="closeShippingModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div
+          id="shippingOptions"
+          style="display: flex; flex-direction: column; gap: 12px"
+        >
+          <!-- Se renderizan dinámicamente desde JS -->
+        </div>
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <h4 style="margin-bottom: 10px; font-size: 14px">Dirección de envío</h4>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <input type="text" id="shippingAddress" placeholder="Calle, número, apartamento" class="form-input" style="padding: 8px; font-size: 13px;" />
+          </div>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <input type="text" id="shippingCity" placeholder="Ciudad, Estado" class="form-input" style="padding: 8px; font-size: 13px;" />
+          </div>
+          <div class="form-group">
+            <input type="text" id="shippingPhone" placeholder="Teléfono de contacto" class="form-input" style="padding: 8px; font-size: 13px;" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="adm-btn-ghost" onclick="closeShippingModal()">
+          CANCELAR
+        </button>
+        <button
+          class="adm-btn"
+          onclick="confirmShipping()"
+          id="confirmShippingBtn"
+          disabled
+        >
+          CONTINUAR AL PAGO
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ SCRIPTS ══ -->    
+    <!-- PUNTO DE ENTRADA ÚNICO PARA LA TIENDA -->
+    <!-- Este archivo es generado por `npm run build:store` y contiene todos los módulos -->
+    <script src="store-bundle.js"></script>
+  </body>
+</html>

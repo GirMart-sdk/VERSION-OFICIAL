@@ -51,7 +51,15 @@ pool.on("error", (err) => {
 
 const adapter = new PrismaPg(pool);
 
-const prisma = new PrismaClient({ adapter });
+let prisma;
+
+// En el entorno de pruebas de Jest, no es necesario (y puede dar problemas) el pool de conexiones.
+// Usamos la inicialización estándar de Prisma.
+if (process.env.NODE_ENV === 'test') {
+  prisma = new PrismaClient();
+} else {
+  prisma = new PrismaClient({ adapter });
+}
 
 console.log(
   "🐘 Prisma Client (PostgreSQL) inicializado con capa de compatibilidad",

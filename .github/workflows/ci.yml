@@ -1,0 +1,33 @@
+# Nombre del Flujo de Trabajo
+name: Node.js CI
+
+# ¿Cuándo se ejecuta?
+on:
+  push: # En cada push a cualquier rama
+    branches: [ main ]
+  pull_request: # En cada pull request a la rama main
+    branches: [ main ]
+
+# Tareas a ejecutar
+jobs:
+  build:
+    # El tipo de máquina virtual donde se ejecutará
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Clona tu repositorio en la máquina virtual
+      - uses: actions/checkout@v3
+
+      # 2. Configura el entorno de Node.js
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      # 3. Instala las dependencias del proyecto
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Ejecuta las pruebas automatizadas
+      - name: Run tests
+        run: npm test

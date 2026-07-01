@@ -1,0 +1,9 @@
+/*
+ * WINNER STORE - Admin Panel CSS Bundle Entry Point
+ *
+ * esbuild usará este archivo para combinar todos los estilos en uno solo.
+ */
+@import "../public/css/admin-panel.css";
+@import "../public/css/payments-logic.css";
+@import "../public/css/expenses-logic.css";
+@import "../public/css/cash-logic.css";

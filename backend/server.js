@@ -8,6 +8,15 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const path = require("path");
+
+// --- INICIO DE CORRECCIÓN ---
+// Carga robusta de variables de entorno.
+// Esto asegura que el .env se encuentre desde la raíz del proyecto,
+// sin importar si el script se ejecuta directamente o con PM2.
+const envPath = path.resolve(__dirname, '..', '.env');
+require('dotenv').config({ path: envPath });
+// --- FIN DE CORRECCIÓN ---
+
 // eslint-disable-next-line no-unused-vars
 const sharp = require("sharp");
 const rateLimit = require("express-rate-limit");
@@ -16,7 +25,7 @@ const { prisma } = require("./database");
 const config = require("./config"); // Importar configuración centralizada
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
-const { requireAdminIp } = require("./middlewares/securityMiddleware");
+const { requireAdminIp, checkBannedIp } = require("./middlewares/securityMiddleware.js");
 const { requireAuth } = require("./middlewares/auth");
 
 // 2. Configuración de seguridad (Rate Limit)
@@ -39,14 +48,9 @@ const app = express();
 // 1.5. Confianza en Proxy (Crucial para Ngrok y detección de IP real)
 app.set("trust proxy", 1);
 
-// Importar Rutas
-const authRoutes = require("./routes/auth");
-const salesRoutes = require("./routes/sales");
-const expensesRoutes = require("./routes/expenses");
-const productsRoutes = require("./routes/products");
-const arqueoRoutes = require("./routes/arqueo");
-const webhookRoutes = require("./routes/webhooks");
-const statsRoutes = require("./routes/stats");
+// --- INICIO DE CORRECCIÓN: Importar enrutador principal ---
+const apiRoutes = require("./routes"); // Importa backend/routes/index.js
+// --- FIN DE CORRECCIÓN ---
 
 // 3. Middlewares Globales
 app.use(helmet({
@@ -94,7 +98,8 @@ app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
-// Aplicar limitadores
+// Aplicar filtros anti-bots y limitadores
+app.use("/api/", checkBannedIp);
 app.use("/api/", limiter);
 app.use("/api/login", loginLimiter);
 app.use("/api/auth/forgot-password", loginLimiter);
@@ -103,15 +108,8 @@ app.use("/api/auth/forgot-password", loginLimiter);
 // IMPORTANTE: usar un secreto estable para que el token CSRF no se desincronice entre requests.
 if (config.csrfEnforcement) {
   app.use((req, res, next) => {
-    const method = req.method.toUpperCase();
-    const origin = req.get('origin');
-    
     // Solo verificamos métodos que alteran datos
-    if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
-      // Validar que el origen coincida con nuestras IPs o Ngrok si es producción (usando config)
-      if (config.isProduction && origin && !origin.includes("ngrok") && !origin.includes(config.networkIp || "192.168.1.3") && !origin.includes("localhost") && !origin.includes("127.0.0.1") && !origin.includes("::1")) {
-        return res.status(403).json({ error: "Origen de petición no confiable" });
-      }
+    if (["POST", "PUT", "DELETE", "PATCH"].includes(req.method)) {
       const clientToken = req.headers["x-csrf-token"];
       if (clientToken !== config.csrfSecret) {
         logger.warn(`🛡️ Bloqueo CSRF: Intento sin token válido desde ${req.ip}`);
@@ -122,29 +120,24 @@ if (config.csrfEnforcement) {
   });
 }
 
-// Endpoint para obtener el token dinámico de esta sesión
+// Endpoint para obtener el token CSRF (compatible con el frontend actual)
 app.get("/api/get-csrf", (req, res) => {
-  const origin = req.get('origin') || req.get('referer');
+  const origin = req.get('origin') || req.get('referer') || 'desconocido';
   logger.info(`🔑 CSRF Token solicitado desde: ${origin}`);
   res.json({ csrfToken: config.csrfSecret }); // Devolver el secreto desde la config
 });
 
+// 5. Archivos estáticos (MOVIDO ANTES DE LAS RUTAS DE API)
+// Esto es crucial para que Express sirva archivos como index.html y admin-panel.html
+const publicPath = path.resolve(__dirname, "..", "public");
+app.use(express.static(publicPath));
 
-// Authentication routes (login, logout, forgot-password)
-// These should not be IP whitelisted, as an admin might need to log in from a new IP
-app.use("/api", authRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-// Apply security middleware to all subsequent /api routes
-app.use("/api", requireAuth, requireAdminIp);
-
-// Admin-specific routes
-app.use("/api", productsRoutes); // Montar productsRoutes directamente bajo /api
-app.use("/api", salesRoutes);
-app.use("/api", expensesRoutes);
-app.use("/api", arqueoRoutes);
-app.use("/api", webhookRoutes);
-app.use("/api", statsRoutes);
-app.use("/api", require("./routes/sessions")); // New sessions routes
+// --- INICIO DE CORRECCIÓN: Usar el enrutador principal ---
+// Montar todas las rutas de la API bajo el prefijo /api
+app.use("/api", apiRoutes);
+// --- FIN DE CORRECCIÓN ---
 
 // 4. Seguridad de archivos sensibles
 const BLOCKED_PATTERNS = [
@@ -173,11 +166,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// 5. Archivos estáticos
-const rootPath = path.resolve(__dirname, "..");
-app.use(express.static(rootPath));
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
-
 // 6. Rutas de salud y diagnóstico
 app.get("/api/health", requireAuth, requireAdminIp, async (req, res) => {
   try {
@@ -199,7 +187,7 @@ app.use(errorMiddleware);
 
 // 8. Lanzamiento inteligente de puerto
 const startServer = (portToTry) => {
-  const server = app.listen(portToTry, () => {
+  const server = app.listen(portToTry, "0.0.0.0", () => {
     const localUrl = `http://localhost:${portToTry}`;
     const networkIp = config.networkIp;
     const networkUrl = `http://${networkIp}:${portToTry}`;
@@ -220,8 +208,11 @@ const startServer = (portToTry) => {
   });
 };
 
-// Iniciar en el puerto configurado o 3000 por defecto
-startServer(config.port);
+// Solo iniciar el servidor si este archivo es el punto de entrada principal
+if (require.main === module) {
+  // Iniciar en el puerto configurado o 3000 por defecto
+  startServer(config.port);
+}
 
 // Manejadores para evitar que el servidor muera por errores no capturados
 process.on("unhandledRejection", (reason) => {
@@ -232,3 +223,14 @@ process.on("uncaughtException", (err) => {
   logger.error("❌ Excepción no capturada (Uncaught Exception):", err.message);
   process.exit(1);
 });
+
+if (process.env.NODE_ENV !== 'test') {
+  // Inicializar servicios en segundo plano solo si no estamos en modo de prueba
+  const AIService = require("./services/aiService");
+  // Ejecutar predicción de demanda cada 24 horas (o al iniciar si es necesario)
+  setTimeout(() => AIService.runDemandForecast(), 5000); // 5 segundos después del inicio
+  setInterval(() => AIService.runDemandForecast(), 24 * 60 * 60 * 1000);
+}
+
+// Exportar la app para las pruebas
+module.exports = app;

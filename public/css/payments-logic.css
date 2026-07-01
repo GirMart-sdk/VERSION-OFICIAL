@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════
+   WINNER — payments-logic.css
+   ═══════════════════════════════════════════════════════ */
+
+.payment-methods-section {
+  margin-bottom: 32px;
+}
+
+.section-heading {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--gray-text);
+  margin-bottom: 20px;
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  text-transform: uppercase;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.payment-method-card {
+  background: var(--gray);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all var(--trans);
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-method-card.enabled {
+  border-color: var(--accent);
+  background: var(--gray);
+  box-shadow: var(--shadow);
+}
+
+.payment-method-card.enabled::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent);
+}
+
+.method-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.method-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--white);
+}
+
+.method-badge {
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(232, 255, 71, 0.1);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.method-details {
+  font-size: 12px;
+  color: var(--gray-text);
+  margin-bottom: 15px;
+}
+
+.method-details ul {
+  margin-top: 8px;
+  list-style: none;
+}
+
+.method-details li {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* KPI Row */
+.payments-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+/* Filters Bar */
+.payments-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  background: var(--gray);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+}
+
+/* History Grouping */
+#transactionsGroupedContainer,
+#salesGroupedContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.transactions-group {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.day-divider:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  #transactionsGroupedContainer,
+  #salesGroupedContainer {
+    grid-template-columns: 1fr;
+  }
+}
